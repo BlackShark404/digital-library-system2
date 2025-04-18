@@ -9,7 +9,7 @@
 function handleFormSubmission(formId, actionUrl) {
     // Select the form element
     const form = document.getElementById(formId);
-    
+
     // Check if form exists
     if (!form) {
         console.error(`Form with ID '${formId}' not found`);

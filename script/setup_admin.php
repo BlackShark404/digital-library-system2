@@ -20,24 +20,25 @@ $adminExists = $userModel->getByRole('admin');
 // If no admin exists, create one from environment variables
 if (empty($adminExists)) {
     // Get admin details from environment variables
-    $adminAvatarUrl = $_ENV['ADMIN_AVATAR_URL'];
-    $adminFullName = $_ENV['ADMIN_FULL_NAME'];
-    $adminUsername = $_ENV['ADMIN_USERNAME'];
+    $adminProfileUrl = $_ENV['ADMIN_PROFILE_URL'];
+    $adminFirstName = $_ENV['ADMIN_FIRST_NAME'];
+    $adminLastName = $_ENV['ADMIN_LAST_NAME'];
     $adminEmail = $_ENV['ADMIN_EMAIL'];
     $adminPassword = $_ENV['ADMIN_PASSWORD'];
-    $adminRole = $_ENV['ADMIN_ROLE'];
+    $adminRoleId = (int) $_ENV['ADMIN_ROLE_ID'];
+
 
     // Hash the password
     $hashedPassword = $userModel->hashPassword($adminPassword);
     
     // Create admin user
     $userModel->insert([
-        'avatar_url' => $adminAvatarUrl,
-        'full_name' => $adminFullName,
-        'username' => $adminUsername,
+        'profile_url' => $adminProfileUrl,
+        'first_name' => $adminFirstName,
+        'last_name' => $adminLastName,
         'email' => $adminEmail,
         'password' => $hashedPassword,
-        'role_id' => $adminRole
+        'role_id' => $adminRoleId
     ]);
     
     // Log the creation of admin account (optional)

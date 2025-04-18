@@ -50,10 +50,13 @@ $router->map('GET', '/admin/reading-sessions', 'App\Controllers\AdminController#
 $router->map('GET', '/admin/purchases', 'App\Controllers\AdminController#renderPurchases', 'purchases');
 $router->map('GET', '/admin/activity-logs', 'App\Controllers\AdminController#renderActivityLogs', 'activity-log');
 
+$router->map('POST', '/admin/user-management', 'App\Controllers\UserManagementController#registerUsers', 'register-users');
 
-$router->map('POST', '/admin/user-management', 'App\Controllers\UserController#registerUsers', 'register-users');
 
 // User routes
+$router->map('GET', '/user/dashboard', 'App\Controllers\UserController#renderUserDashboard', 'user_dashboard');
+
+
 
 // Error routes
 $router->map('GET', '/error/404', 'App\Controllers\ErrorController#error404', 'error_404');

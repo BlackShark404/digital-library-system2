@@ -1,6 +1,6 @@
 <?php
-// Set page title
-$page_title = "Admin Dashboard";
+
+use Core\Session;
 
 include $headerPath;
 
@@ -50,8 +50,7 @@ $genre_distribution = [
 ?>
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4 mb-4">Admin Dashboard</h1>
-
+    <h1 class="mt-4 mb-4">Welcome <?= $_SESSION['first_name'] ?> </h1>
     <!-- Quick Stats -->
     <div class="row">
         <div class="col-xl-3 col-md-6">

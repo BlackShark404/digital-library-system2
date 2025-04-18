@@ -87,7 +87,6 @@ class BaseModel
         return $this->aggregate('MIN', $column);
     }
 
-    
     public function max($column)
     {
         return $this->aggregate('MAX', $column);
@@ -154,12 +153,13 @@ class BaseModel
         $this->useSoftDeletes = false;
         return $this;
     }
-
+ 
     public function select($columns)
     {
         $this->select = $columns;
         return $this;
     }
+    
 
     public function join($table, $firstKey, $secondKey, $type = 'INNER')
     {

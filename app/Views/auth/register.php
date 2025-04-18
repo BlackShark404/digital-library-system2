@@ -164,7 +164,7 @@
                                 <span class="input-group-text">
                                     <i class="fas fa-user"></i>
                                 </span>
-                                <input type="text" class="form-control" id="firstName" name="fname" placeholder="John" required>
+                                <input type="text" class="form-control" id="firstName" name="first_name" placeholder="John" required>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -173,7 +173,7 @@
                                 <span class="input-group-text">
                                     <i class="fas fa-user"></i>
                                 </span>
-                                <input type="text" class="form-control" id="lastName" name="lname" placeholder="Doe" required>
+                                <input type="text" class="form-control" id="lastName" name="last_name" placeholder="Doe" required>
                             </div>
                         </div>
                     </div>
@@ -195,8 +195,8 @@
                                 <i class="fas fa-lock"></i>
                             </span>
                             <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
-                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                                <i class="fas fa-eye"></i>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword" data-target="password">
+                                <i class="fas fa-eye-slash"></i>
                             </button>
                         </div>
 
@@ -209,6 +209,9 @@
                                 <i class="fas fa-lock"></i>
                             </span>
                             <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" placeholder="••••••••" required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword" data-target="confirmPassword">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -231,41 +234,11 @@
         </div>
     </div>
 
-    <script src="/assets/js/utility/toast.js"></script>
-    <?php include __DIR__ . '/../../Views/toast/toast-view.php' ?>
-
     <!-- Bootstrap & jQuery JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Toggle password visibility
-        document.getElementById('togglePassword').addEventListener('click', function() {
-            const password = document.getElementById('password');
-            const icon = this.querySelector('i');
-
-            if (password.type === 'password') {
-                password.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                password.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
-        });
-
-        // Validate password and confirm password
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (password !== confirmPassword) {
-                e.preventDefault(); // Stop form submission
-                alert('Passwords do not match. Please re-enter.');
-                document.getElementById('confirmPassword').focus();
-            }
-        });
-    </script>
+    
+    <script src="/assets/js/utility/toggle-password.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="assets/js/utility/toast-notifications.js"></script>

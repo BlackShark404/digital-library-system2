@@ -1,8 +1,10 @@
 <!-- User Sidebar -->
+<?php use Core\Session; ?>
+
 <div class="sidebar bg-light" id="sidebar">
     
     <div class="avatar-wrapper">
-        <img src="https://ui-avatars.com/api/?name=<?php echo urlencode(isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'User'); ?>&background=5469d4&color=fff" alt="User" class="avatar">
+        <img src=<?=Session::get('profile_url') ?>" alt="User" class="avatar">
         <div class="user-info">
             <div class="user-name"><?php echo isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'User'; ?></div>
             <div class="user-role">Reader</div>
@@ -21,7 +23,7 @@
             ['title' => 'Wishlist', 'icon' => 'heart', 'url' => '/user/wishlist'],
             ['title' => 'My Purchases', 'icon' => 'shopping-bag', 'url' => '/user/purchases'],
             ['title' => 'Profile', 'icon' => 'user-circle', 'url' => '/user/user-profile'],
-            ['title' => 'Logout', 'icon' => 'sign-out-alt', 'url' => 'logout']
+            ['title' => 'Logout', 'icon' => 'sign-out-alt', 'url' => '/logout']
         ];
 
         // Get current page filename

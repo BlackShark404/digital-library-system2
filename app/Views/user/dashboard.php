@@ -483,5 +483,4 @@ $reading_stats = [
 <?php
 // Include footer
 include_once $footerPath;
-;
 ?>

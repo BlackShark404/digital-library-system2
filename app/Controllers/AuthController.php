@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use Core\AvatarGenerator;
 use Core\Session;
 use Core\Cookie;
 
@@ -38,7 +39,7 @@ class AuthController extends BaseController
         $email = $data['email'] ?? '';
         $password = $data['password'] ?? '';
         $remember = isset($data['remember']);
-        
+
         $user = $this->userModel->findByEmail($email);
         
         // Check if user exists, password is correct, and account is active
@@ -63,16 +64,15 @@ class AuthController extends BaseController
         $_SESSION['last_name'] = $user['last_name'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_role'] = $user['role_name'] ?? "user"; // Handle both role_name from join or direct role
-        
 
-        // Handle "remember me" functionality
+        // Handle "remember me" functionality 
         if ($remember) {
             $token = $this->userModel->generateRememberToken($user['id'], 30); // 30 days expiry
             Cookie::set('remember_token', $token, 30); // Match cookie expiry with token expiry
         }
 
         // Dynamically determine redirect URL based on role
-        $role = $user['role_name'] ?? "user";
+        $role = $user['role_name'] ?? "/";
         $redirectUrl = match ($role) {
             'admin'     => '/admin/dashboard',
             'user'      => '/user/dashboard',
@@ -88,10 +88,11 @@ class AuthController extends BaseController
 
     public function register() 
     {
+        $avatar = new AvatarGenerator();
+
         if (!$this->isPost() || !$this->isAjax()) {
             return $this->jsonError('Invalid request method');
         }
-
         $data = $this->getJsonInput();
 
         // Validate required fields
@@ -103,6 +104,7 @@ class AuthController extends BaseController
             }
         }
 
+        $profileUrl = $avatar->generate($data['first_name'] . ' ' . $data['last_name']);
         $firstName = $data['first_name'];
         $last_name = $data['last_name'];
         $email = $data['email'];
@@ -120,7 +122,8 @@ class AuthController extends BaseController
 
         // Create the user
         $result = $this->userModel->createUser([
-            'full_name' => $firstName,
+            'profile_url' => $profileUrl,
+            'first_name' => $firstName,
             'last_name' => $last_name,
             'email' => $email,
             'password' => $password,

@@ -21,7 +21,7 @@ class UserModel extends BaseModel
         'last_name',
         'email',
         'password',
-        'role',
+        'role_id',
         'is_active',
         'remember_token',
         'remember_token_expires_at',

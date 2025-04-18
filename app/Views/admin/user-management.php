@@ -209,11 +209,11 @@ include $headerPath;
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label for="addFname" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="addFname" name="fname" required>
+                            <input type="text" class="form-control" id="addFname" name="first_name" required>
                         </div>
                         <div class="col-md-6">
                             <label for="addLname" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="addLname" name="lname" required>
+                            <input type="text" class="form-control" id="addLname" name="last_name" required>
                         </div>
                     </div>
                     <div class="mb-3 mt-2">
@@ -227,16 +227,16 @@ include $headerPath;
                         </div>
                         <div class="col-md-6">
                             <label for="addConfirmPassword" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="addConfirmPassword" name="confirmPassword" required>
+                            <input type="password" class="form-control" id="addConfirmPassword" name="confirm_password" required>
                         </div>
                     </div>
                     <div class="row g-2 mt-2">
                         <div class="col-md-6">
                             <label for="addRole" class="form-label">Role</label>
-                            <select class="form-select" id="addRole" name="role" required>
+                            <select class="form-select" id="addRole" name="role_id" required>
                                 <option value="">Select Role</option>
-                                <option value="user" selected>User</option>
-                                <option value="admin">Admin</option>
+                                <option value="1" selected>User</option>
+                                <option value="2">Admin</option>
                             </select>
                         </div>
                         <div class="col-md-6">
