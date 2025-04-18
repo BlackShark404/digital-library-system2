@@ -1,4 +1,7 @@
 <?php
+
+use Core\Session;
+
 include $headerPath;
 ?>
 
@@ -121,7 +124,7 @@ include $headerPath;
                             <td>#PUR-1082</td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <span class="avatar-sm bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">JD</span>
+                                    <img src="<?= Session::get('profile_url') ?>" alt="profile" class="avatar-wrapper-compact avatar-compact">
                                     <span>John Doe</span>
                                 </div>
                             </td>

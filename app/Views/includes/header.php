@@ -166,6 +166,23 @@ function is_admin()
             border: 3px solid white;
         }
 
+        .avatar-wrapper-compact {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.1rem;
+        }
+
+        .avatar-compact {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            border: 2px solid white;
+        }
+
+
         .user-info {
             margin-top: 0.75rem;
             text-align: center;
