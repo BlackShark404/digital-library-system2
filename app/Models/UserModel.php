@@ -246,4 +246,65 @@ class UserModel extends BaseModel
             []
         );
     }
+
+    /**
+     * Get paginated list of users with optional filters
+     * 
+     * @param int $page Current page number
+     * @param int $perPage Number of items per page
+     * @param array $filters Optional filters: search, role, status
+     * @return array Paginated user data with pagination information
+     */
+    public function getPaginatedUsers($page = 1, $perPage = 10, array $filters = [])
+    {
+        // Start with a base query that joins the roles table
+        $this->select('users.*, roles.name AS role_name')
+            ->join('roles', 'users.role_id', 'roles.id');
+
+        // Apply filters if provided
+        if (!empty($filters)) {
+            // Search filter (name or email)
+            if (!empty($filters['search'])) {
+                $searchTerm = $filters['search'];
+                $this->where("(users.first_name LIKE :search OR users.last_name LIKE :search OR users.email LIKE :search)")
+                    ->bind(['search' => "%$searchTerm%"]);
+            }
+            
+            // Role filter
+            if (!empty($filters['role'])) {
+                $this->where("roles.name = :role")
+                    ->bind(['role' => $filters['role']]);
+            }
+            
+            // Status filter
+            if (isset($filters['status'])) {
+                if ($filters['status'] === 'active') {
+                    $this->where("users.is_active = :active")
+                        ->bind(['active' => true]);
+                } elseif ($filters['status'] === 'inactive') {
+                    $this->where("users.is_active = :inactive")
+                        ->bind(['inactive' => false]);
+                }
+                // You can add more status filters as needed
+            }
+        }
+        
+        // Apply soft delete filter
+        $this->whereSoftDeleted('users');
+        
+        // Sort by ID by default, can be customized
+        $this->orderBy('users.id DESC');
+         
+        // Use the paginate method from BaseModel
+        return $this->paginate($page, $perPage);
+    }
+
+    public function getAllUsers()
+    {
+        return $this->select('users.*, roles.name AS role_name')
+                    ->join('roles', 'users.role_id', 'roles.id')
+                    ->whereSoftDeleted('users')
+                    ->orderBy('users.id DESC')
+                    ->get();
+    }
 }
