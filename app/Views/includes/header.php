@@ -174,8 +174,8 @@ function is_admin()
         }
 
         .avatar-compact {
-            width: 38px;
-            height: 38px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             object-fit: cover;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
@@ -431,7 +431,7 @@ body.sidebar-collapsed .footer {
                             <li><a class="dropdown-item" href="user/profile.php">
                                 <i class="fas fa-id-badge me-2"></i>Profile</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="logout.php">
+                            <li><a class="dropdown-item" href="/logout">
                                 <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                         </ul>
                     </li>
