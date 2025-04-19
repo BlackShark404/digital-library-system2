@@ -200,7 +200,7 @@ include $headerPath;
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-user-plus me-2"></i>Add New User
+                    <i class="fas fa-user-plus me-2 text-muted"></i>Add New User
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -209,46 +209,92 @@ include $headerPath;
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label for="addFname" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="addFname" name="first_name" required>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-user text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="addFname" name="first_name" required>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label for="addLname" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="addLname" name="last_name" required>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-user text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="addLname" name="last_name" required>
+                            </div>
                         </div>
                     </div>
+
                     <div class="mb-3 mt-2">
                         <label for="addEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="addEmail" name="email" required>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label for="addPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="addPassword" name="password" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="addConfirmPassword" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="addConfirmPassword" name="confirm_password" required>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="fas fa-envelope text-muted"></i>
+                            </span>
+                            <input type="email" class="form-control border-start-0" id="addEmail" name="email" required>
                         </div>
                     </div>
+
+                    <!-- Password field (Full width) -->
+                    <div class="mb-3">
+                        <label for="addPassword" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="fas fa-lock text-muted"></i>
+                            </span>
+                            <input type="password" class="form-control border-start-0" id="addPassword" name="password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword" data-target="password">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password field (Full width) -->
+                    <div class="mb-3">
+                        <label for="addConfirmPassword" class="form-label">Confirm Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="fas fa-lock text-muted"></i>
+                            </span>
+                            <input type="password" class="form-control border-start-0" id="addConfirmPassword" name="confirm_password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword" data-target="confirmPassword">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="row g-2 mt-2">
                         <div class="col-md-6">
                             <label for="addRole" class="form-label">Role</label>
-                            <select class="form-select" id="addRole" name="role_id" required>
-                                <option value="">Select Role</option>
-                                <option value="1" selected>User</option>
-                                <option value="2">Admin</option>
-                            </select>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-briefcase text-muted"></i>
+                                </span>
+                                <select class="form-select border-start-0" id="addRole" name="role_id" required>
+                                    <option value="">Select Role</option>
+                                    <option value="1" selected>User</option>
+                                    <option value="2">Admin</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label for="addStatus" class="form-label">Status</label>
-                            <select class="form-select" id="addStatus" name="is_active" required>
-                                <option value="1" selected>Active</option>
-                                <option value="0">Inactive</option>
-                            </select>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-toggle-on text-muted"></i>
+                                </span>
+                                <select class="form-select border-start-0" id="addStatus" name="is_active" required>
+                                    <option value="1" selected>Active</option>
+                                    <option value="0">Inactive</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </form>
             </div>
+
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" form="addUserForm" class="btn btn-primary">Add User</button>
@@ -256,6 +302,7 @@ include $headerPath;
         </div>
     </div>
 </div>
+
 
 
 <!-- Edit User Modal (for user ID 1) -->
@@ -378,6 +425,8 @@ include $headerPath;
     </div>
 </div>
 
+
+<script src="/assets/js/utility/toggle-password.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 

@@ -47,7 +47,7 @@ class UserManagementController extends BaseController{
         $password = $data['password'];
         $roleId = (int) $data['role_id']; 
         $isActive = filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN); // Get status and convert '1'/'0' to boolean
-
+        
         // Validate email form at
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $this->jsonError('Invalid email format');
@@ -72,7 +72,7 @@ class UserManagementController extends BaseController{
             'last_name' => $lastName,
             'email' => $email,
             'password' => $password,
-            'role' => $roleId,         // Use submitted role
+            'role_id' => $roleId,         // Use submitted role
             'is_active' => $isActive // Use submitted status
         ]);
 

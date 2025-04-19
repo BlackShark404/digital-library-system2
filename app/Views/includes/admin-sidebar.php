@@ -1,7 +1,9 @@
 <!-- Admin Sidebar -->
+<?php use Core\Session;?>
+
 <div class="sidebar bg-dark text-white" id="sidebar">
     <div class="avatar-wrapper">
-        <img src="https://ui-avatars.com/api/?name=Admin+User&background=1a2236&color=fff" alt="Admin" class="avatar">
+        <img src=<?=Session::get('profile_url')?> alt="Admin" class="avatar">
         <div class="user-info">
             <div class="user-name">Admin User</div>
             <div class="user-role">Administrator</div>

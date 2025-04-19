@@ -1,4 +1,7 @@
 <?php
+
+use Core\Session;
+
 // Include header
 include_once $headerPath;
 
@@ -48,7 +51,7 @@ $reading_stats = [
 ?>
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4 mb-4">My Reading Dashboard</h1>
+    <h1 class="mt-4 mb-4">Welcome <?= Session::get("first_name") . " " . Session::get("last_name") ?></h1>
 
     <!-- Quick Stats -->
     <div class="row">

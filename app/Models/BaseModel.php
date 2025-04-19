@@ -160,7 +160,6 @@ class BaseModel
         return $this;
     }
     
-
     public function join($table, $firstKey, $secondKey, $type = 'INNER')
     {
         $this->joins[] = "$type JOIN $table ON $firstKey = $secondKey";
@@ -210,6 +209,65 @@ class BaseModel
     {
         $this->offset = (int) $number;
         return $this;
+    }
+
+    /**
+     * Paginate the results
+     *
+     * @param int $page The page number (1-based)
+     * @param int $perPage Number of items per page
+     * @return array Array with 'data', 'pagination' information
+     */
+    public function paginate($page = 1, $perPage = 15)
+    {
+        // Calculate the total records before applying limit and offset
+        $originalSelect = $this->select;
+        $originalLimit = $this->limit;
+        $originalOffset = $this->offset;
+        
+        // Get total count
+        $this->select = "COUNT(*) as total";
+        $countResult = $this->get();
+        $total = isset($countResult[0]['total']) ? (int)$countResult[0]['total'] : 0;
+        
+        // Restore original select
+        $this->select = $originalSelect;
+        
+        // Calculate pagination values
+        $page = max(1, (int)$page); // Ensure page is at least 1
+        $perPage = max(1, (int)$perPage); // Ensure items per page is at least 1
+        $lastPage = ceil($total / $perPage);
+        $lastPage = max(1, $lastPage); // Ensure last page is at least 1
+        
+        // Apply pagination limits
+        $this->limit($perPage);
+        $this->offset(($page - 1) * $perPage);
+        
+        // Get the paginated data
+        $data = $this->get();
+        
+        // Restore original limit and offset
+        $this->limit = $originalLimit;
+        $this->offset = $originalOffset;
+        
+        // Create pagination information
+        $pagination = [
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => $lastPage,
+            'first_page_url' => 1,
+            'last_page_url' => $lastPage,
+            'next_page_url' => $page < $lastPage ? $page + 1 : null,
+            'prev_page_url' => $page > 1 ? $page - 1 : null,
+            'from' => ($page - 1) * $perPage + 1,
+            'to' => min($page * $perPage, $total),
+        ];
+        
+        return [
+            'data' => $data,
+            'pagination' => $pagination
+        ];
     }
 
     public function get(array $params = [])

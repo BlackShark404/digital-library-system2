@@ -4,7 +4,7 @@
 <div class="sidebar bg-light" id="sidebar">
     
     <div class="avatar-wrapper">
-        <img src=<?=Session::get('profile_url') ?>" alt="User" class="avatar">
+        <img src=<?=Session::get('profile_url')?> alt="User" class="avatar">
         <div class="user-info">
             <div class="user-name"><?php echo isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'User'; ?></div>
             <div class="user-role">Reader</div>
