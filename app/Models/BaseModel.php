@@ -6,10 +6,12 @@ use Config\Database;
 
 class BaseModel
 {
+    // Database connection and table properties
     protected $db;
     protected $table;
-    protected $fillable = [];
     protected $primaryKey = 'id';
+    
+    // Query building properties
     protected $select = '*';
     protected $joins = [];
     protected $wheres = [];
@@ -18,29 +20,113 @@ class BaseModel
     protected $limit;
     protected $offset;
     protected $params = [];
+    
+    // Model configuration properties
+    protected $fillable = [];
     protected $useSoftDeletes = false;
     protected $timestamps = false;
     protected $createdAtColumn = 'created_at';
     protected $updatedAtColumn = 'updated_at';
     protected $deletedAtColumn = 'deleted_at';
 
+    /**
+     * Constructor
+     */
     public function __construct()
     {
         $this->db = Database::getInstance()->getConnection();
     }
 
+    // -----------------------------------------
+    // Basic CRUD Operations
+    // -----------------------------------------
+    
+    /**
+     * Get all records
+     */
     public function all()
     {
         $this->whereSoftDeleted();
         return $this->get();
     }
 
+    /**
+     * Find a record by primary key
+     */
+    public function find($id)
+    {
+        $this->where("{$this->table}.{$this->primaryKey} = :id")
+             ->whereSoftDeleted();
+        $this->bind(['id' => $id]);
+
+        $result = $this->limit(1)->get();
+        return $result[0] ?? null;
+    }
+
+    /**
+     * Get the first record from the query
+     */
     public function first()
     {
         $result = $this->limit(1)->get();
         return $result[0] ?? null;
     }
 
+    /**
+     * Insert a new record
+     */
+    public function insert(array $data)
+    {
+        if (!empty($this->fillable)) {
+            $data = array_intersect_key($data, array_flip($this->fillable));
+        }
+
+        if ($this->timestamps) {
+            $now = date('Y-m-d H:i:s');
+            $data[$this->createdAtColumn] = $now;
+            $data[$this->updatedAtColumn] = $now;
+        }
+
+        $columns = implode(',', array_keys($data));
+        $placeholders = ':' . implode(', :', array_keys($data));
+        $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders)";
+        return $this->execute($sql, $data);
+    }
+
+    /**
+     * Update records matching the where condition
+     */
+    public function update(array $data, $where, array $whereParams = [])
+    {
+        if (!empty($this->fillable)) {
+            $data = array_intersect_key($data, array_flip($this->fillable));
+        }
+
+        if ($this->timestamps) {
+            $data[$this->updatedAtColumn] = date('Y-m-d H:i:s');
+        }
+
+        $set = implode(', ', array_map(fn($k) => "$k = :$k", array_keys($data)));
+        $sql = "UPDATE {$this->table} SET $set WHERE $where";
+        return $this->execute($sql, array_merge($data, $whereParams));
+    }
+
+    /**
+     * Delete records matching the where condition
+     */
+    public function delete($where, array $params = [])
+    {
+        if ($this->useSoftDeletes) {
+            $sql = "UPDATE {$this->table} SET {$this->deletedAtColumn} = NOW() WHERE $where";
+        } else {
+            $sql = "DELETE FROM {$this->table} WHERE $where";
+        }
+        return $this->execute($sql, $params);
+    }
+
+    /**
+     * Restore soft-deleted records
+     */
     public function restore($where, array $params = [])
     {
         if (!$this->useSoftDeletes) return false;
@@ -49,6 +135,118 @@ class BaseModel
         return $this->execute($sql, $params);
     }
 
+    /**
+     * Truncate the table
+     */
+    public function truncate()
+    {
+        return $this->db->exec("TRUNCATE TABLE {$this->table}");
+    }
+
+    // -----------------------------------------
+    // Query Building Methods
+    // -----------------------------------------
+    
+    /**
+     * Select specific columns
+     */
+    public function select($columns)
+    {
+        $this->select = $columns;
+        return $this;
+    }
+    
+    /**
+     * Add a join clause
+     */
+    public function join($table, $firstKey, $secondKey, $type = 'INNER')
+    {
+        $this->joins[] = "$type JOIN $table ON $firstKey = $secondKey";
+        return $this;
+    }
+
+    /**
+     * Add a where condition
+     */
+    public function where($condition)
+    {
+        $this->wheres[] = $condition;
+        return $this;
+    }
+
+    /**
+     * Add where condition for soft deleted records
+     */
+    public function whereSoftDeleted($alias = null)
+    {
+        if ($this->useSoftDeletes) {
+            $col = $alias ? "$alias.{$this->deletedAtColumn}" : "{$this->table}.{$this->deletedAtColumn}";
+            $this->wheres[] = "$col IS NULL";
+        }
+        return $this;
+    }
+
+    /**
+     * Include soft-deleted records
+     */
+    public function withDeleted()
+    {
+        $this->useSoftDeletes = false;
+        return $this;
+    }
+
+    /**
+     * Add parameters to bind
+     */
+    public function bind(array $params)
+    {
+        $this->params = array_merge($this->params, $params);
+        return $this;
+    }
+
+    /**
+     * Add a group by clause
+     */
+    public function groupBy($columns)
+    {
+        $this->groupBy = "GROUP BY $columns";
+        return $this;
+    }
+
+    /**
+     * Add an order by clause
+     */
+    public function orderBy($columns)
+    {
+        $this->orderBy = "ORDER BY $columns";
+        return $this;
+    }
+
+    /**
+     * Set the query limit
+     */
+    public function limit($number)
+    {
+        $this->limit = (int) $number;
+        return $this;
+    }
+
+    /**
+     * Set the query offset
+     */
+    public function offset($number)
+    {
+        $this->offset = (int) $number;
+        return $this;
+    }
+
+    // -----------------------------------------
+    // Aggregation Methods
+    // -----------------------------------------
+    
+    /**
+     * Count records
+     */
     public function count($column = '*')
     {
         return $this->aggregate('COUNT', $column);
@@ -87,11 +285,17 @@ class BaseModel
         return $this->aggregate('MIN', $column);
     }
 
+    /**
+     * Get the maximum value of a column
+     */
     public function max($column)
     {
         return $this->aggregate('MAX', $column);
     }
 
+    /**
+     * Perform an aggregate function
+     */
     public function aggregate($function, $column, $alias = null)
     {
         $column = $column === '*' ? '*' : "`$column`";
@@ -106,6 +310,9 @@ class BaseModel
         return isset($result[0][$alias]) ? $result[0][$alias] : 0;
     }
 
+    /**
+     * Perform multiple aggregate functions
+     */
     public function aggregates(array $aggregates)
     {
         $selects = [];
@@ -135,161 +342,13 @@ class BaseModel
         return $result[0] ?? [];
     }
 
-    public function exists($where, array $params = [])
-    {
-        $sql = "SELECT 1 FROM {$this->table} WHERE $where LIMIT 1";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchColumn() !== false;
-    }
-
-    public function truncate()
-    {
-        return $this->db->exec("TRUNCATE TABLE {$this->table}");
-    }
-
-    public function withDeleted()
-    {
-        $this->useSoftDeletes = false;
-        return $this;
-    }
- 
-    public function select($columns)
-    {
-        $this->select = $columns;
-        return $this;
-    }
+    // -----------------------------------------
+    // Query Execution Methods
+    // -----------------------------------------
     
-    public function join($table, $firstKey, $secondKey, $type = 'INNER')
-    {
-        $this->joins[] = "$type JOIN $table ON $firstKey = $secondKey";
-        return $this;
-    }
-
-    public function where($condition)
-    {
-        $this->wheres[] = $condition;
-        return $this;
-    }
-
-    public function bind(array $params)
-    {
-        $this->params = array_merge($this->params, $params);
-        return $this;
-    }
-
-    public function whereSoftDeleted($alias = null)
-    {
-        if ($this->useSoftDeletes) {
-            $col = $alias ? "$alias.{$this->deletedAtColumn}" : "{$this->table}.{$this->deletedAtColumn}";
-            $this->wheres[] = "$col IS NULL";
-        }
-        return $this;
-    }
-
-    public function groupBy($columns)
-    {
-        $this->groupBy = "GROUP BY $columns";
-        return $this;
-    }
-
-    public function orderBy($columns)
-    {
-        $this->orderBy = "ORDER BY $columns";
-        return $this;
-    }
-
-    public function limit($number)
-    {
-        $this->limit = (int) $number;
-        return $this;
-    }
-
-    public function offset($number)
-    {
-        $this->offset = (int) $number;
-        return $this;
-    }
-
     /**
-     * Paginate the results
-     *
-     * @param int $page The page number (1-based)
-     * @param int $perPage Number of items per page
-     * @return array Array with 'data', 'pagination' information
+     * Execute the query and get results
      */
-    public function paginate($page = 1, $perPage = 15)
-{
-    // Save the current query state
-    $originalSelect = $this->select;
-    $originalJoins = $this->joins;
-    $originalWheres = $this->wheres;
-    $originalParams = $this->params;
-    $originalGroupBy = $this->groupBy;
-    $originalOrderBy = $this->orderBy;
-    $originalLimit = $this->limit;
-    $originalOffset = $this->offset;
-    
-    // For the count query, we only need a simple COUNT
-    $this->select = "COUNT(*) as total";
-    
-    // If there are joins, we need to be more specific to avoid duplicate counting
-    if (!empty($this->joins)) {
-        $this->select = "COUNT(DISTINCT {$this->table}.{$this->primaryKey}) as total";
-    }
-    
-    // Temporarily remove ORDER BY as it's not needed for counting and can cause issues
-    $this->orderBy = '';
-    
-    // Get total count
-    $countResult = $this->get();
-    $total = isset($countResult[0]['total']) ? (int)$countResult[0]['total'] : 0;
-    
-    // Restore original query state
-    $this->select = $originalSelect;
-    $this->joins = $originalJoins;
-    $this->wheres = $originalWheres;
-    $this->params = $originalParams;
-    $this->groupBy = $originalGroupBy;
-    $this->orderBy = $originalOrderBy;
-    
-    // Calculate pagination values
-    $page = max(1, (int)$page); // Ensure page is at least 1
-    $perPage = max(1, (int)$perPage); // Ensure items per page is at least 1
-    $lastPage = ceil($total / $perPage);
-    $lastPage = max(1, $lastPage); // Ensure last page is at least 1
-    
-    // Apply pagination limits
-    $this->limit($perPage);
-    $this->offset(($page - 1) * $perPage);
-    
-    // Get the paginated data
-    $data = $this->get();
-    
-    // Restore original limit and offset
-    $this->limit = $originalLimit;
-    $this->offset = $originalOffset;
-    
-    // Create pagination information
-    $pagination = [
-        'total' => $total,
-        'per_page' => $perPage,
-        'current_page' => $page,
-        'last_page' => $lastPage,
-        'first_page_url' => 1,
-        'last_page_url' => $lastPage,
-        'next_page_url' => $page < $lastPage ? $page + 1 : null,
-        'prev_page_url' => $page > 1 ? $page - 1 : null,
-        'from' => ($page - 1) * $perPage + 1,
-        'to' => min($page * $perPage, $total),
-    ];
-    
-    return [
-        'data' => $data,
-        'pagination' => $pagination
-    ];
-}
-
     public function get(array $params = [])
     {
         $sql = "SELECT {$this->select} FROM {$this->table}";
@@ -321,108 +380,103 @@ class BaseModel
         return $this->rawQuery($sql, array_merge($this->params, $params));
     }
 
-    public function find($id)
-    {
-        $this->where("{$this->table}.{$this->primaryKey} = :id")
-             ->whereSoftDeleted();
-        $this->bind(['id' => $id]);
-
-        $result = $this->limit(1)->get();
-        return $result[0] ?? null;
-    }
-
-        /**
-     * Define a hasOne relationship.
+    /**
+     * Check if records exist
      */
-    public function hasOne($relatedModel, $foreignKey, $localKey = null)
+    public function exists($where, array $params = [])
     {
-        $localKey = $localKey ?? $this->primaryKey;
-        $related = new $relatedModel;
-        return $related->where("{$related->table}.{$foreignKey} = :fk")
-                       ->bind(['fk' => $this->$localKey]);
+        $sql = "SELECT 1 FROM {$this->table} WHERE $where LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn() !== false;
     }
 
     /**
-     * Define a hasMany relationship.
+     * Paginate the results
+     *
+     * @param int $page The page number (1-based)
+     * @param int $perPage Number of items per page
+     * @return array Array with 'data', 'pagination' information
      */
-    public function hasMany($relatedModel, $foreignKey, $localKey = null)
+    public function paginate($page = 1, $perPage = 15)
     {
-        $localKey = $localKey ?? $this->primaryKey;
-        $related = new $relatedModel;
-        return $related->where("{$related->table}.{$foreignKey} = :fk")
-                       ->bind(['fk' => $this->$localKey]);
+        // Save the current query state
+        $originalSelect = $this->select;
+        $originalJoins = $this->joins;
+        $originalWheres = $this->wheres;
+        $originalParams = $this->params;
+        $originalGroupBy = $this->groupBy;
+        $originalOrderBy = $this->orderBy;
+        $originalLimit = $this->limit;
+        $originalOffset = $this->offset;
+        
+        // For the count query, we only need a simple COUNT
+        $this->select = "COUNT(*) as total";
+        
+        // If there are joins, we need to be more specific to avoid duplicate counting
+        if (!empty($this->joins)) {
+            $this->select = "COUNT(DISTINCT {$this->table}.{$this->primaryKey}) as total";
+        }
+        
+        // Temporarily remove ORDER BY as it's not needed for counting and can cause issues
+        $this->orderBy = '';
+        
+        // Get total count
+        $countResult = $this->get();
+        $total = isset($countResult[0]['total']) ? (int)$countResult[0]['total'] : 0;
+        
+        // Restore original query state
+        $this->select = $originalSelect;
+        $this->joins = $originalJoins;
+        $this->wheres = $originalWheres;
+        $this->params = $originalParams;
+        $this->groupBy = $originalGroupBy;
+        $this->orderBy = $originalOrderBy;
+        
+        // Calculate pagination values
+        $page = max(1, (int)$page); // Ensure page is at least 1
+        $perPage = max(1, (int)$perPage); // Ensure items per page is at least 1
+        $lastPage = ceil($total / $perPage);
+        $lastPage = max(1, $lastPage); // Ensure last page is at least 1
+        
+        // Apply pagination limits
+        $this->limit($perPage);
+        $this->offset(($page - 1) * $perPage);
+        
+        // Get the paginated data
+        $data = $this->get();
+        
+        // Restore original limit and offset
+        $this->limit = $originalLimit;
+        $this->offset = $originalOffset;
+        
+        // Create pagination information
+        $pagination = [
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => $lastPage,
+            'first_page_url' => 1,
+            'last_page_url' => $lastPage,
+            'next_page_url' => $page < $lastPage ? $page + 1 : null,
+            'prev_page_url' => $page > 1 ? $page - 1 : null,
+            'from' => ($page - 1) * $perPage + 1,
+            'to' => min($page * $perPage, $total),
+        ];
+        
+        return [
+            'data' => $data,
+            'pagination' => $pagination
+        ];
     }
 
+    // -----------------------------------------
+    // Internal Helper Methods
+    // -----------------------------------------
+    
     /**
-     * Define a belongsTo relationship.
+     * Execute a raw query and fetch results
      */
-    public function belongsTo($relatedModel, $foreignKey, $ownerKey = 'id')
-    {
-        $related = new $relatedModel;
-        return $related->where("{$related->table}.{$ownerKey} = :fk")
-                       ->bind(['fk' => $this->$foreignKey]);
-    }
-
-    /**
-     * Define a belongsToMany relationship (pivot table).
-     */
-    public function belongsToMany($relatedModel, $pivotTable, $foreignKey, $relatedKey, $localKey = null)
-    {
-        $localKey = $localKey ?? $this->primaryKey;
-        $related = new $relatedModel;
-        $relatedTable = $related->table;
-
-        $sql = "SELECT {$relatedTable}.* FROM {$relatedTable}
-                INNER JOIN {$pivotTable} ON {$pivotTable}.{$relatedKey} = {$relatedTable}.{$related->primaryKey}
-                WHERE {$pivotTable}.{$foreignKey} = :fk";
-
-        return $related->rawQuery($sql, ['fk' => $this->$localKey]);
-    }
-
-
-    public function insert(array $data)
-    {
-        if (!empty($this->fillable)) {
-            $data = array_intersect_key($data, array_flip($this->fillable));
-        }
-
-        if ($this->timestamps) {
-            $now = date('Y-m-d H:i:s');
-            $data[$this->createdAtColumn] = $now;
-            $data[$this->updatedAtColumn] = $now;
-        }
-
-        $columns = implode(',', array_keys($data));
-        $placeholders = ':' . implode(', :', array_keys($data));
-        $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders)";
-        return $this->execute($sql, $data);
-    }
-
-    public function update(array $data, $where, array $whereParams = [])
-    {
-        if (!empty($this->fillable)) {
-            $data = array_intersect_key($data, array_flip($this->fillable));
-        }
-
-        if ($this->timestamps) {
-            $data[$this->updatedAtColumn] = date('Y-m-d H:i:s');
-        }
-
-        $set = implode(', ', array_map(fn($k) => "$k = :$k", array_keys($data)));
-        $sql = "UPDATE {$this->table} SET $set WHERE $where";
-        return $this->execute($sql, array_merge($data, $whereParams));
-    }
-
-    public function delete($where, array $params = [])
-    {
-        if ($this->useSoftDeletes) {
-            $sql = "UPDATE {$this->table} SET {$this->deletedAtColumn} = NOW() WHERE $where";
-        } else {
-            $sql = "DELETE FROM {$this->table} WHERE $where";
-        }
-        return $this->execute($sql, $params);
-    }
-
     protected function rawQuery($query, $params = [])
     {
         $stmt = $this->db->prepare($query);
@@ -432,6 +486,9 @@ class BaseModel
         return $result;
     }
 
+    /**
+     * Execute a query without fetching results
+     */
     protected function execute($query, $params = [])
     {
         $stmt = $this->db->prepare($query);
@@ -440,6 +497,9 @@ class BaseModel
         return $result;
     }
 
+    /**
+     * Reset query builder state
+     */
     protected function reset()
     {
         $this->select = '*';
