@@ -18,8 +18,8 @@ class BaseModel
     protected $limit;
     protected $offset;
     protected $params = [];
-    protected $useSoftDeletes = true;
-    protected $timestamps = true;
+    protected $useSoftDeletes = false;
+    protected $timestamps = false;
     protected $createdAtColumn = 'created_at';
     protected $updatedAtColumn = 'updated_at';
     protected $deletedAtColumn = 'deleted_at';
@@ -219,56 +219,76 @@ class BaseModel
      * @return array Array with 'data', 'pagination' information
      */
     public function paginate($page = 1, $perPage = 15)
-    {
-        // Calculate the total records before applying limit and offset
-        $originalSelect = $this->select;
-        $originalLimit = $this->limit;
-        $originalOffset = $this->offset;
-        
-        // Get total count
-        $this->select = "COUNT(*) as total";
-        $countResult = $this->get();
-        $total = isset($countResult[0]['total']) ? (int)$countResult[0]['total'] : 0;
-        
-        // Restore original select
-        $this->select = $originalSelect;
-        
-        // Calculate pagination values
-        $page = max(1, (int)$page); // Ensure page is at least 1
-        $perPage = max(1, (int)$perPage); // Ensure items per page is at least 1
-        $lastPage = ceil($total / $perPage);
-        $lastPage = max(1, $lastPage); // Ensure last page is at least 1
-        
-        // Apply pagination limits
-        $this->limit($perPage);
-        $this->offset(($page - 1) * $perPage);
-        
-        // Get the paginated data
-        $data = $this->get();
-        
-        // Restore original limit and offset
-        $this->limit = $originalLimit;
-        $this->offset = $originalOffset;
-        
-        // Create pagination information
-        $pagination = [
-            'total' => $total,
-            'per_page' => $perPage,
-            'current_page' => $page,
-            'last_page' => $lastPage,
-            'first_page_url' => 1,
-            'last_page_url' => $lastPage,
-            'next_page_url' => $page < $lastPage ? $page + 1 : null,
-            'prev_page_url' => $page > 1 ? $page - 1 : null,
-            'from' => ($page - 1) * $perPage + 1,
-            'to' => min($page * $perPage, $total),
-        ];
-        
-        return [
-            'data' => $data,
-            'pagination' => $pagination
-        ];
+{
+    // Save the current query state
+    $originalSelect = $this->select;
+    $originalJoins = $this->joins;
+    $originalWheres = $this->wheres;
+    $originalParams = $this->params;
+    $originalGroupBy = $this->groupBy;
+    $originalOrderBy = $this->orderBy;
+    $originalLimit = $this->limit;
+    $originalOffset = $this->offset;
+    
+    // For the count query, we only need a simple COUNT
+    $this->select = "COUNT(*) as total";
+    
+    // If there are joins, we need to be more specific to avoid duplicate counting
+    if (!empty($this->joins)) {
+        $this->select = "COUNT(DISTINCT {$this->table}.{$this->primaryKey}) as total";
     }
+    
+    // Temporarily remove ORDER BY as it's not needed for counting and can cause issues
+    $this->orderBy = '';
+    
+    // Get total count
+    $countResult = $this->get();
+    $total = isset($countResult[0]['total']) ? (int)$countResult[0]['total'] : 0;
+    
+    // Restore original query state
+    $this->select = $originalSelect;
+    $this->joins = $originalJoins;
+    $this->wheres = $originalWheres;
+    $this->params = $originalParams;
+    $this->groupBy = $originalGroupBy;
+    $this->orderBy = $originalOrderBy;
+    
+    // Calculate pagination values
+    $page = max(1, (int)$page); // Ensure page is at least 1
+    $perPage = max(1, (int)$perPage); // Ensure items per page is at least 1
+    $lastPage = ceil($total / $perPage);
+    $lastPage = max(1, $lastPage); // Ensure last page is at least 1
+    
+    // Apply pagination limits
+    $this->limit($perPage);
+    $this->offset(($page - 1) * $perPage);
+    
+    // Get the paginated data
+    $data = $this->get();
+    
+    // Restore original limit and offset
+    $this->limit = $originalLimit;
+    $this->offset = $originalOffset;
+    
+    // Create pagination information
+    $pagination = [
+        'total' => $total,
+        'per_page' => $perPage,
+        'current_page' => $page,
+        'last_page' => $lastPage,
+        'first_page_url' => 1,
+        'last_page_url' => $lastPage,
+        'next_page_url' => $page < $lastPage ? $page + 1 : null,
+        'prev_page_url' => $page > 1 ? $page - 1 : null,
+        'from' => ($page - 1) * $perPage + 1,
+        'to' => min($page * $perPage, $total),
+    ];
+    
+    return [
+        'data' => $data,
+        'pagination' => $pagination
+    ];
+}
 
     public function get(array $params = [])
     {
@@ -310,6 +330,55 @@ class BaseModel
         $result = $this->limit(1)->get();
         return $result[0] ?? null;
     }
+
+        /**
+     * Define a hasOne relationship.
+     */
+    public function hasOne($relatedModel, $foreignKey, $localKey = null)
+    {
+        $localKey = $localKey ?? $this->primaryKey;
+        $related = new $relatedModel;
+        return $related->where("{$related->table}.{$foreignKey} = :fk")
+                       ->bind(['fk' => $this->$localKey]);
+    }
+
+    /**
+     * Define a hasMany relationship.
+     */
+    public function hasMany($relatedModel, $foreignKey, $localKey = null)
+    {
+        $localKey = $localKey ?? $this->primaryKey;
+        $related = new $relatedModel;
+        return $related->where("{$related->table}.{$foreignKey} = :fk")
+                       ->bind(['fk' => $this->$localKey]);
+    }
+
+    /**
+     * Define a belongsTo relationship.
+     */
+    public function belongsTo($relatedModel, $foreignKey, $ownerKey = 'id')
+    {
+        $related = new $relatedModel;
+        return $related->where("{$related->table}.{$ownerKey} = :fk")
+                       ->bind(['fk' => $this->$foreignKey]);
+    }
+
+    /**
+     * Define a belongsToMany relationship (pivot table).
+     */
+    public function belongsToMany($relatedModel, $pivotTable, $foreignKey, $relatedKey, $localKey = null)
+    {
+        $localKey = $localKey ?? $this->primaryKey;
+        $related = new $relatedModel;
+        $relatedTable = $related->table;
+
+        $sql = "SELECT {$relatedTable}.* FROM {$relatedTable}
+                INNER JOIN {$pivotTable} ON {$pivotTable}.{$relatedKey} = {$relatedTable}.{$related->primaryKey}
+                WHERE {$pivotTable}.{$foreignKey} = :fk";
+
+        return $related->rawQuery($sql, ['fk' => $this->$localKey]);
+    }
+
 
     public function insert(array $data)
     {
