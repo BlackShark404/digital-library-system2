@@ -11,7 +11,6 @@ class UserManagementController extends BaseController
         $this->userModel = $this->loadModel('UserModel');
     }
     
-    
     /**
      * Process DataTables server-side request for users data
      * 

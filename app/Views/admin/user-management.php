@@ -1,69 +1,88 @@
 <?php
-use Core\Session;
 
 include $headerPath;
 
-// Access the provided data
-$users = $viewData['users'] ?? [];
-$pagination = $viewData['pagination'] ?? [];
-$filters = $viewData['filters'] ?? [];
 ?>
 
 <div class="container">
-    <h1 class="mb-4"><i class="bi bi-people me-2"></i>User Management</h1>
+    <h1 class="mb-4 text-primary"><i class="bi bi-people me-2"></i>User Management</h1>
 
-    <!-- Search and Filter Options -->
-    <div class="card mb-4">
+    <!-- Search and Filter Options with Export Dropdown -->
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-header bg-light py-3">
+            <h5 class="card-title mb-0 text-secondary">
+                <i class="fas fa-filter me-2"></i>Filters and Actions
+            </h5>
+        </div>
         <div class="card-body">
             <form id="userFiltersForm">
-                <div class="row g-3">
-                    <div class="col-md-4">
+                <div class="row g-3 align-items-center">
+                    
+                    <div class="col-md-3">
+                        <label for="roleFilter" class="form-label small text-muted">Role</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" placeholder="Search users..." 
-                                  id="userSearch" name="search" value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
-                            <button class="btn btn-outline-secondary" type="submit">
-                                <i class="fas fa-search"></i>
-                            </button>
+                            <span class="input-group-text bg-white"><i class="fas fa-user-tag text-secondary"></i></span>
+                            <select class="form-select" id="roleFilter" name="role">
+                                <option value="">All Roles</option>
+                                <option value="admin" <?= ($filters['role'] ?? '') === 'admin' ? 'selected' : '' ?>>Admin</option>
+                                <option value="user" <?= ($filters['role'] ?? '') === 'user' ? 'selected' : '' ?>>User</option>
+                            </select>
                         </div>
                     </div>
+                    
                     <div class="col-md-3">
-                        <select class="form-select" id="roleFilter" name="role">
-                            <option value="">All Roles</option>
-                            <option value="admin" <?= ($filters['role'] ?? '') === 'admin' ? 'selected' : '' ?>>Admin</option>
-                            <option value="user" <?= ($filters['role'] ?? '') === 'user' ? 'selected' : '' ?>>User</option>
-                        </select>
+                        <label for="statusFilter" class="form-label small text-muted">Status</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="fas fa-toggle-on text-secondary"></i></span>
+                            <select class="form-select" id="statusFilter" name="status">
+                                <option value="">All Status</option>
+                                <option value="active" <?= ($filters['status'] ?? '') === 'active' ? 'selected' : '' ?>>Active</option>
+                                <option value="inactive" <?= ($filters['status'] ?? '') === 'inactive' ? 'selected' : '' ?>>Inactive</option>
+                            </select>
+                        </div>
                     </div>
+                    
+                    
+                    
                     <div class="col-md-3">
-                        <select class="form-select" id="statusFilter" name="status">
-                            <option value="">All Status</option>
-                            <option value="active" <?= ($filters['status'] ?? '') === 'active' ? 'selected' : '' ?>>Active</option>
-                            <option value="inactive" <?= ($filters['status'] ?? '') === 'inactive' ? 'selected' : '' ?>>Inactive</option>
-                        </select>
+                        <label class="form-label small text-muted">Export Data</label>
+                        <div class="dropdown">
+                            <button class="btn btn-success w-100 d-flex align-items-center justify-content-center shadow-sm dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-file-export me-2"></i> Export Data
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end w-100 shadow-sm border-0" aria-labelledby="exportDropdown">
+                                <li>
+                                    <a class="dropdown-item py-2 d-flex align-items-center" href="#" id="exportCsv">
+                                        <i class="fas fa-file-csv me-2 text-success"></i> Export CSV
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item py-2 d-flex align-items-center" href="#" id="exportExcel">
+                                        <i class="fas fa-file-excel me-2 text-success"></i> Export Excel
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item py-2 d-flex align-items-center" href="#" id="exportPdf">
+                                        <i class="fas fa-file-pdf me-2 text-danger"></i> Export PDF
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                    <div class="col-md-2">
-                        <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addUserModal" type="button">
-                            <i class="fas fa-plus"></i> Add User
+
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Add New</label>
+                        <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center shadow-sm" data-bs-toggle="modal" data-bs-target="#addUserModal" type="button">
+                            <i class="fas fa-plus-circle me-2"></i> Add User
                         </button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
-
-    <!-- Export Buttons -->
-    <div class="mb-3">
-        <div class="btn-group" role="group" aria-label="Export options">
-            <button type="button" class="btn btn-outline-secondary" id="exportCsv">
-                <i class="fas fa-file-csv me-1"></i> Export CSV
-            </button>
-            <button type="button" class="btn btn-outline-secondary" id="exportExcel">
-                <i class="fas fa-file-excel me-1"></i> Export Excel
-            </button>
-            <button type="button" class="btn btn-outline-secondary" id="exportPdf">
-                <i class="fas fa-file-pdf me-1"></i> Export PDF
-            </button>
-        </div>
-    </div>
+    
 
     <!-- User List Table -->
     <div class="card">
@@ -344,257 +363,6 @@ $filters = $viewData['filters'] ?? [];
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="/assets/js/utility/toast-notifications.js"></script>
 <script src="/assets/js/utility/form-handler.js"></script>
-
-<script>
-    $(document).ready(function() {
-        // Define the action buttons for the DataTable
-        const actions = [
-            {
-                name: 'edit',
-                icon: '<i class="fas fa-pen"></i>',
-                class: 'btn-outline-primary',
-                attributes: 'title="Edit User"'
-            },
-            {
-                name: 'view',
-                icon: '<i class="fas fa-eye"></i>',
-                class: 'btn-outline-info',
-                attributes: 'title="View Details"'
-            },
-            {
-                name: 'delete',
-                icon: '<i class="fas fa-trash"></i>',
-                class: 'btn-outline-danger',
-                attributes: 'title="Delete User"'
-            }
-        ];
-
-        // Column definitions for DataTable
-        const columns = [
-            { data: 'id', name: 'id' },
-            { 
-                data: null,
-                name: 'name',
-                render: function(data, type, row) {
-                    return row.first_name + ' ' + row.last_name;
-                }
-            },
-            { data: 'email', name: 'email' },
-            { 
-                data: 'role_name',
-                name: 'role_name',
-                render: function(data, type, row) {
-                    const badgeClass = data === 'admin' ? 'bg-danger' : 'bg-primary';
-                    return `<span class="badge ${badgeClass}">${data.charAt(0).toUpperCase() + data.slice(1)}</span>`;
-                }
-            },
-            { 
-                data: 'is_active',
-                name: 'is_active',
-                render: function(data, type, row) {
-                    return data == 1 ? 
-                        '<span class="badge bg-success">Active</span>' : 
-                        '<span class="badge bg-warning text-dark">Inactive</span>';
-                }
-            },
-            { 
-                data: 'created_at',
-                name: 'created_at',
-                render: function(data, type, row) {
-                    return new Date(data).toISOString().split('T')[0];
-                }
-            },
-            { 
-                data: 'last_login',
-                name: 'last_login',
-                render: function(data, type, row) {
-                    return data ? new Date(data).toISOString().replace('T', ' ').substring(0, 16) : 'Never';
-                }
-            },
-            { 
-                data: null,
-                orderable: false, 
-                searchable: false,
-                render: DataTablesHelper.createActionColumn(actions)
-            }
-        ];
-
-        // Initialize DataTable with server-side processing
-        const usersTable = DataTablesHelper.initServerSide(
-            'usersTable',
-            '/admin/users/data',
-            columns,
-            {
-                order: [[0, 'desc']],
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                // Add any additional DataTables options here
-                language: {
-                    processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
-                    emptyTable: 'No users found',
-                    zeroRecords: 'No matching users found'
-                }
-            }
-        );
-
-        // Handle form submission for adding new users
-        DataTablesHelper.handleFormSubmit(
-            'addUserForm',
-            'usersTable',
-            '/admin/users/create',
-            function(response) {
-                showToast('Success', 'User added successfully!', 'success');
-            }
-        );
-        
-        // Handle form submission for editing users
-        DataTablesHelper.handleFormSubmit(
-            'editUserForm',
-            'usersTable',
-            '/admin/users/update',
-            function(response) {
-                showToast('Success', 'User updated successfully!', 'success');
-            }
-        );
-        
-        // Bind action buttons events
-        DataTablesHelper.bindActionEvents('usersTable', {
-            edit: function(id, rowData, row) {
-                // Populate edit form with user data
-                $('#editUserId').val(rowData.id);
-                $('#editUserName').text(rowData.first_name + ' ' + rowData.last_name);
-                $('#editFirstName').val(rowData.first_name);
-                $('#editLastName').val(rowData.last_name);
-                $('#editEmail').val(rowData.email);
-                $('#editRole').val(rowData.role_id);
-                $('#editStatus').val(rowData.is_active);
-                $('#editPassword').val(''); // Clear password field
-                
-                // Show edit modal
-                $('#editUserModal').modal('show');
-            },
-            view: function(id, rowData, row) {
-                // Populate view modal with user data
-                $('#viewUserId').text(rowData.id);
-                $('#viewUserUsername').text(rowData.email.split('@')[0]);
-                $('#viewUserName').text(rowData.first_name + ' ' + rowData.last_name);
-                $('#viewUserEmail').text(rowData.email);
-                
-                // Set role badge with appropriate class
-                const roleBadgeClass = rowData.role_name === 'admin' ? 'bg-danger' : 'bg-primary';
-                $('#viewUserRole').html(`<span class="badge ${roleBadgeClass}">${rowData.role_name.charAt(0).toUpperCase() + rowData.role_name.slice(1)}</span>`);
-                
-                // Set status badge with appropriate class
-                const statusBadgeClass = rowData.is_active == 1 ? 'bg-success' : 'bg-warning text-dark';
-                const statusText = rowData.is_active == 1 ? 'Active' : 'Inactive';
-                $('#viewUserStatus').html(`<span class="badge ${statusBadgeClass}">${statusText}</span>`);
-                
-                // Set dates
-                $('#viewUserRegistered').text(new Date(rowData.created_at).toISOString().split('T')[0]);
-                $('#viewUserLastLogin').text(rowData.last_login ? 
-                    new Date(rowData.last_login).toISOString().replace('T', ' ').substring(0, 16) : 'Never');
-                
-                // Set sample statistics (in a real app, you would fetch these from the server)
-                $('#viewUserLogins').text(Math.floor(Math.random() * 200));
-                $('#viewUserPurchases').text(Math.floor(Math.random() * 20));
-                $('#viewUserSessions').text(Math.floor(Math.random() * 100));
-                $('#viewUserHours').text((Math.random() * 200).toFixed(1));
-                $('#viewUserComments').text(Math.floor(Math.random() * 50));
-                $('#viewUserRatings').text(Math.floor(Math.random() * 30));
-                
-                // Setup edit button in view modal
-                $('#editUserBtn').off('click').on('click', function() {
-                    $('#viewUserModal').modal('hide');
-                    // Trigger the edit action with a slight delay to allow modal transition
-                    setTimeout(function() {
-                        $('#usersTable').find('.edit-btn[data-id="' + id + '"]').trigger('click');
-                    }, 500);
-                });
-                
-                // Show view modal
-                $('#viewUserModal').modal('show');
-            },
-            delete: function(id, rowData, row) {
-                // Populate delete modal
-                $('#deleteUserId').val(id);
-                $('#deleteUserName').text(rowData.first_name + ' ' + rowData.last_name);
-                $('#confirmDelete').prop('checked', false);
-                $('#deleteUserBtn').prop('disabled', true);
-                
-                // Show delete modal
-                $('#deleteUserModal').modal('show');
-            }
-        });
-        
-        // Handle delete confirmation checkbox
-        $('#confirmDelete').on('change', function() {
-            $('#deleteUserBtn').prop('disabled', !$(this).is(':checked'));
-        });
-        
-        // Handle delete user button click
-        $('#deleteUserBtn').on('click', function() {
-            const userId = $('#deleteUserId').val();
-            
-            $.ajax({
-                url: '/admin/users/delete',
-                type: 'POST',
-                data: {
-                    id: userId,
-                    _token: typeof csrfToken !== 'undefined' ? csrfToken : ''
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        // Close delete modal
-                        $('#deleteUserModal').modal('hide');
-                        
-                        // Refresh table
-                        DataTablesHelper.refreshTable('usersTable');
-                        
-                        // Show success message
-                        showToast('Success', 'User deleted successfully!', 'success');
-                    } else {
-                        showToast('Error', response.message || 'Failed to delete user.', 'error');
-                    }
-                },
-                error: function() {
-                    showToast('Error', 'Server error occurred', 'error');
-                }
-            });
-        });
-
-        // Handle filter form submission
-        $('#userFiltersForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            // Apply filters to DataTable
-            usersTable.search($('#userSearch').val()).draw();
-            
-            // Apply custom filters
-            usersTable.column(3).search($('#roleFilter').val()).draw();
-            usersTable.column(4).search($('#statusFilter').val()).draw();
-        });
-        
-        // Reset filters button
-        $('#resetFilters').on('click', function() {
-            $('#userFiltersForm')[0].reset();
-            usersTable.search('').columns().search('').draw();
-        });
-        
-        // Export buttons
-        $('#exportCsv').on('click', function() {
-            DataTablesHelper.exportData('usersTable', 'csv', 'Users_Export');
-        });
-        
-        $('#exportExcel').on('click', function() {
-            DataTablesHelper.exportData('usersTable', 'excel', 'Users_Export');
-        });
-        
-        $('#exportPdf').on('click', function() {
-            DataTablesHelper.exportData('usersTable', 'pdf', 'Users_Export');
-        });
-    });
-</script>
 
 <?php
 include $footerPath;

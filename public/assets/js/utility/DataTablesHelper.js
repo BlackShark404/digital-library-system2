@@ -155,7 +155,7 @@ class DataTablesHelper {
     // Check if toast container exists, if not create it
     let toastContainer = $('.toast-container');
     if (toastContainer.length === 0) {
-      $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3"></div>');
+      $('body').append('<div class="toast-container position-fixed bottom-0 end-0 p-3"></div>');
       toastContainer = $('.toast-container');
     }
     
