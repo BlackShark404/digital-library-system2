@@ -80,13 +80,11 @@ class BaseController
         exit;
     }
 
-
     protected function redirect($url) {
         header("Location: $url");
         exit;
     }
     
-
     protected function loadModel($model) {
         $modelClass = "App\\Models\\$model";
 

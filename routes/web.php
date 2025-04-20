@@ -42,7 +42,7 @@ $router->map('GET', '/login', 'App\Controllers\AuthController#loginForm', 'login
 $router->map('POST', '/login', 'App\Controllers\AuthController#login', 'login_post');
 $router->map('GET', '/register', 'App\Controllers\AuthController#registerForm', 'register');
 $router->map('POST', '/register', 'App\Controllers\AuthController#register', 'register_post');
-
+    
 
 // Admin routes
 $router->map('GET', '/admin/dashboard', 'App\Controllers\AdminController#renderAdminDashboard', 'admin_dashboard');
