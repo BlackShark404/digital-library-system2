@@ -1,15 +1,6 @@
 <?php
-// Set page title
-$page_title = 'Reading Sessions';
-
 // Include header
-include 'includes/header.php';
-
-// Check if user is admin, if not redirect
-if (!is_admin()) {
-    header('Location: ../login.php');
-    exit();
-}
+include $headerPath;
 
 // Hardcoded reading session data
 $reading_sessions = [
@@ -474,5 +465,5 @@ $unique_books = count(array_unique(array_column($reading_sessions, 'book_id')));
 
 <?php
 // Include footer
-include 'includes/footer.php';
+include $footerPath;
 ?>

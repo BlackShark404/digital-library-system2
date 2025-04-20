@@ -6,7 +6,9 @@ $publicRoutes = [
     '/login',
     '/register',
     '/contact-us',
-    'user-data'
+    '/user-data',
+    '/paginate-test',
+    '/datable-test'
 ];
 
 // Define the access control map for routes
@@ -40,7 +42,7 @@ $router->map('GET', '/login', 'App\Controllers\AuthController#loginForm', 'login
 $router->map('POST', '/login', 'App\Controllers\AuthController#login', 'login_post');
 $router->map('GET', '/register', 'App\Controllers\AuthController#registerForm', 'register');
 $router->map('POST', '/register', 'App\Controllers\AuthController#register', 'register_post');
-$router->map('GET', '/logout', 'App\Controllers\AuthController#logout', 'logout');
+
 
 // Admin routes
 $router->map('GET', '/admin/dashboard', 'App\Controllers\AdminController#renderAdminDashboard', 'admin_dashboard');
@@ -49,14 +51,26 @@ $router->map('GET', '/admin/book-management', 'App\Controllers\AdminController#r
 $router->map('GET', '/admin/reading-sessions', 'App\Controllers\AdminController#renderReadingSessions', 'reading-session');
 $router->map('GET', '/admin/purchases', 'App\Controllers\AdminController#renderPurchases', 'purchases');
 $router->map('GET', '/admin/activity-logs', 'App\Controllers\AdminController#renderActivityLogs', 'activity-log');
+$router->map('GET', '/admin/user-management', 'App\Controllers\UserManagementController#displayPaginatedUsers', 'display-paginated-users');
+$router->map('GET', '/admin/admin-profile', 'App\Controllers\AdminController#renderAdminProfile', 'admin-profile');
 
-$router->map('POST', '/admin/user-management', 'App\Controllers\UserManagementController#registerUsers', 'register-users');
-
+// User management routes
+$router->map('POST', '/admin/users/create', 'App\Controllers\UserManagementController#create', 'register-users');
+$router->map('GET', '/admin/users/data', 'App\Controllers\UserManagementController#getData', 'users_data');
+$router->map('POST', '/admin/users/create', 'App\Controllers\UserManagementController#create', 'users_create');
+$router->map('POST', '/admin/users/update', 'App\Controllers\UserManagementController#update', 'users_update');
+$router->map('POST', '/admin/users/delete', 'App\Controllers\UserManagementController#delete', 'users_delete');
 
 // User routes
 $router->map('GET', '/user/dashboard', 'App\Controllers\UserController#renderUserDashboard', 'user_dashboard');
+$router->map('GET', '/user/browse-books', 'App\Controllers\UserController#renderBrowseBooks', 'user_browse_books');
+$router->map('GET', '/user/reading-sessions', 'App\Controllers\UserController#renderReadingSessions', 'user_reading_sessions');
+$router->map('GET', '/user/wishlist', 'App\Controllers\UserController#renderWishlist', 'user_wishlist');
+$router->map('GET', '/user/purchases', 'App\Controllers\UserController#renderPurchases', 'user_purchases');
+$router->map('GET', '/user/user-profile', 'App\Controllers\UserController#renderUserProfile', 'user_profile');
 
-
+// Logout routes
+$router->map('GET', '/logout', 'App\Controllers\AuthController#logout', 'logout');
 
 // Error routes
 $router->map('GET', '/error/404', 'App\Controllers\ErrorController#error404', 'error_404');
@@ -70,3 +84,5 @@ $router->map('GET', '/view', 'App\Controllers\TestController#viewData', 'view-da
 
 // Testing routes
 $router->map('GET', '/user-data', 'App\Controllers\TestController#showUser', 'test-modal');
+$router->map('GET', '/paginate', 'App\Controllers\TestController#paginateUsers', 'paginate-test');
+$router->map('GET', '/datable', 'App\Controllers\TestController#renderDatableTest', 'datable-test');

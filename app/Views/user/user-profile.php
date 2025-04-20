@@ -1,5 +1,8 @@
 <?php
 // Include header
+
+use Core\Session;
+
 include $headerPath;
 ?>
 
@@ -9,7 +12,7 @@ include $headerPath;
             <div class="card">
                 <div class="card-body text-center">
                     <div class="mb-3">
-                        <img src="https://via.placeholder.com/150" class="rounded-circle img-fluid mx-auto d-block" alt="Profile Picture" style="width: 150px; height: 150px; object-fit: cover;">
+                        <img src=<?= Session::get("profile_url") ?> class="rounded-circle img-fluid mx-auto d-block" alt="Profile Picture" style="width: 130px; height: 130px; object-fit: cover;">
                     </div>
                     <h5 class="card-title">John Doe</h5>
                     <p class="text-muted">Member since: January 15, 2025</p>
@@ -52,7 +55,7 @@ include $headerPath;
                             <h6 class="mb-0">Full Name</h6>
                         </div>
                         <div class="col-sm-9 text-secondary">
-                            John Doe
+                            <?= Session::get("full_name") ?>
                         </div>
                     </div>
                     <hr>
@@ -61,7 +64,7 @@ include $headerPath;
                             <h6 class="mb-0">Email</h6>
                         </div>
                         <div class="col-sm-9 text-secondary">
-                            johndoe@example.com
+                            <?= Session::get("user_email") ?>
                         </div>
                     </div>
                     <hr>
@@ -95,9 +98,7 @@ include $headerPath;
                     <a href="#" class="btn btn-outline-primary mb-2" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                         <i class="bi bi-key"></i> Change Password
                     </a>
-                    <a href="#" class="btn btn-outline-primary mb-2 ms-2" data-bs-toggle="modal" data-bs-target="#notificationSettingsModal">
-                        <i class="bi bi-bell"></i> Notification Settings
-                    </a>
+                    
                     <hr>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -182,36 +183,16 @@ include $headerPath;
                     <div class="mb-3">
                         <label class="form-label">Reading Preferences</label>
                         <div class="d-flex flex-wrap gap-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="genre1" checked>
-                                <label class="form-check-label" for="genre1">
-                                    Fantasy
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="genre2" checked>
-                                <label class="form-check-label" for="genre2">
-                                    Science Fiction
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="genre3" checked>
-                                <label class="form-check-label" for="genre3">
-                                    Mystery
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="genre4">
-                                <label class="form-check-label" for="genre4">
-                                    Romance
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="genre5">
-                                <label class="form-check-label" for="genre5">
-                                    Biography
-                                </label>
-                            </div>
+                            <?php
+                            $genres = ['Fiction', 'Non-Fiction', 'Science Fiction', 'Fantasy', 'Mystery', 'Thriller', 'Romance', 'Biography', 'Self-Help', 'History'];
+                            foreach ($genres as $index => $genre): ?>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="<?= $genre ?>" id="genre<?= $index + 1 ?>">
+                                    <label class="form-check-label" for="genre<?= $index + 1 ?>">
+                                        <?= $genre ?>
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </form>
@@ -283,56 +264,7 @@ include $headerPath;
     </div>
 </div>
 
-<!-- Notification Settings Modal -->
-<div class="modal fade" id="notificationSettingsModal" tabindex="-1" aria-labelledby="notificationSettingsModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="notificationSettingsModalLabel">Notification Settings</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
-                            <label class="form-check-label" for="emailNotifications">Email Notifications</label>
-                        </div>
-                        <div class="form-text text-muted mb-3">Receive notifications about new books, promotions, and reading reminders via email.</div>
-                    </div>
 
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="readingReminders" checked>
-                            <label class="form-check-label" for="readingReminders">Reading Reminders</label>
-                        </div>
-                        <div class="form-text text-muted mb-3">Get reminders to continue your reading sessions.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="newBookNotifications" checked>
-                            <label class="form-check-label" for="newBookNotifications">New Book Notifications</label>
-                        </div>
-                        <div class="form-text text-muted mb-3">Be notified when new books are added to our collection.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="promotionNotifications">
-                            <label class="form-check-label" for="promotionNotifications">Promotional Notifications</label>
-                        </div>
-                        <div class="form-text text-muted">Receive updates about promotions, discounts, and special offers.</div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Save Settings</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Delete Account Modal -->
 <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">

@@ -28,8 +28,18 @@ class UserModel extends BaseModel
         'last_login'
     ];
 
+    protected $searchableFields = ['first_name', 'last_name', 'email']; // Updated from 'name' to 'first_name' and 'last_name'
+
     protected $timestamps = true;
     protected $useSoftDeletes = true;
+
+    public function findById() {
+        return $this->select('users.*, roles.name AS role_name')
+                    ->join('roles', 'users.role_id', 'roles.id')
+                    ->where('users.id = :id')
+                    ->bind(['id => $id'])
+                    ->first();
+    }
 
     public function findByEmail($email)
     {
@@ -93,6 +103,27 @@ class UserModel extends BaseModel
 
         // No need to manually set updated_at as BaseModel.update() handles this
         return $this->update($data, "{$this->primaryKey} = :id", ['id' => $id]);
+    }
+
+    /**
+     * Delete a user by ID
+     * 
+     * @param int $id The user ID to delete
+     * @param bool $permanent Whether to permanently delete the user or use soft delete
+     * @return bool Success status
+     */
+    public function deleteUser($id, $permanent = false)
+    {
+        if ($permanent && $this->useSoftDeletes) {
+            // Permanently delete the user from the database
+            return $this->execute(
+                "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id",
+                ['id' => $id]
+            );
+        }
+        
+        // Use the standard delete method which respects soft deletes
+        return $this->delete("{$this->primaryKey} = :id", ['id' => $id]);
     }
 
     public function emailExists($email)
@@ -299,6 +330,62 @@ class UserModel extends BaseModel
         return $this->paginate($page, $perPage);
     }
 
+    /**
+     * Count users with optional filters
+     * 
+     * @param array $filters Optional filters: role, status, search
+     * @return int Number of users matching the filters
+     */
+    public function countUsers(array $filters = [])
+    {
+        // Start with a base query
+        $this->select('COUNT(*) as total')
+            ->whereSoftDeleted();
+        
+        // Apply filters if provided
+        if (!empty($filters)) {
+            // Role filter
+            if (!empty($filters['role'])) {
+                $this->join('roles', 'users.role_id', 'roles.id')
+                    ->where("roles.name = :role")
+                    ->bind(['role' => $filters['role']]);
+            }
+            
+            // Status filter
+            if (isset($filters['status'])) {
+                if ($filters['status'] === 'active') {
+                    $this->where("is_active = :active")
+                        ->bind(['active' => true]);
+                } elseif ($filters['status'] === 'inactive') {
+                    $this->where("is_active = :inactive")
+                        ->bind(['inactive' => false]);
+                }
+            }
+            
+            // Search filter (name or email)
+            if (!empty($filters['search'])) {
+                $searchTerm = $filters['search'];
+                $this->where("(first_name LIKE :search OR last_name LIKE :search OR email LIKE :search)")
+                    ->bind(['search' => "%$searchTerm%"]);
+            }
+            
+            // Date range filter
+            if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+                $this->where("created_at BETWEEN :date_from AND :date_to")
+                    ->bind([
+                        'date_from' => $filters['date_from'],
+                        'date_to' => $filters['date_to']
+                    ]);
+            }
+        }
+        
+        // Execute the count query
+        $result = $this->get();
+        
+        // Return the count from the result
+        return isset($result[0]['total']) ? (int)$result[0]['total'] : 0;
+    }
+
     public function getAllUsers()
     {
         return $this->select('users.*, roles.name AS role_name')
@@ -307,4 +394,166 @@ class UserModel extends BaseModel
                     ->orderBy('users.id DESC')
                     ->get();
     }
+
+    /**
+ * Count filtered records for DataTables
+ * 
+ * @param string $search Search term
+ * @return int
+ */
+public function countFilteredData($search)
+{
+    $this->select('COUNT(*) as total')
+         ->join('roles', 'users.role_id', 'roles.id')
+         ->whereSoftDeleted('users');
+    
+    if (!empty($search)) {
+        // Build search conditions based on searchableFields
+        $searchConditions = [];
+        $bindParams = [];
+        
+        foreach ($this->searchableFields as $field) {
+            // Handle special case for 'name' which needs to check first_name and last_name
+            if ($field === 'name') {
+                $searchConditions[] = "users.first_name LIKE :search_first_name";
+                $searchConditions[] = "users.last_name LIKE :search_last_name";
+                $bindParams['search_first_name'] = "%$search%";
+                $bindParams['search_last_name'] = "%$search%";
+            } else {
+                $searchConditions[] = "users.$field LIKE :search_$field";
+                $bindParams["search_$field"] = "%$search%";
+            }
+        }
+        
+        if (!empty($searchConditions)) {
+            $this->where("(" . implode(" OR ", $searchConditions) . ")")
+                 ->bind($bindParams);
+        }
+    }
+    
+    $result = $this->first();
+    return isset($result['total']) ? (int)$result['total'] : 0;
+}
+
+/**
+ * Get data for DataTables
+ * 
+ * @param int $start Start record
+ * @param int $length Number of records
+ * @param string $search Search term
+ * @param string $orderColumn Column to order by
+ * @param string $orderDir Order direction
+ * @return array
+ */
+public function getDataTableData($start, $length, $search, $orderColumn, $orderDir)
+{
+    // Map frontend column names to database columns
+    $columnMap = [
+        'id' => 'users.id',
+        'name' => 'users.last_name', // Maps 'name' to last_name for sorting
+        'first_name' => 'users.first_name',
+        'last_name' => 'users.last_name',
+        'email' => 'users.email',
+        'role_name' => 'roles.name',
+        'is_active' => 'users.is_active',
+        'created_at' => 'users.created_at',
+        'last_login' => 'users.last_login'
+    ];
+    
+    // Use mapped column or default to id
+    $orderBy = isset($columnMap[$orderColumn]) ? $columnMap[$orderColumn] : 'users.id';
+    
+    $this->select('users.id, users.first_name, users.last_name, 
+                   CONCAT(users.first_name, " ", users.last_name) as name,
+                   users.email, users.is_active, users.created_at, users.last_login,
+                   roles.name as role_name')
+         ->join('roles', 'users.role_id', 'roles.id')
+         ->whereSoftDeleted('users');
+    
+    if (!empty($search)) {
+        // Build search conditions based on searchableFields
+        $searchConditions = [];
+        $bindParams = [];
+        
+        foreach ($this->searchableFields as $field) {
+            // Handle special case for 'name' which needs to check first_name and last_name
+            if ($field === 'name') {
+                $searchConditions[] = "users.first_name LIKE :search_first_name";
+                $searchConditions[] = "users.last_name LIKE :search_last_name";
+                $bindParams['search_first_name'] = "%$search%";
+                $bindParams['search_last_name'] = "%$search%";
+            } else {
+                $searchConditions[] = "users.$field LIKE :search_$field";
+                $bindParams["search_$field"] = "%$search%";
+            }
+        }
+        
+        if (!empty($searchConditions)) {
+            $this->where("(" . implode(" OR ", $searchConditions) . ")")
+                 ->bind($bindParams);
+        }
+    }
+    
+    $this->orderBy("$orderBy $orderDir")
+         ->limit($length, $start);
+    
+    return $this->get();
+}
+
+/**
+ * Count total records for DataTables
+ * 
+ * @return int
+ */
+public function countData()
+{
+    return $this->select('COUNT(*) as total')
+         ->whereSoftDeleted('users')
+         ->first()['total'] ?? 0;
+}
+
+/**
+ * Create a user record from DataTables
+ * 
+ * @param array $data The data to insert
+ * @return mixed The result of the insert operation
+ */
+public function createData(array $data)
+{
+    // Handle password hashing if present
+    if (isset($data['password'])) {
+        $data['password'] = $this->hashPassword($data['password']);
+    }
+    
+    return $this->insert($data);
+}
+
+/**
+ * Update a user record from DataTables
+ * 
+ * @param int $id The user ID to update
+ * @param array $data The data to update
+ * @return bool Success status
+ */
+public function updateData($id, array $data)
+{
+    // Handle password hashing if present
+    if (isset($data['password'])) {
+        $data['password'] = $this->hashPassword($data['password']);
+    }
+    
+    return $this->update($data, "{$this->primaryKey} = :id", ['id' => $id]);
+}
+
+/**
+ * Delete a user record from DataTables
+ * 
+ * @param int $id The user ID to delete
+ * @return bool Success status
+ */
+public function deleteData($id)
+{
+    // Use the standard delete method which respects soft deletes
+    return $this->delete("{$this->primaryKey} = :id", ['id' => $id]);
+}
 }

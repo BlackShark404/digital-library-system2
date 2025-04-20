@@ -1,10 +1,14 @@
 <?php
 
 // Simple function to check if user is admin
-function is_admin()
-{
-    return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
-}
+
+use Core\Session;
+
+
+$role = isset($_SESSION['user_role']) ?? 'user';
+
+error_log("Role is: " . $_SESSION['user_role']);
+$profileRoute = ($role === 'user') ? '/admin/admin-profile' : '/user/user-profile';
 
 ?>
 <!DOCTYPE html>
@@ -45,12 +49,11 @@ function is_admin()
 
         body {
             display: flex;
-    min-height: 100vh;
-    font-family: 'Inter', sans-serif;
-    background-color: #f8f9fa;
-    overflow-x: hidden;
-    flex-direction: column;
-
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            overflow-x: hidden;
+            flex-direction: column;
         }
 
         html {
@@ -142,11 +145,11 @@ function is_admin()
         /* Content Wrapper */
         .content-wrapper {
             flex: 1;
-    margin-left: var(--sidebar-width);
-    padding-top: calc(var(--header-height) + 20px);
-    padding-bottom: 30px;
-    transition: all var(--transition-speed) ease;
-    min-height: calc(100vh - 60px - 56px); 
+            margin-left: var(--sidebar-width);
+            padding-top: calc(var(--header-height) + 20px);
+            padding-bottom: 30px;
+            transition: all var(--transition-speed) ease;
+            min-height: calc(100vh - 60px - 56px); 
         }
 
         .avatar-wrapper {
@@ -220,13 +223,13 @@ function is_admin()
         }
 
         .footer {
-    margin-left: var(--sidebar-width);
-    transition: all var(--transition-speed) ease;
-}
+            margin-left: var(--sidebar-width);
+            transition: all var(--transition-speed) ease;
+        }
 
-body.sidebar-collapsed .footer {
-    margin-left: var(--sidebar-collapsed-width);
-}
+        body.sidebar-collapsed .footer {
+            margin-left: var(--sidebar-collapsed-width);
+        }
 
 
 
@@ -428,8 +431,11 @@ body.sidebar-collapsed .footer {
                             User
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="user/profile.php">
-                                <i class="fas fa-id-badge me-2"></i>Profile</a></li>
+                            <li>
+                                <a class="dropdown-item" href="<?= $profileRoute ?>">
+                                    <i class="fas fa-id-badge me-2"></i>Profile
+                                </a>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/logout">
                                 <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>

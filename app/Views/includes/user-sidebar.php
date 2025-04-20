@@ -17,14 +17,15 @@
         <?php
         // Define sidebar links with their icons and URLs
         $user_links = [
-            ['title' => 'Dashboard', 'icon' => 'tachometer-alt', 'url' => '/user/dashboard'],
-            ['title' => 'Browse Books', 'icon' => 'books', 'url' => '/user/browse-books'],
-            ['title' => 'My Reading Sessions', 'icon' => 'book-open', 'url' => '/user/reading-sessions'],
-            ['title' => 'Wishlist', 'icon' => 'heart', 'url' => '/user/wishlist'],
-            ['title' => 'My Purchases', 'icon' => 'shopping-bag', 'url' => '/user/purchases'],
-            ['title' => 'Profile', 'icon' => 'user-circle', 'url' => '/user/user-profile'],
-            ['title' => 'Logout', 'icon' => 'sign-out-alt', 'url' => '/logout']
-        ];
+        ['title' => 'Dashboard', 'icon' => 'tachometer-alt', 'url' => '/user/dashboard'],
+        ['title' => 'Browse Books', 'icon' => 'book', 'url' => '/user/browse-books'], // fixed here
+        ['title' => 'My Reading Sessions', 'icon' => 'book-open', 'url' => '/user/reading-sessions'],
+        ['title' => 'Wishlist', 'icon' => 'heart', 'url' => '/user/wishlist'],
+        ['title' => 'My Purchases', 'icon' => 'shopping-bag', 'url' => '/user/purchases'],
+        ['title' => 'Profile', 'icon' => 'user-circle', 'url' => '/user/user-profile'],
+        ['title' => 'Logout', 'icon' => 'sign-out-alt', 'url' => '/logout']
+    ];
+
 
         // Get current page filename
         $current_page = basename($_SERVER['PHP_SELF']);

@@ -62,6 +62,7 @@ class AuthController extends BaseController
         $_SESSION['profile_url'] = $user['profile_url'];
         $_SESSION['first_name'] = $user['first_name'];
         $_SESSION['last_name'] = $user['last_name'];
+        $_SESSION['full_name'] = $user['first_name'] . ' ' . $user['last_name'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_role'] = $user['role_name'] ?? "user"; // Handle both role_name from join or direct role
 

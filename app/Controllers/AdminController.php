@@ -28,4 +28,8 @@ class AdminController extends BaseController {
     public function renderActivityLogs() {
         $this->render('admin/activity-log');
     }
+
+    public function renderAdminProfile() {
+        $this->render('admin/admin-profile');
+    }
 }
