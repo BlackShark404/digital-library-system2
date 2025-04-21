@@ -72,6 +72,9 @@ $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#render
 
 // Profile routes
 $router->map('POST', '/user/user-profile/delete-account', 'App\Controllers\ProfileController#deleteAccount', 'user_delete_account');
+$router->map('POST', '/user/user-profile/change-password', 'App\Controllers\ProfileController#changePassword', 'change-password');
+
+
 
 // Logout routes
 $router->map('GET', '/logout', 'App\Controllers\AuthController#logout', 'logout');

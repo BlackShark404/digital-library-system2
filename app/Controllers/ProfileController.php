@@ -17,6 +17,72 @@ class ProfileController extends BaseController {
 
     }
 
+    public function changePassword() {
+        // Check if the request is AJAX and POST
+        if (!$this->isAjax() || !$this->isPost()) {
+            $this->redirect('/error/403');
+            return;
+        }
+
+        // Get JSON input from the request body
+        $input = $this->getJsonInput();
+        $currentPassword = $input['currentPassword'] ?? '';
+        $newPassword = $input['newPassword'] ?? '';
+        $confirmPassword = $input['confirmPassword'] ?? '';
+        
+        // Get user ID from session
+        $userId = (int) $_SESSION['user_id'] ?? null;
+        
+        if (!$userId) {
+            $this->jsonError('User not authenticated.', 401);
+            return;
+        }
+
+        // Validate inputs
+        if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+            $this->jsonError('All password fields are required.', 400);
+            return;
+        }
+
+        // Validate password match
+        if ($newPassword !== $confirmPassword) {
+            $this->jsonError('New password and confirmation do not match.', 400);
+            return;
+        }
+
+        // Validate password strength
+        if (strlen($newPassword) < 8) {
+            $this->jsonError('Password must be at least 8 characters long.', 400);
+            return;
+        }
+
+        // Get the user from database
+        $user = $this->userModel->findById($userId);
+        if (!$user) {
+            $this->jsonError('User not found.', 404);
+            return;
+        }
+
+        // Verify current password
+        if (!$this->userModel->verifyPassword($currentPassword, $user['password'])) {
+            $this->jsonError('Current password is incorrect.', 401);
+            return;
+        }
+
+        // Update the password
+        $updated = $this->userModel->updateUser($userId, ['password' => $newPassword]);
+        if (!$updated) {
+            $this->jsonError('Failed to update password. Please try again later.', 500);
+            return;
+        }
+
+        // Return success response
+        $this->jsonSuccess(
+            [], // No additional data needed
+            'Your password has been successfully updated.'
+        );
+    }
+
     public function deleteAccount() {
         // Check if the request is AJAX
         if (!$this->isAjax() || !$this->isPost()) {

@@ -74,9 +74,9 @@ class AuthController extends BaseController
         $_SESSION['last_name'] = $user['last_name'];
         $_SESSION['full_name'] = $user['first_name'] . ' ' . $user['last_name'];
         $_SESSION['user_email'] = $user['email'];
+        $_SESSION['phone_number'] = $user['phone_number'];
         $_SESSION['user_role'] = $user['role_name'] ?? "user";
         $_SESSION['member_since'] = (new DateTime($user['created_at']))->format('F j, Y');
-
 
         if ($remember) {
             $token = $this->userModel->generateRememberToken($user['id'], 30);
