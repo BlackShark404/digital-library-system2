@@ -156,25 +156,24 @@ include $headerPath;
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form>
+                <form id="updateProfileForm">
                     <div class="mb-3">
                         <label for="firstName" class="form-label">First Name</label>
-                        <input type="text" class="form-control" id="firstName" value="<?= Session::get('first_name') ?>">
+                        <input type="text" class="form-control" id="firstName" name="firstName" value="<?= Session::get('first_name') ?>">
                     </div>
                     <div class="mb-3">
                         <label for="lastName" class="form-label">Last Name</label>
-                        <input type="text" class="form-control" id="lastName" value="<?= Session::get('last_name') ?>">
+                        <input type="text" class="form-control" id="lastName" name="lastName" value="<?= Session::get('last_name') ?>">
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control" id="phone" value="<?= Session::get('phone_number') ?? '' ?>">
+                        <input type="tel" class="form-control" id="phone" name="phone" value="<?= Session::get('phone_number') ?? '' ?>">
                     </div>
                 </form>
-
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Save Changes</button>
+                <button type="submit" form="updateProfileForm" class="btn btn-primary">Save Changes</button>
             </div>
         </div>
     </div>
@@ -185,23 +184,26 @@ include $headerPath;
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editProfilePictureModalLabel">Change Profile Picture</h5>
+                <h5 class="modal-title" id="editProfilePictureModalLabel">Update Profile Picture</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form>
-                    <div class="mb-3 text-center">
-                        <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="Profile Picture" style="width: 150px; height: 150px; object-fit: cover;">
+                <form id="updateProfilePictureForm" enctype="multipart/form-data">
+                    <div class="text-center mb-3">
+                        <img id="profileImagePreview" src="<?= Session::get('profile_url') ?>" class="rounded-circle img-fluid mx-auto d-block" alt="Profile Picture Preview" style="width: 150px; height: 150px; object-fit: cover;">
                     </div>
                     <div class="mb-3">
-                        <label for="profilePicture" class="form-label">Upload New Picture</label>
-                        <input class="form-control" type="file" id="profilePicture">
+                        <label for="profileImage" class="form-label">Choose New Profile Picture</label>
+                        <input type="file" class="form-control" id="profileImage" name="profile_image" accept="image/jpeg,image/png,image/gif,image/webp">
+                        <div class="form-text">
+                            Supported formats: JPEG, PNG, GIF, WebP. Maximum size: 5MB.
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Upload</button>
+                <button type="submit" form="updateProfilePictureForm" class="btn btn-primary">Upload Image</button>
             </div>
         </div>
     </div>
@@ -271,12 +273,43 @@ include $headerPath;
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="/assets/js/utility/toast-notifications.js"></script>
     <script src="/assets/js/utility/form-handler.js"></script>
+    <script src="/assets/js/utility/ImageFormHandler.js"></script>
     
     <script>
+        // Add to the existing script at the bottom of user-profile.php
         document.addEventListener("DOMContentLoaded", function () {
+            // Remove the generic form submission handler for profile picture
+            // Comment out or remove this line:
+            // handleFormSubmission('updateProfilePictureForm', '/user/user-profile/update-profile-pic', false);
+
+            // Keep the other form handlers
+            handleFormSubmission('updateProfileForm', '/user/user-profile/update-profile-info', true);
             handleFormSubmission('deleteAccountForm', '/user/user-profile/delete-account');
             handleFormSubmission('changePasswordForm', '/user/user-profile/change-password');
-        });
+            
+            handleImageUpload(
+                    'updateProfilePictureForm',                // Form ID
+                    'profileImage',                            // File input ID
+                    'profileImagePreview',                     // Image preview ID
+                    '/user/user-profile/update-profile-pic',   // Endpoint
+                    {
+                        modalId: 'editProfilePictureModal',     // Modal ID to close after success
+                        reloadPage: true,                       // Reload the page after successful upload
+                        reloadDelay: 1500,                      // Delay before reloading (ms)
+                        
+                        // Optional custom success handler
+                        onSuccess: function(data) {
+                            // You can add additional behavior here if needed
+                            console.log('Profile picture updated successfully!');
+                            
+                            // Example: Update session data
+                            if (data.data && data.data.profile_url) {
+                                sessionStorage.setItem('profile_url', data.data.profile_url);
+                            }
+                        }
+                    }
+                );
+            });
     </script>
 
     

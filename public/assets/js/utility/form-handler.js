@@ -1,12 +1,4 @@
-// form-handler.js
-// Module for handling form submissions with Axios and toast notifications
-
-/**
- * Handles form submission with Axios and displays toast notifications
- * @param {string} formId - The ID of the form element
- * @param {string} actionUrl - The URL to submit the form data to
- */
-function handleFormSubmission(formId, actionUrl) {
+function handleFormSubmission(formId, actionUrl, refreshPage = false) {
     // Select the form element
     const form = document.getElementById(formId);
 
@@ -51,12 +43,25 @@ function handleFormSubmission(formId, actionUrl) {
             // ✅ Reset the form
             form.reset();
 
+            // Optionally refresh the page after a slight delay
+            if (refreshPage) {
+                setTimeout(() => {
+                    location.reload();
+                }, 1500); // Delay before refresh (adjustable)
+            }
+
+            // Optionally, display the updated session value (if needed)
+            if (response.data.success && response.data.data.status) {
+                console.log("Updated session status:", response.data.data.status);
+                // Update the UI or perform any other actions based on the updated session value
+            }
+
             // Check if response contains a redirect URL
             if (response.data.success && response.data.data && response.data.data.redirect_url) {
                 // Redirect to the specified URL after a short delay to allow toast to be seen
                 setTimeout(() => {
                     window.location.href = response.data.data.redirect_url;
-                }, 1000);
+                }, 1500);
             }
         })
         .catch(error => {
@@ -72,4 +77,3 @@ function handleFormSubmission(formId, actionUrl) {
         });
     });
 }
-

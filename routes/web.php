@@ -20,9 +20,30 @@ $accessMap = [
     '/admin/reading' => ['admin'],
     '/admin/purchases' => ['admin'],
     '/admin/logs' => ['admin'],
+    '/admin/user-management' => ['admin'],
+    '/admin/book-management' => ['admin'],
+    '/admin/reading-sessions' => ['admin'],
+    '/admin/activity-logs' => ['admin'],
+    '/admin/admin-profile' => ['admin'],
+    '/admin/users/create' => ['admin'],
+    '/admin/users/data' => ['admin'],
+    '/admin/users/update' => ['admin'],
+    '/admin/users/delete' => ['admin'],
 
-    // Logout route (accessible by any logged-in user)
+     // User-only routes
+    '/user/dashboard' => ['user'],
+    '/user/browse-books' => ['user'],
+    '/user/reading-sessions' => ['user'],
+    '/user/wishlist' => ['user'],
+    '/user/purchases' => ['user'],
+    '/user/user-profile' => ['user'],
+    '/user/user-profile/delete-account' => ['user'],
+    '/user/user-profile/change-password' => ['user'],
+    '/user/user-profile/update-profile-info' => ['user'],
+
+    // Shared (admin and user)
     '/logout' => ['admin', 'user'],
+
 ];
 
 $router->setBasePath(''); // Set this if your app is in a subdirectory
@@ -71,9 +92,10 @@ $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#render
 
 
 // Profile routes
+$router->map('POST', '/user/user-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-profile-pic');
+$router->map('POST', '/user/user-profile/update-profile-info', 'App\Controllers\ProfileController#updateProfileInfo', 'update-profile-info');
 $router->map('POST', '/user/user-profile/delete-account', 'App\Controllers\ProfileController#deleteAccount', 'user_delete_account');
 $router->map('POST', '/user/user-profile/change-password', 'App\Controllers\ProfileController#changePassword', 'change-password');
-
 
 
 // Logout routes
