@@ -1,17 +1,4 @@
-/**
- * Handle image upload form submission with preview functionality
- * @param {string} formId - The ID of the form element
- * @param {string} imageInputId - The ID of the file input element
- * @param {string} previewId - The ID of the image preview element
- * @param {string} endpoint - The API endpoint for uploading the image
- * @param {Object} options - Additional options
- * @param {boolean} options.closeModal - Whether to close the modal after successful upload
- * @param {string} options.modalId - The ID of the modal to close
- * @param {boolean} options.reloadPage - Whether to reload the page after successful upload
- * @param {number} options.reloadDelay - Delay in ms before reloading the page
- * @param {Function} options.onSuccess - Callback function to execute on successful upload
- * @param {Function} options.onError - Callback function to execute on upload error
- */
+// Add to handleImageUpload function in ImageFormHandler.js to manage the loading state
 function handleImageUpload(formId, imageInputId, previewId, endpoint, options = {}) {
     const form = document.getElementById(formId);
     const imageInput = document.getElementById(imageInputId);
@@ -24,7 +11,8 @@ function handleImageUpload(formId, imageInputId, previewId, endpoint, options = 
         reloadPage: true,
         reloadDelay: 1500,
         onSuccess: null,
-        onError: null
+        onError: null,
+        loadingText: 'Uploading...'  // Default loading text
     };
     
     // Merge provided options with defaults
@@ -53,6 +41,20 @@ function handleImageUpload(formId, imageInputId, previewId, endpoint, options = 
                 showToast('Error', 'Please select an image to upload', 'danger');
                 return;
             }
+            
+            // Find submit button and store original text if button exists
+            const submitButton = form.querySelector('button[type="submit"]');
+            let originalText = '';
+            
+            // Only try to access innerHTML if button exists
+            if (submitButton) {
+                originalText = submitButton.innerHTML;
+                // Show loading state on button
+                setLoadingState(true, submitButton, settings.loadingText);
+            }
+            
+            // Create overlay on the preview image
+            const previewOverlay = createPreviewOverlay(preview);
             
             // Create form data for submission
             const formData = new FormData(this);
@@ -103,10 +105,22 @@ function handleImageUpload(formId, imageInputId, previewId, endpoint, options = 
                     setTimeout(() => {
                         location.reload();
                     }, settings.reloadDelay);
+                } else {
+                    // Reset loading state if not reloading
+                    if (submitButton) {
+                        setLoadingState(false, submitButton, originalText);
+                    }
+                    removePreviewOverlay(preview);
                 }
             })
             .catch(error => {
                 console.error('Image upload error:', error);
+                
+                // Reset loading state
+                if (submitButton) {
+                    setLoadingState(false, submitButton, originalText);
+                }
+                removePreviewOverlay(preview);
                 
                 // Get error message
                 const errorMessage = error.response && error.response.data && error.response.data.message 
@@ -122,5 +136,104 @@ function handleImageUpload(formId, imageInputId, previewId, endpoint, options = 
                 }
             });
         });
+    }
+    
+    /**
+     * Set loading state for a button
+     * @param {boolean} isLoading - Whether to show loading state
+     * @param {HTMLElement} button - The button element
+     * @param {string} loadingText - Text to display during loading
+     */
+    function setLoadingState(isLoading, button, loadingText) {
+        if (!button) return;
+        
+        if (isLoading) {
+            button.disabled = true;
+            button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${loadingText}`;
+        } else {
+            button.disabled = false;
+            button.innerHTML = loadingText; // Original text is passed as loadingText parameter
+        }
+    }
+    
+    /**
+     * Create an overlay with spinner on the preview image
+     * @param {HTMLElement} imageElement - The image element
+     * @return {HTMLElement} The created overlay element
+     */
+    function createPreviewOverlay(imageElement) {
+        if (!imageElement) return null;
+        
+        // Save the original src if not already saved
+        if (!imageElement.getAttribute('data-original-src')) {
+            imageElement.setAttribute('data-original-src', imageElement.src);
+        }
+        
+        // Get dimensions from the image element
+        const width = imageElement.offsetWidth;
+        const height = imageElement.offsetHeight;
+        
+        // Create wrapper if not exists
+        let wrapper = imageElement.parentElement;
+        if (!wrapper.classList.contains('profile-image-wrapper')) {
+            // Create new wrapper with position relative
+            wrapper = document.createElement('div');
+            wrapper.className = 'profile-image-wrapper';
+            wrapper.style.position = 'relative';
+            wrapper.style.width = `${width}px`;
+            wrapper.style.height = `${height}px`;
+            wrapper.style.display = 'inline-block';
+            wrapper.style.borderRadius = '50%'; // For circular images
+            
+            // Replace image with wrapper containing image
+            imageElement.parentElement.insertBefore(wrapper, imageElement);
+            wrapper.appendChild(imageElement);
+        }
+        
+        // Remove any existing overlay
+        removePreviewOverlay(imageElement);
+        
+        // Create overlay element
+        const overlay = document.createElement('div');
+        overlay.className = 'image-upload-overlay';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.style.borderRadius = '50%'; // Match the rounded-circle class
+        overlay.style.zIndex = '10'; // Ensure it's above the image
+        
+        // Create spinner
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner-border text-light';
+        spinner.setAttribute('role', 'status');
+        spinner.innerHTML = '<span class="visually-hidden">Loading...</span>';
+        
+        overlay.appendChild(spinner);
+        wrapper.appendChild(overlay);
+        
+        return overlay;
+    }
+    
+    /**
+     * Remove the preview overlay
+     * @param {HTMLElement} imageElement - The image element
+     */
+    function removePreviewOverlay(imageElement) {
+        if (!imageElement) return;
+        
+        // Find wrapper
+        const wrapper = imageElement.closest('.profile-image-wrapper') || imageElement.parentElement;
+        
+        // Remove overlay if exists
+        const overlay = wrapper.querySelector('.image-upload-overlay');
+        if (overlay) {
+            wrapper.removeChild(overlay);
+        }
     }
 }

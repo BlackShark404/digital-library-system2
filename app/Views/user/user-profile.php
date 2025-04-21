@@ -287,28 +287,30 @@ include $headerPath;
             handleFormSubmission('deleteAccountForm', '/user/user-profile/delete-account');
             handleFormSubmission('changePasswordForm', '/user/user-profile/change-password');
             
+            // Update the handleImageUpload call in user-profile.php
             handleImageUpload(
-                    'updateProfilePictureForm',                // Form ID
-                    'profileImage',                            // File input ID
-                    'profileImagePreview',                     // Image preview ID
-                    '/user/user-profile/update-profile-pic',   // Endpoint
-                    {
-                        modalId: 'editProfilePictureModal',     // Modal ID to close after success
-                        reloadPage: true,                       // Reload the page after successful upload
-                        reloadDelay: 1500,                      // Delay before reloading (ms)
+                'updateProfilePictureForm',                // Form ID
+                'profileImage',                            // File input ID
+                'profileImagePreview',                     // Image preview ID
+                '/user/user-profile/update-profile-pic',   // Endpoint
+                {
+                    modalId: 'editProfilePictureModal',     // Modal ID to close after success
+                    reloadPage: true,                       // Reload the page after successful upload
+                    reloadDelay: 1500,                      // Delay before reloading (ms)
+                    loadingText: 'Updating profile...',     // Custom loading text
+                    
+                    // Optional custom success handler
+                    onSuccess: function(data) {
+                        // You can add additional behavior here if needed
+                        console.log('Profile picture updated successfully!');
                         
-                        // Optional custom success handler
-                        onSuccess: function(data) {
-                            // You can add additional behavior here if needed
-                            console.log('Profile picture updated successfully!');
-                            
-                            // Example: Update session data
-                            if (data.data && data.data.profile_url) {
-                                sessionStorage.setItem('profile_url', data.data.profile_url);
-                            }
+                        // Example: Update session data
+                        if (data.data && data.data.profile_url) {
+                            sessionStorage.setItem('profile_url', data.data.profile_url);
                         }
                     }
-                );
+                }
+            );
             });
     </script>
 
