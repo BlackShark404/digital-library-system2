@@ -56,7 +56,7 @@ $router->map('GET', '/admin/admin-profile', 'App\Controllers\AdminController#ren
 
 // User management routes
 $router->map('POST', '/admin/users/create', 'App\Controllers\UserManagementController#create', 'register-users');
-$router->map('GET', '/admin/users/data', 'App\Controllers\UserManagementController#getData', 'users_data');
+$router->map('GET', '/admin/users/data', 'App\Controllers\UserManagementController#getUsers', 'users_data');
 $router->map('POST', '/admin/users/create', 'App\Controllers\UserManagementController#create', 'users_create');
 $router->map('POST', '/admin/users/update', 'App\Controllers\UserManagementController#update', 'users_update');
 $router->map('POST', '/admin/users/delete', 'App\Controllers\UserManagementController#delete', 'users_delete');
@@ -68,6 +68,10 @@ $router->map('GET', '/user/reading-sessions', 'App\Controllers\UserController#re
 $router->map('GET', '/user/wishlist', 'App\Controllers\UserController#renderWishlist', 'user_wishlist');
 $router->map('GET', '/user/purchases', 'App\Controllers\UserController#renderPurchases', 'user_purchases');
 $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#renderUserProfile', 'user_profile');
+
+
+// Profile routes
+$router->map('POST', '/user/user-profile/delete-account', 'App\Controllers\ProfileController#deleteAccount', 'user_delete_account');
 
 // Logout routes
 $router->map('GET', '/logout', 'App\Controllers\AuthController#logout', 'logout');

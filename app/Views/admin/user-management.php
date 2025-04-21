@@ -92,7 +92,8 @@ include $headerPath;
                     <thead>
                         <tr>
                             <th scope="col">ID</th>
-                            <th scope="col">Name</th>
+                            <th scope="col">First Name</th>
+                            <th scope="col">Last Name</th>
                             <th scope="col">Email</th>
                             <th scope="col">Role</th>
                             <th scope="col">Status</th>
@@ -363,6 +364,288 @@ include $headerPath;
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="/assets/js/utility/toast-notifications.js"></script>
 <script src="/assets/js/utility/form-handler.js"></script>
+
+<script>
+    /**
+ * User Management JavaScript
+ * This script initializes the users DataTable and sets up event handlers for the user management interface
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    // Define column configurations for the DataTable
+    const columns = [
+        { data: 'id', title: 'ID' },
+        { data: 'first_name', title: 'First Name' },
+        { data: 'last_name', title: 'Last Name' },
+        { data: 'email', title: 'Email' },
+        { 
+            data: 'role', 
+            title: 'Role',
+            render: function(data) {
+                if (data === 'admin') {
+                    return '<span class="badge bg-primary">Admin</span>';
+                } else {
+                    return '<span class="badge bg-secondary">User</span>';
+                }
+            }
+        },
+        { 
+            data: 'status', 
+            title: 'Status',
+            render: function(data) {
+                if (data === 'active') {
+                    return '<span class="badge bg-success">Active</span>';
+                } else {
+                    return '<span class="badge bg-danger">Inactive</span>';
+                }
+            }
+        },
+        { 
+            data: 'registered_date',
+            title: 'Registered',
+            render: function(data) {
+                return new Date(data).toLocaleDateString();
+            }
+        },
+        { 
+            data: 'last_login',
+            title: 'Last Login',
+            render: function(data) {
+                return data ? new Date(data).toLocaleString() : 'Never';
+            }
+        },
+        { 
+            data: null,
+            title: 'Actions',
+            orderable: false,
+            render: DataTablesHelper.createActionColumn([
+                {
+                    name: 'view',
+                    icon: '<i class="fas fa-eye"></i>',
+                    class: 'btn-info',
+                    url: '#'
+                },
+                {
+                    name: 'edit',
+                    icon: '<i class="fas fa-edit"></i>',
+                    class: 'btn-warning',
+                    url: '#'
+                },
+                {
+                    name: 'delete',
+                    icon: '<i class="fas fa-trash"></i>',
+                    class: 'btn-danger',
+                    url: '#'
+                }
+            ])
+        }
+    ];
+
+    // Initialize the DataTable with server-side processing
+    const usersTable = DataTablesHelper.initServerSide('usersTable', '/api/users/list', columns, {
+        // Additional DataTable options
+        dom: 'Bfrtip',
+        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        pageLength: 10,
+        order: [[0, 'desc']],
+        // Add filter functionality
+        initComplete: function() {
+            // Apply filters when the select boxes change
+            $('#roleFilter, #statusFilter').on('change', function() {
+                applyFilters();
+            });
+        }
+    });
+
+    // Add event listeners for the action buttons
+    DataTablesHelper.bindActionEvents('usersTable', {
+        'view': function(id, rowData) {
+            viewUser(id, rowData);
+        },
+        'edit': function(id, rowData) {
+            editUser(id, rowData);
+        },
+        'delete': function(id, rowData) {
+            confirmDeleteUser(id, rowData);
+        }
+    });
+
+    // Handle the add user form submission
+    DataTablesHelper.handleFormSubmit('addUserForm', 'usersTable', '/api/users/add', function(response) {
+        // Additional success callback
+        $('#addUserModal').modal('hide');
+        DataTablesHelper.refreshTable('usersTable');
+    });
+
+    // Handle the edit user form submission
+    DataTablesHelper.handleFormSubmit('editUserForm', 'usersTable', '/api/users/update', function(response) {
+        // Additional success callback
+        $('#editUserModal').modal('hide');
+        DataTablesHelper.refreshTable('usersTable');
+    });
+
+    // Export functionality
+    $('#exportCsv').on('click', function(e) {
+        e.preventDefault();
+        DataTablesHelper.exportData('usersTable', 'csv', 'Users_Export');
+    });
+
+    $('#exportExcel').on('click', function(e) {
+        e.preventDefault();
+        DataTablesHelper.exportData('usersTable', 'excel', 'Users_Export');
+    });
+
+    $('#exportPdf').on('click', function(e) {
+        e.preventDefault();
+        DataTablesHelper.exportData('usersTable', 'pdf', 'Users_Export');
+    });
+
+    // Toggle delete button based on checkbox
+    $('#confirmDelete').on('change', function() {
+        $('#deleteUserBtn').prop('disabled', !this.checked);
+    });
+
+    // Handle delete user action
+    $('#deleteUserBtn').on('click', function() {
+        const userId = $('#deleteUserId').val();
+        
+        $.ajax({
+            url: '/api/users/delete',
+            type: 'POST',
+            data: { id: userId, _token: typeof csrfToken !== 'undefined' ? csrfToken : '' },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    $('#deleteUserModal').modal('hide');
+                    DataTablesHelper.refreshTable('usersTable');
+                    DataTablesHelper.showToast('User deleted successfully', 'success');
+                } else {
+                    DataTablesHelper.showToast(response.message || 'Failed to delete user', 'error');
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Server error occurred';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                DataTablesHelper.showToast(errorMessage, 'error');
+            }
+        });
+    });
+
+    // Toggle password visibility
+    $('.modal').on('click', '[id^=toggle]', function() {
+        const target = $(this).data('target');
+        const inputField = $(this).closest('.input-group').find('input');
+        const icon = $(this).find('i');
+        
+        if (inputField.attr('type') === 'password') {
+            inputField.attr('type', 'text');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        } else {
+            inputField.attr('type', 'password');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        }
+    });
+
+    // Function to apply filters to the DataTable
+    function applyFilters() {
+        const roleFilter = $('#roleFilter').val();
+        const statusFilter = $('#statusFilter').val();
+        
+        // Apply filters using DataTables API
+        usersTable.column(4).search(roleFilter).draw();
+        usersTable.column(5).search(statusFilter).draw();
+    }
+
+    // Function to view user details
+    function viewUser(id, userData) {
+        // Set user data in the view modal
+        $('#viewUserId').text(userData.id);
+        $('#viewUserName').text(`${userData.first_name} ${userData.last_name}`);
+        $('#viewUserUsername').text(`${userData.first_name} ${userData.last_name}`);
+        $('#viewUserEmail').text(userData.email);
+        $('#viewUserRole').text(userData.role);
+        
+        // Set status with appropriate styling
+        if (userData.status === 'active') {
+            $('#viewUserStatus').html('<span class="badge bg-success">Active</span>');
+        } else {
+            $('#viewUserStatus').html('<span class="badge bg-danger">Inactive</span>');
+        }
+        
+        $('#viewUserRegistered').text(new Date(userData.registered_date).toLocaleDateString());
+        $('#viewUserLastLogin').text(userData.last_login ? new Date(userData.last_login).toLocaleString() : 'Never');
+        
+        // Load additional user statistics
+        $.ajax({
+            url: '/api/users/statistics/' + id,
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    const stats = response.data;
+                    $('#viewUserLogins').text(stats.total_logins || 0);
+                    $('#viewUserPurchases').text(stats.books_purchased || 0);
+                    $('#viewUserSessions').text(stats.reading_sessions || 0);
+                    $('#viewUserHours').text(stats.hours_read || 0);
+                    $('#viewUserComments').text(stats.comments_made || 0);
+                    $('#viewUserRatings').text(stats.ratings_given || 0);
+                }
+            },
+            error: function() {
+                // If error, show default values
+                $('.stats-value').text('N/A');
+            }
+        });
+        
+        // Store user ID for edit button
+        $('#editUserBtn').data('id', id);
+        
+        // Show the modal
+        $('#viewUserModal').modal('show');
+    }
+
+    // Function to edit user
+    function editUser(id, userData) {
+        // Hide the view modal if it's open
+        $('#viewUserModal').modal('hide');
+        
+        // Set user data in the edit form
+        $('#editUserId').val(id);
+        $('#editUserName').text(`${userData.first_name} ${userData.last_name}`);
+        $('#editFirstName').val(userData.first_name);
+        $('#editLastName').val(userData.last_name);
+        $('#editEmail').val(userData.email);
+        $('#editRole').val(userData.role === 'admin' ? 2 : 1);
+        $('#editStatus').val(userData.status === 'active' ? 1 : 0);
+        
+        // Clear password field as it's optional in edit mode
+        $('#editPassword').val('');
+        
+        // Show the edit modal
+        $('#editUserModal').modal('show');
+    }
+
+    // Handle click on edit button in view modal
+    $('#editUserBtn').on('click', function() {
+        const userId = $(this).data('id');
+        const userData = usersTable.rows().data().toArray().find(row => row.id == userId);
+        
+        if (userData) {
+            editUser(userId, userData);
+        }
+    });
+
+    // Function to show delete confirmation
+    function confirmDeleteUser(id, userData) {
+        $('#deleteUserId').val(id);
+        $('#deleteUserName').text(`${userData.first_name} ${userData.last_name}`);
+        $('#confirmDelete').prop('checked', false);
+        $('#deleteUserBtn').prop('disabled', true);
+        $('#deleteUserModal').modal('show');
+    }
+});
+</script>
 
 <?php
 include $footerPath;

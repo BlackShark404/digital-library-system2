@@ -14,8 +14,8 @@ include $headerPath;
                     <div class="mb-3">
                         <img src=<?= Session::get("profile_url") ?> class="rounded-circle img-fluid mx-auto d-block" alt="Profile Picture" style="width: 130px; height: 130px; object-fit: cover;">
                     </div>
-                    <h5 class="card-title">John Doe</h5>
-                    <p class="text-muted">Member since: January 15, 2025</p>
+                    <h5 class="card-title"><?= Session::get('full_name') ?></h5>
+                    <p class="text-muted">Member since: <?= Session::get('member_since') ?></p>
                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfilePictureModal">
                         <i class="bi bi-camera"></i> Change Picture
                     </button>
@@ -52,7 +52,7 @@ include $headerPath;
                 <div class="card-body">
                     <div class="row mb-3">
                         <div class="col-sm-3">
-                            <h6 class="mb-0">Full Name</h6>
+                            <h6 class="mb-0">Name</h6>
                         </div>
                         <div class="col-sm-9 text-secondary">
                             <?= Session::get("full_name") ?>
@@ -73,7 +73,7 @@ include $headerPath;
                             <h6 class="mb-0">Phone</h6>
                         </div>
                         <div class="col-sm-9 text-secondary">
-                            (123) 456-7890
+                            <?= Session::get('phone_number') ?? 'No phone number' ?>
                         </div>
                     </div>
                     <hr>
@@ -169,16 +169,16 @@ include $headerPath;
             <div class="modal-body">
                 <form>
                     <div class="mb-3">
-                        <label for="fullName" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="fullName" value="John Doe">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="firstName" value="<?= Session::get('first_name') ?>">
                     </div>
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" value="johndoe@example.com">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" value="<?= Session::get('last_name') ?>">
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control" id="phone" value="(123) 456-7890">
+                        <input type="tel" class="form-control" id="phone" value="<?= Session::get('phone_number') ?? '' ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Reading Preferences</label>
@@ -196,6 +196,7 @@ include $headerPath;
                         </div>
                     </div>
                 </form>
+
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -280,20 +281,37 @@ include $headerPath;
                     This action cannot be undone. All your data will be permanently deleted.
                 </div>
                 <p>Please enter your password to confirm account deletion:</p>
-                <form>
+                <form id="deleteAccountForm">
                     <div class="mb-3">
                         <label for="confirmDeletePassword" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="confirmDeletePassword">
+                        <input type="password" class="form-control" id="confirmDeletePassword" name="password">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger">Delete Account</button>
+                <button type="submit" form="deleteAccountForm" class="btn btn-danger">Delete Account</button>
             </div>
         </div>
     </div>
 </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/assets/js/utility/toast-notifications.js"></script>
+    <script src="/assets/js/utility/form-handler.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Check if handleFormSubmission is available
+            if (typeof handleFormSubmission === 'function') {
+                // Initialize delete account form submission
+                handleFormSubmission('deleteAccountForm', '/user/user-profile/delete-account');
+            } else {
+                console.error('Form handler function not found. Make sure form-handler.js is properly loaded.');
+            }
+        });
+    </script>
+    
 
 <?php
 // Include footer

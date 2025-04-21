@@ -207,11 +207,13 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="assets/js/utility/toast-notifications.js"></script>
-    <script src="assets/js/utility/form-handler.js"></script>
+    <script src="/assets/js/utility/toast-notifications.js"></script>
+    <script src="/assets/js/utility/form-handler.js"></script>
     
     <script>
-        handleFormSubmission('loginForm', '/login'); 
+        document.addEventListener("DOMContentLoaded", function () {
+            handleFormSubmission('loginForm', '/login');
+        });
     </script>
     
 </body>

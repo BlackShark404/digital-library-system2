@@ -241,11 +241,13 @@
     <script src="/assets/js/utility/toggle-password.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="assets/js/utility/toast-notifications.js"></script>
-    <script src="assets/js/utility/form-handler.js"></script>
+    <script src="/assets/js/utility/toast-notifications.js"></script>
+    <script src="/assets/js/utility/form-handler.js"></script>
     
     <script>
-        handleFormSubmission('registerForm', '/register'); 
+        document.addEventListener("DOMContentLoaded", function () {
+            handleFormSubmission('registerForm', '/register'); 
+        });
     </script>
 </body>
 

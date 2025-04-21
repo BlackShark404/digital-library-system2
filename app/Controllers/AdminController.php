@@ -10,7 +10,14 @@ class AdminController extends BaseController {
     }
 
     public function renderUserManagement() {
-        $this->render('admin/user-management');
+        $filters = [
+            'role' => $this->getRequestParam('role', ''),
+            'status' => $this->getRequestParam('status', '')
+        ];
+
+        $this->render('admin/user-management',[
+            'filters' => $filters
+        ]);
     }
 
     public function renderBookManagement() {

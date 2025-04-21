@@ -11,6 +11,4 @@ class UserManagementController extends BaseController
         $this->userModel = $this->loadModel('UserModel');
     }
     
-    
-    
 }
