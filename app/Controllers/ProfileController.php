@@ -104,7 +104,7 @@ class ProfileController extends BaseController {
             // Upload image to Cloudinary with the consistent public ID
             $uploadResult = $cloudinary->uploadImage(
                 $file['tmp_name'],
-                'profile_picture    s', // Folder in Cloudinary
+                'Digital_Library/profile_pictures', // Folder in Cloudinary
                 [
                     'public_id' => $publicId, // Use the consistent public ID
                     'overwrite' => true, // Force overwrite of existing images with the same public ID

@@ -1,8 +1,6 @@
 <?php
 include $headerPath;
 
-
-
 // Hardcoded activity log data
 $activity_logs = [
     [

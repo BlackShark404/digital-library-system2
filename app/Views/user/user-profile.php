@@ -167,7 +167,7 @@ include $headerPath;
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control" id="phone" name="phone" value="<?= Session::get('phone_number') ?? '' ?>">
+                        <input type="tel" class="form-control" id="phone" name="phone" value="<?= Session::get('phone_number') ?>">
                     </div>
                 </form>
             </div>

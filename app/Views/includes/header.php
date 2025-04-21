@@ -4,10 +4,8 @@
 
 use Core\Session;
 
-
 $role = isset($_SESSION['user_role']) ?? 'user';
 
-error_log("Role is: " . $_SESSION['user_role']);
 $profileRoute = ($role === 'user') ? '/admin/admin-profile' : '/user/user-profile';
 
 ?>

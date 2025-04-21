@@ -1,6 +1,4 @@
 <?php
-$page_title = "Book Management";
-
 include $headerPath;
 
 // Hardcoded sample book data
