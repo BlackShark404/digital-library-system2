@@ -33,11 +33,12 @@ class UserModel extends BaseModel
     protected $timestamps = true;
     protected $useSoftDeletes = true;
 
-    public function findById() {
+    public function findById($id) {
         return $this->select('users.*, roles.name AS role_name')
                     ->join('roles', 'users.role_id', 'roles.id')
                     ->where('users.id = :id')
-                    ->bind(['id => $id'])
+                    ->bind(['id' => $id])
+                    ->whereSoftDeleted('users')
                     ->first();
     }
 

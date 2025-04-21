@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use DateTime;
+
 use Core\AvatarGenerator;
 use Core\Session;
 use Core\Cookie;
@@ -40,18 +42,26 @@ class AuthController extends BaseController
         $password = $data['password'] ?? '';
         $remember = isset($data['remember']);
 
+        // Get user record but check for soft deletion
         $user = $this->userModel->findByEmail($email);
         
-        // Check if user exists, password is correct, and account is active
-        if (!$user || 
-            !$this->userModel->verifyPassword($password, $user['password']) || 
-            !$user['is_active']) {
-            
-            if ($user && !$user['is_active']) {
-                return $this->jsonError('Account is inactive');
-            }
-            
+        // Check if user exists
+        if (!$user) {
             return $this->jsonError('Invalid email or password');
+        }
+        
+        // Check if account is soft deleted
+        if ($user['deleted_at'] !== null) {
+            return $this->jsonError('This account has been deactivated');
+        }
+        
+        // Check password and active status
+        if (!$this->userModel->verifyPassword($password, $user['password'])) {
+            return $this->jsonError('Invalid email or password');
+        }
+        
+        if (!$user['is_active']) {
+            return $this->jsonError('Account is inactive');
         }
 
         // Update last login timestamp
@@ -64,15 +74,15 @@ class AuthController extends BaseController
         $_SESSION['last_name'] = $user['last_name'];
         $_SESSION['full_name'] = $user['first_name'] . ' ' . $user['last_name'];
         $_SESSION['user_email'] = $user['email'];
-        $_SESSION['user_role'] = $user['role_name'] ?? "user"; // Handle both role_name from join or direct role
+        $_SESSION['user_role'] = $user['role_name'] ?? "user";
+        $_SESSION['member_since'] = (new DateTime($user['created_at']))->format('F j, Y');
 
-        // Handle "remember me" functionality 
+
         if ($remember) {
-            $token = $this->userModel->generateRememberToken($user['id'], 30); // 30 days expiry
-            Cookie::set('remember_token', $token, 30); // Match cookie expiry with token expiry
+            $token = $this->userModel->generateRememberToken($user['id'], 30);
+            Cookie::set('remember_token', $token, 30);
         }
 
-        // Dynamically determine redirect URL based on role
         $role = $user['role_name'] ?? "/";
         $redirectUrl = match ($role) {
             'admin'     => '/admin/dashboard',
@@ -80,7 +90,6 @@ class AuthController extends BaseController
             default     => '/'
         };
 
-        // Respond with JSON including redirect URL
         return $this->jsonSuccess(
             ['redirect_url' => $redirectUrl],
             'Login successful'
