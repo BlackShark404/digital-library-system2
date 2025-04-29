@@ -98,10 +98,16 @@ $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#render
 
 
 // Profile routes 
-$router->map('POST', '/user/user-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-profile-pic');
-$router->map('POST', '/user/user-profile/update-profile-info', 'App\Controllers\ProfileController#updateProfileInfo', 'update-profile-info');
-$router->map('POST', '/user/user-profile/delete-account', 'App\Controllers\ProfileController#deleteAccount', 'user_delete_account');
-$router->map('POST', '/user/user-profile/change-password', 'App\Controllers\ProfileController#changePassword', 'change-password');
+$router->map('POST', '/user/user-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-user-profile-pic');
+$router->map('POST', '/user/user-profile/update-profile-info', 'App\Controllers\ProfileController#updateProfileInfo', 'update-user-profile-info');
+$router->map('POST', '/user/user-profile/delete-account', 'App\Controllers\ProfileController#deleteAccount', 'delete_user-account');
+$router->map('POST', '/user/user-profile/change-password', 'App\Controllers\ProfileController#changePassword', 'change-user-password');
+
+$router->map('POST', '/admin/admin-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-admin-profile-pic');
+$router->map('POST', '/admin/admin-profile/update-profile-info', 'App\Controllers\ProfileController#updateProfileInfo', 'update-admin-profile-info');
+$router->map('POST', '/admin/admin-profile/delete-account', 'App\Controllers\ProfileController#deleteAccount', 'delete_admin-account');
+$router->map('POST', '/admin/admin-profile/change-password', 'App\Controllers\ProfileController#changePassword', 'change-admin-password');
+
 
 
 // Logout routes

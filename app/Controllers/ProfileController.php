@@ -64,7 +64,7 @@ class ProfileController extends BaseController {
             $cloudinary = new CloudinaryService;
             
             // Check if user has an existing custom profile image (not a default avatar)
-            $currentProfileUrl = $user['profile_url'] ?? '';
+            $currentProfileUrl = $user['ua_profile_url'] ?? '';
             $isDefaultAvatar = $this->isDefaultAvatar($currentProfileUrl);
             
             // Define a consistent public ID for the user's profile picture
@@ -180,7 +180,7 @@ class ProfileController extends BaseController {
             return;
         }
 
-        $currentProfileUrl = $user['profile_url'];
+        $currentProfileUrl = $user['ua_profile_url'];
         $newName = $firstName . ' ' . $lastName;
 
 
@@ -195,10 +195,10 @@ class ProfileController extends BaseController {
 
         // Prepare data for update
         $updateData = [
-            'profile_url' => $newProfileUrl,
-            'first_name' => $firstName,
-            'last_name' => $lastName,
-            'phone_numbe' => $phone // This will be empty string if not provided
+            'ua_profile_url' => $newProfileUrl,
+            'ua_first_name' => $firstName,
+            'ua_last_name' => $lastName,
+            'ua_phone_number' => $phone // This will be empty string if not provided
         ];
 
         // Update the user profile

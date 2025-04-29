@@ -42,7 +42,7 @@ class DataTablesManager {
         closeOnClick: true,           // close when clicked
         pauseOnHover: true,           // pause countdown on hover
         draggable: true,              // allow dragging
-        enableIcons: false,            // show icons
+        enableIcons: true,            // show icons
       },
       ...options
     };

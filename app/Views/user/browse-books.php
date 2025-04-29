@@ -228,7 +228,6 @@ switch ($sort) {
                             </select>
                         </div>
                         <div class="col-md-1">
-                            <button type="submit" class="btn btn-primary w-100">Filter</button>
                         </div>
                     </form>
                 </div>

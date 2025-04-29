@@ -566,15 +566,15 @@ include $headerPath;
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         // Form submission handlers
-        handleFormSubmission('updateProfileForm', '/user/user-profile/update-profile-info', true);
-        handleFormSubmission('changePasswordForm', '/user/user-profile/change-password');
+        handleFormSubmission('updateProfileForm', '/admin/admin-profile/update-profile-info', true);
+        handleFormSubmission('changePasswordForm', '/admin/admin-profile/change-password');
         
         // Image upload handler
         handleImageUpload(
             'updateProfilePictureForm',                // Form ID
             'profileImage',                            // File input ID
             'profileImagePreview',                     // Image preview ID
-            '/user/user-profile/update-profile-pic',   // Endpoint
+            '/admin/admin-profile/update-profile-pic',   // Endpoint
             {
                 modalId: 'editProfilePictureModal',     // Modal ID to close after success
                 reloadPage: true,                       // Reload the page after successful upload
