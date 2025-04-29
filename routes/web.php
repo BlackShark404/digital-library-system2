@@ -29,8 +29,12 @@ $accessMap = [
     '/admin/users/data' => ['admin'],
     '/admin/users/update' => ['admin'],
     '/admin/users/delete' => ['admin'],
-
-     // User-only routes
+    
+    // User Management API routes - Admin only
+    '/api/users' => ['admin'],
+    '/api/users/export' => ['admin'],
+    
+    // User-only routes
     '/user/dashboard' => ['user'],
     '/user/browse-books' => ['user'],
     '/user/reading-sessions' => ['user'],
@@ -67,20 +71,22 @@ $router->map('POST', '/register', 'App\Controllers\AuthController#register', 're
 
 // Admin routes
 $router->map('GET', '/admin/dashboard', 'App\Controllers\AdminController#renderAdminDashboard', 'admin_dashboard');
-$router->map('GET', '/admin/user-management', 'App\Controllers\AdminController#renderUserManagement', 'user-management');
 $router->map('GET', '/admin/book-management', 'App\Controllers\AdminController#renderBookManagement', 'book-management');
 $router->map('GET', '/admin/reading-sessions', 'App\Controllers\AdminController#renderReadingSessions', 'reading-session');
 $router->map('GET', '/admin/purchases', 'App\Controllers\AdminController#renderPurchases', 'purchases');
 $router->map('GET', '/admin/activity-logs', 'App\Controllers\AdminController#renderActivityLogs', 'activity-log');
-$router->map('GET', '/admin/user-management', 'App\Controllers\UserManagementController#displayPaginatedUsers', 'display-paginated-users');
 $router->map('GET', '/admin/admin-profile', 'App\Controllers\AdminController#renderAdminProfile', 'admin-profile');
 
-// User management routes
-$router->map('POST', '/admin/users/create', 'App\Controllers\UserManagementController#create', 'register-users');
-$router->map('GET', '/admin/users/data', 'App\Controllers\UserManagementController#getUsers', 'users_data');
-$router->map('POST', '/admin/users/create', 'App\Controllers\UserManagementController#create', 'users_create');
-$router->map('POST', '/admin/users/update', 'App\Controllers\UserManagementController#update', 'users_update');
-$router->map('POST', '/admin/users/delete', 'App\Controllers\UserManagementController#delete', 'users_delete');
+// User Management Routes
+$router->map('GET', '/admin/user-management', 'App\Controllers\UserManagementController#index', 'user-management');
+
+// User Management API Routes
+$router->map('GET', '/api/users', 'App\Controllers\UserManagementController#getUsers', 'api_get_users');
+$router->map('GET', '/api/users/[i:id]', 'App\Controllers\UserManagementController#getUser', 'api_get_user');
+$router->map('POST', '/api/users', 'App\Controllers\UserManagementController#createUser', 'api_create_user');
+$router->map('PUT', '/api/users/[i:id]', 'App\Controllers\UserManagementController#updateUser', 'api_update_user');
+$router->map('DELETE', '/api/users/[i:id]', 'App\Controllers\UserManagementController#deleteUser', 'api_delete_user');
+$router->map('GET', '/api/users/export', 'App\Controllers\UserManagementController#exportUsers', 'api_export_users');
 
 // User routes
 $router->map('GET', '/user/dashboard', 'App\Controllers\UserController#renderUserDashboard', 'user_dashboard');
@@ -91,7 +97,7 @@ $router->map('GET', '/user/purchases', 'App\Controllers\UserController#renderPur
 $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#renderUserProfile', 'user_profile');
 
 
-// Profile routes
+// Profile routes 
 $router->map('POST', '/user/user-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-profile-pic');
 $router->map('POST', '/user/user-profile/update-profile-info', 'App\Controllers\ProfileController#updateProfileInfo', 'update-profile-info');
 $router->map('POST', '/user/user-profile/delete-account', 'App\Controllers\ProfileController#deleteAccount', 'user_delete_account');
@@ -109,7 +115,6 @@ $router->map('GET', '/error/500', 'App\Controllers\ErrorController#error500', 'e
 $router->map('GET', '/test', 'App\Controllers\TestController#showTestView', 'test');
 $router->map('POST', '/test', 'App\Controllers\TestController#getData', 'form_submission');
 $router->map('GET', '/view', 'App\Controllers\TestController#viewData', 'view-data');
-
 
 // Testing routes
 $router->map('GET', '/user-data', 'App\Controllers\TestController#showUser', 'test-modal');

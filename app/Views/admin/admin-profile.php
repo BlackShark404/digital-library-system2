@@ -6,262 +6,367 @@ use Core\Session;
 include $headerPath;
 ?>
 
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <img src=<?= Session::get("profile_url") ?> class="rounded-circle img-fluid mx-auto d-block" alt="Profile Picture" style="width: 130px; height: 130px; object-fit: cover;">
+<div class="container py-5">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Admin Profile</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Admin Profile</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column - Profile Info -->
+        <div class="col-lg-4">
+            <!-- Profile Card -->
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-body p-4">
+                    <div class="text-center position-relative mb-4">
+                        <div class="profile-picture-container mx-auto">
+                            <img src="<?= Session::get("profile_url") ?>" class="rounded-circle img-fluid profile-image shadow" 
+                                style="width: 150px; height: 150px; object-fit: cover;" alt="Admin Profile Picture">
+                            <div class="profile-picture-overlay position-absolute bottom-0 end-0">
+                                <button class="btn btn-sm btn-primary rounded-circle shadow-sm" 
+                                    data-bs-toggle="modal" data-bs-target="#editProfilePictureModal"
+                                    style="width: 36px; height: 36px;">
+                                    <i class="bi bi-camera-fill"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <h5 class="card-title"><?= Session::get("full_name") ?></h5>
-                    <p class="text-muted">Administrator</p>
-                    <div class="badge bg-danger mb-2">Admin Access</div>
-                    <div>
-                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfilePictureModal">
-                            <i class="bi bi-camera"></i> Change Picture
+                    
+                    <div class="text-center">
+                        <h4 class="mb-1"><?= Session::get('full_name') ?></h4>
+                        <p class="text-muted small mb-2">
+                            <span class="badge bg-primary">Administrator</span>
+                        </p>
+                        <p class="text-muted small mb-3">
+                            <i class="bi bi-calendar3 me-1"></i>Admin since: <?= Session::get('member_since') ?>
+                        </p>
+                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+                            data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                            <i class="bi bi-pencil me-1"></i>Edit Profile
                         </button>
                     </div>
                 </div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Total Users
-                        <span class="badge bg-primary rounded-pill">1,245</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Total Books
-                        <span class="badge bg-primary rounded-pill">3,782</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Active Sessions
-                        <span class="badge bg-primary rounded-pill">87</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Today's Purchases
-                        <span class="badge bg-primary rounded-pill">32</span>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Admin Navigation -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Admin Navigation</h5>
-                </div>
-                <div class="list-group list-group-flush">
-                    <?php
-                    $admin_links = [
-                        ['title' => 'Dashboard', 'icon' => 'tachometer-alt', 'url' => '/admin/dashboard'],
-                        ['title' => 'User Management', 'icon' => 'users', 'url' => '/admin/user-management'],
-                        ['title' => 'Book Management', 'icon' => 'book', 'url' => '/admin/book-management'],
-                        ['title' => 'Reading Sessions', 'icon' => 'history', 'url' => '/admin/reading-sessions'],
-                        ['title' => 'Purchases', 'icon' => 'shopping-cart', 'url' => '/admin/purchases'],
-                        ['title' => 'Activity Log', 'icon' => 'clipboard-list', 'url' => '/admin/activity-logs'],
-                        ['title' => 'Logout', 'icon' => 'sign-out-alt', 'url' => '/logout']
-                    ];
+                
+                <hr class="my-0">
+                
+                <!-- Admin Stats -->
+                <div class="card-body p-4">
+                    <h5 class="card-title d-flex align-items-center mb-3">
+                        <i class="bi bi-bar-chart-line me-2 text-primary"></i>
+                        Admin Dashboard
+                    </h5>
                     
-                    foreach ($admin_links as $link): ?>
-                        <a href="<?= $link['url'] ?>" class="list-group-item list-group-item-action">
-                            <i class="fas fa-<?= $link['icon'] ?> me-2"></i> <?= $link['title'] ?>
-                        </a>
-                    <?php endforeach; ?>
+                    <div class="row row-cols-2 g-3">
+                        <div class="col">
+                            <div class="bg-light rounded-3 p-3 h-100">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-box me-3 bg-primary bg-opacity-10 text-primary rounded-circle p-2">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="mb-0 fs-4 fw-bold">324</h2>
+                                        <span class="small text-muted">Total Users</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col">
+                            <div class="bg-light rounded-3 p-3 h-100">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-box me-3 bg-success bg-opacity-10 text-success rounded-circle p-2">
+                                        <i class="bi bi-book"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="mb-0 fs-4 fw-bold">1,250</h2>
+                                        <span class="small text-muted">Total Books</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col">
+                            <div class="bg-light rounded-3 p-3 h-100">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-box me-3 bg-warning bg-opacity-10 text-warning rounded-circle p-2">
+                                        <i class="bi bi-ticket-perforated"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="mb-0 fs-4 fw-bold">18</h2>
+                                        <span class="small text-muted">Open Tickets</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col">
+                            <div class="bg-light rounded-3 p-3 h-100">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-box me-3 bg-info bg-opacity-10 text-info rounded-circle p-2">
+                                        <i class="bi bi-bag"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="mb-0 fs-4 fw-bold">82</h2>
+                                        <span class="small text-muted">Total Orders</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Account Settings Card -->
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-light border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear me-2 text-muted"></i>Account Settings
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                            <i class="bi bi-key me-2"></i>Change Password
+                        </button>
+                        
+                        <button class="btn btn-outline-secondary">
+                            <i class="bi bi-bell me-2"></i>Notification Settings
+                        </button>
+                        
+                        <button class="btn btn-outline-info">
+                            <i class="bi bi-shield-lock me-2"></i>Security Settings
+                        </button>
+                        
+                        <div class="dropdown-divider my-3"></div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">Admin Privileges</h6>
+                                <p class="text-muted small mb-0">Request role change</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-person-gear me-1"></i>Request
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-9">
-            <!-- Admin Overview -->
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Admin Dashboard Overview</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-info text-white h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-0">New Users</h6>
-                                            <h2 class="mb-0">24</h2>
-                                        </div>
-                                        <i class="fas fa-user-plus fa-2x"></i>
-                                    </div>
-                                    <p class="small mb-0">+12% from last week</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-success text-white h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-0">Revenue</h6>
-                                            <h2 class="mb-0">$3.2k</h2>
-                                        </div>
-                                        <i class="fas fa-dollar-sign fa-2x"></i>
-                                    </div>
-                                    <p class="small mb-0">+8% from last week</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-warning text-dark h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-0">New Books</h6>
-                                            <h2 class="mb-0">56</h2>
-                                        </div>
-                                        <i class="fas fa-book fa-2x"></i>
-                                    </div>
-                                    <p class="small mb-0">+15% from last week</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-danger text-white h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-0">Support</h6>
-                                            <h2 class="mb-0">8</h2>
-                                        </div>
-                                        <i class="fas fa-ticket-alt fa-2x"></i>
-                                    </div>
-                                    <p class="small mb-0">Pending tickets</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Personal Information</h5>
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
-                        <i class="bi bi-pencil"></i> Edit
+        
+        <!-- Right Column - Details -->
+        <div class="col-lg-8">
+            <!-- Personal Information Card -->
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-vcard me-2 text-primary"></i>Personal Information
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        <i class="bi bi-pencil me-1"></i>Edit
                     </button>
                 </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-sm-3">
-                            <h6 class="mb-0">Full Name</h6>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="info-group">
+                                <label class="text-muted small mb-1">Full Name</label>
+                                <h6 class="mb-0"><?= Session::get("full_name") ?></h6>
+                            </div>
                         </div>
-                        <div class="col-sm-9 text-secondary">
-                            <?= Session::get("full_name") ?>
+                        
+                        <div class="col-md-6">
+                            <div class="info-group">
+                                <label class="text-muted small mb-1">Email Address</label>
+                                <h6 class="mb-0"><?= Session::get("user_email") ?></h6>
+                            </div>
                         </div>
-                    </div>
-                    <hr>
-                    <div class="row mb-3">
-                        <div class="col-sm-3">
-                            <h6 class="mb-0">Email</h6>
+                        
+                        <div class="col-md-6">
+                            <div class="info-group">
+                                <label class="text-muted small mb-1">Phone Number</label>
+                                <h6 class="mb-0">
+                                    <?php if (Session::get('phone_number')): ?>
+                                        <i class="bi bi-telephone me-1 text-success"></i><?= Session::get('phone_number') ?>
+                                    <?php else: ?>
+                                        <span class="text-muted fst-italic">No phone number added</span>
+                                    <?php endif; ?>
+                                </h6>
+                            </div>
                         </div>
-                        <div class="col-sm-9 text-secondary">
-                            <?= Session::get("user_email") ?>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row mb-3">
-                        <div class="col-sm-3">
-                            <h6 class="mb-0">Phone</h6>
-                        </div>
-                        <div class="col-sm-9 text-secondary">
-                            (123) 456-7890
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row mb-3">
-                        <div class="col-sm-3">
-                            <h6 class="mb-0">Role</h6>
-                        </div>
-                        <div class="col-sm-9 text-secondary">
-                            <span class="badge bg-danger">Administrator</span>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row mb-3">
-                        <div class="col-sm-3">
-                            <h6 class="mb-0">Last Login</h6>
-                        </div>
-                        <div class="col-sm-9 text-secondary">
-                            <?= date('F j, Y, g:i a') ?>
+                        
+                        <div class="col-md-6">
+                            <div class="info-group">
+                                <label class="text-muted small mb-1">Admin Role</label>
+                                <h6 class="mb-0">System Administrator</h6>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Account Settings</h5>
+            
+            <!-- Recent Admin Activity Card -->
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-activity me-2 text-success"></i>Recent Admin Activity
+                    </h5>
+                    <a href="#" class="btn btn-sm btn-outline-success rounded-pill">
+                        <i class="bi bi-clock-history me-1"></i>View All
+                    </a>
                 </div>
-                <div class="card-body">
-                    <a href="#" class="btn btn-outline-primary mb-2" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
-                        <i class="bi bi-key"></i> Change Password
-                    </a>
-                    <a href="#" class="btn btn-outline-secondary mb-2" data-bs-toggle="modal" data-bs-target="#twoFactorModal">
-                        <i class="bi bi-shield-lock"></i> Two-Factor Authentication
-                    </a>
-                    <a href="#" class="btn btn-outline-info mb-2">
-                        <i class="bi bi-bell"></i> Notification Settings
-                    </a>
+                <div class="card-body p-4">
+                    <!-- Activity Item 1 -->
+                    <div class="activity-item mb-3 pb-3 border-bottom">
+                        <div class="d-flex">
+                            <div class="activity-icon me-3 bg-primary bg-opacity-10 text-primary rounded-circle p-2">
+                                <i class="bi bi-person-plus"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <h6 class="mb-0">Added new user</h6>
+                                    <span class="badge bg-light text-dark">2 hours ago</span>
+                                </div>
+                                <p class="text-muted small mb-0">Added new user "John Smith" to the system with "Reader" role.</p>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-0">API Access</h6>
-                            <p class="text-muted small">Manage your API keys and permissions</p>
+                    <!-- Activity Item 2 -->
+                    <div class="activity-item mb-3 pb-3 border-bottom">
+                        <div class="d-flex">
+                            <div class="activity-icon me-3 bg-success bg-opacity-10 text-success rounded-circle p-2">
+                                <i class="bi bi-book"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <h6 class="mb-0">Updated book catalog</h6>
+                                    <span class="badge bg-light text-dark">Yesterday</span>
+                                </div>
+                                <p class="text-muted small mb-0">Added 15 new titles to the "Science Fiction" category.</p>
+                            </div>
                         </div>
-                        <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#apiAccessModal">
-                            <i class="bi bi-code-slash"></i> Manage API Keys
-                        </button>
                     </div>
+                    
+                    <!-- Activity Item 3 -->
+                    <div class="activity-item">
+                        <div class="d-flex">
+                            <div class="activity-icon me-3 bg-warning bg-opacity-10 text-warning rounded-circle p-2">
+                                <i class="bi bi-gear"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <h6 class="mb-0">System settings updated</h6>
+                                    <span class="badge bg-light text-dark">3 days ago</span>
+                                </div>
+                                <p class="text-muted small mb-0">Updated email notification settings for user registration process.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top-0 text-center">
+                    <a href="#" class="btn btn-link text-success">View complete activity log <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Recent System Activity</h5>
+            
+            <!-- System Overview Card -->
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2 text-warning"></i>System Overview
+                    </h5>
+                    <button class="btn btn-sm btn-outline-warning rounded-pill">
+                        <i class="bi bi-download me-1"></i>Export Report
+                    </button>
                 </div>
-                <div class="card-body">
-                    <div class="list-group">
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">New User Registration</h6>
-                                <small>10 minutes ago</small>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <!-- System Health -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title d-flex align-items-center mb-3">
+                                        <i class="bi bi-heart-pulse me-2 text-primary"></i>System Health
+                                    </h6>
+                                    <div class="text-center mb-3">
+                                        <div class="d-inline-block position-relative">
+                                            <svg width="120" height="120" viewBox="0 0 120 120">
+                                                <circle cx="60" cy="60" r="54" fill="none" stroke="#e9ecef" stroke-width="12"/>
+                                                <circle cx="60" cy="60" r="54" fill="none" stroke="#0d6efd" stroke-width="12"
+                                                    stroke-dasharray="339.3" stroke-dashoffset="33.9" transform="rotate(-90 60 60)"/>
+                                            </svg>
+                                            <div class="position-absolute top-50 start-50 translate-middle text-center">
+                                                <h3 class="mb-0 fw-bold">90%</h3>
+                                                <small class="text-muted">Optimal</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-center mb-0">All systems operating normally</p>
+                                </div>
                             </div>
-                            <p class="mb-1">User 'sarah.johnson@example.com' registered a new account</p>
-                            <small class="text-muted">IP: 192.168.1.45</small>
                         </div>
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">Book Inventory Update</h6>
-                                <small>2 hours ago</small>
+                        
+                        <!-- User Activity -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title d-flex align-items-center mb-3">
+                                        <i class="bi bi-people me-2 text-success"></i>User Activity
+                                    </h6>
+                                    <div class="text-center mb-3">
+                                        <div class="d-inline-block position-relative">
+                                            <svg width="120" height="120" viewBox="0 0 120 120">
+                                                <circle cx="60" cy="60" r="54" fill="none" stroke="#e9ecef" stroke-width="12"/>
+                                                <circle cx="60" cy="60" r="54" fill="none" stroke="#198754" stroke-width="12"
+                                                    stroke-dasharray="339.3" stroke-dashoffset="203.6" transform="rotate(-90 60 60)"/>
+                                            </svg>
+                                            <div class="position-absolute top-50 start-50 translate-middle text-center">
+                                                <h3 class="mb-0 fw-bold">40%</h3>
+                                                <small class="text-muted">Increase</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-center mb-0">User activity up 40% from last month</p>
+                                </div>
                             </div>
-                            <p class="mb-1">15 new books added to the inventory</p>
-                            <small class="text-muted">By admin: jessica.smith@example.com</small>
                         </div>
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">Payment Processed</h6>
-                                <small>4 hours ago</small>
+
+                        <!-- Quick Actions -->
+                        <div class="col-12">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title mb-3">Quick Admin Actions</h6>
+                                    <div class="row g-2">
+                                        <div class="col-md-3 col-6">
+                                            <a href="#" class="btn btn-outline-primary w-100 py-2">
+                                                <i class="bi bi-people me-2"></i>Users
+                                            </a>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <a href="#" class="btn btn-outline-success w-100 py-2">
+                                                <i class="bi bi-book me-2"></i>Books
+                                            </a>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <a href="#" class="btn btn-outline-warning w-100 py-2">
+                                                <i class="bi bi-ticket-perforated me-2"></i>Tickets
+                                            </a>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <a href="#" class="btn btn-outline-info w-100 py-2">
+                                                <i class="bi bi-gear me-2"></i>Settings
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <p class="mb-1">Payment of $129.99 processed for order #39284</p>
-                            <small class="text-muted">Transaction ID: TXN-583921</small>
-                        </div>
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">System Maintenance</h6>
-                                <small>Yesterday</small>
-                            </div>
-                            <p class="mb-1">Database backup completed successfully</p>
-                            <small class="text-muted">Size: 2.4 GB</small>
                         </div>
                     </div>
-                </div>
-                <div class="card-footer text-center">
-                    <a href="/admin/activity-logs" class="btn btn-link">View All Activity</a>
                 </div>
             </div>
         </div>
@@ -270,63 +375,44 @@ include $headerPath;
 
 <!-- Edit Profile Modal -->
 <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="editProfileModalLabel">
+                    <i class="bi bi-person-lines-fill me-2"></i>Edit Admin Profile
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form>
+                <form id="updateProfileForm">
                     <div class="mb-3">
-                        <label for="fullName" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="fullName" value="<?= Session::get('full_name') ?>">
+                        <label for="firstName" class="form-label fw-bold">First Name</label>
+                        <input type="text" class="form-control" id="firstName" name="firstName" value="<?= Session::get('first_name') ?>" placeholder="Enter your first name">
                     </div>
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" value="<?= Session::get('user_email') ?>">
+                        <label for="lastName" class="form-label fw-bold">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" name="lastName" value="<?= Session::get('last_name') ?>" placeholder="Enter your last name">
                     </div>
                     <div class="mb-3">
-                        <label for="phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control" id="phone" value="(123) 456-7890">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Save Changes</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Change Password Modal -->
-<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <label for="currentPassword" class="form-label">Current Password</label>
-                        <input type="password" class="form-control" id="currentPassword">
-                    </div>
-                    <div class="mb-3">
-                        <label for="newPassword" class="form-label">New Password</label>
-                        <input type="password" class="form-control" id="newPassword">
-                    </div>
-                    <div class="mb-3">
-                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                        <input type="password" class="form-control" id="confirmPassword">
+                        <label for="phone" class="form-label fw-bold">Phone Number</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="<?= Session::get('phone_number') ?>" placeholder="Enter your phone number">
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Used for account recovery and important system notifications.
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Change Password</button>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Cancel
+                </button>
+                <button type="submit" form="updateProfileForm" class="btn btn-primary">
+                    <i class="bi bi-check2 me-1"></i>Save Changes
+                </button>
             </div>
         </div>
     </div>
@@ -334,165 +420,222 @@ include $headerPath;
 
 <!-- Edit Profile Picture Modal -->
 <div class="modal fade" id="editProfilePictureModal" tabindex="-1" aria-labelledby="editProfilePictureModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editProfilePictureModalLabel">Change Profile Picture</h5>
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="editProfilePictureModalLabel">
+                    <i class="bi bi-person-badge me-2"></i>Update Admin Profile Picture
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form>
-                    <div class="mb-3 text-center">
-                        <img src=<?= Session::get("profile_url") ?> class="rounded-circle mb-3" alt="Profile Picture" style="width: 150px; height: 150px; object-fit: cover;">
-                    </div>
-                    <div class="mb-3">
-                        <label for="profilePicture" class="form-label">Upload New Picture</label>
-                        <input class="form-control" type="file" id="profilePicture">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Upload</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Two Factor Authentication Modal -->
-<div class="modal fade" id="twoFactorModal" tabindex="-1" aria-labelledby="twoFactorModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="twoFactorModalLabel">Two-Factor Authentication</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-4">
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Two-factor authentication adds an extra layer of security to your account
-                    </div>
-                    <div class="mb-4">
-                        <img src="/api/placeholder/200/200" alt="QR Code" class="img-fluid border p-2">
-                    </div>
-                    <p>Scan this QR code with your authenticator app</p>
-                    <p class="text-muted">Or enter this code manually: <strong>ABCD EFGH IJKL MNOP</strong></p>
-                </div>
-                <form>
-                    <div class="mb-3">
-                        <label for="verificationCode" class="form-label">Verification Code</label>
-                        <input type="text" class="form-control" id="verificationCode" placeholder="Enter 6-digit code">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success">Enable 2FA</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- API Access Modal -->
-<div class="modal fade" id="apiAccessModal" tabindex="-1" aria-labelledby="apiAccessModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="apiAccessModalLabel">API Access Management</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    API keys grant access to your account. Never share your keys with others.
-                </div>
-                
-                <h6>Active API Keys</h6>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Key</th>
-                                <th>Created</th>
-                                <th>Last Used</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Development Key</td>
-                                <td>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" value="api_key_378462184628364" readonly>
-                                        <button class="btn btn-outline-secondary" type="button">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                                <td>Apr 10, 2025</td>
-                                <td>Today</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-danger">Revoke</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Production Key</td>
-                                <td>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" value="api_key_123456789012345" readonly>
-                                        <button class="btn btn-outline-secondary" type="button">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                                <td>Mar 15, 2025</td>
-                                <td>Yesterday</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-danger">Revoke</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="mt-4">
-                    <h6>Generate New API Key</h6>
-                    <form>
-                        <div class="mb-3">
-                            <label for="keyName" class="form-label">Key Name</label>
-                            <input type="text" class="form-control" id="keyName" placeholder="e.g., Development, Test, Production">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Permissions</label>
-                            <div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="permRead" value="read" checked>
-                                    <label class="form-check-label" for="permRead">Read</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="permWrite" value="write">
-                                    <label class="form-check-label" for="permWrite">Write</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="permDelete" value="delete">
-                                    <label class="form-check-label" for="permDelete">Delete</label>
-                                </div>
+                <form id="updateProfilePictureForm" enctype="multipart/form-data">
+                    <div class="text-center mb-4">
+                        <div class="position-relative mx-auto" style="width: 180px; height: 180px;">
+                            <img id="profileImagePreview" src="<?= Session::get('profile_url') ?>" 
+                                class="rounded-circle img-fluid border shadow" 
+                                style="width: 180px; height: 180px; object-fit: cover;"
+                                alt="Profile Picture Preview">
+                            <div class="position-absolute bottom-0 end-0 bg-white rounded-circle p-1 shadow-sm">
+                                <label for="profileImage" class="btn btn-sm btn-primary rounded-circle mb-0" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-camera-fill"></i>
+                                </label>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-primary">Generate Key</button>
-                    </form>
-                </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="profileImage" class="form-label fw-bold mb-0">Select New Image</label>
+                            <span class="badge bg-light text-dark">Max: 5MB</span>
+                        </div>
+                        
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="profileImage" name="profile_image" 
+                                accept="image/jpeg,image/png,image/gif,image/webp">
+                            <button class="btn btn-outline-secondary" type="button" id="clearFileBtn">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="form-text mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Supported formats: JPEG, PNG, GIF, WebP
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-light border rounded p-3 mb-0">
+                        <div class="d-flex">
+                            <i class="bi bi-lightbulb text-primary me-2 fs-5"></i>
+                            <div>
+                                <small class="text-muted">
+                                    For best results, upload a square image. Your profile picture will be displayed as a circle throughout the site.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Cancel
+                </button>
+                <button type="submit" form="updateProfilePictureForm" class="btn btn-primary">
+                    <i class="bi bi-cloud-upload me-1"></i>Upload Image
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<?php
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="changePasswordModalLabel">
+                    <i class="bi bi-shield-lock me-2"></i>Change Admin Password
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info d-flex align-items-center mb-4">
+                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                    <div>
+                        Maintain strong security by using a complex password that you don't use elsewhere.
+                    </div>
+                </div>
+                
+                <form id="changePasswordForm">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label fw-bold">Current Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-key"></i></span>
+                            <input type="password" class="form-control" id="currentPassword" name="currentPassword" placeholder="Enter your current password">
+                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="currentPassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label fw-bold">New Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" id="newPassword" name="newPassword" placeholder="Enter your new password">
+                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="newPassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            Password must be at least 8 characters with uppercase, lowercase, number and special character.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label fw-bold">Confirm New Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" placeholder="Confirm your new password">
+                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="confirmPassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Cancel
+                </button>
+                <button type="submit" form="changePasswordForm" class="btn btn-primary">
+                    <i class="bi bi-shield-check me-1"></i>Change Password
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="/assets/js/utility/toast-notifications.js"></script>
+<script src="/assets/js/utility/form-handler.js"></script>
+<script src="/assets/js/utility/ImageFormHandler.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Form submission handlers
+        handleFormSubmission('updateProfileForm', '/user/user-profile/update-profile-info', true);
+        handleFormSubmission('changePasswordForm', '/user/user-profile/change-password');
+        
+        // Image upload handler
+        handleImageUpload(
+            'updateProfilePictureForm',                // Form ID
+            'profileImage',                            // File input ID
+            'profileImagePreview',                     // Image preview ID
+            '/user/user-profile/update-profile-pic',   // Endpoint
+            {
+                modalId: 'editProfilePictureModal',     // Modal ID to close after success
+                reloadPage: true,                       // Reload the page after successful upload
+                reloadDelay: 1500,                      // Delay before reloading (ms)
+                loadingText: 'Updating profile...',     // Custom loading text
+                
+                // Optional custom success handler
+                onSuccess: function(data) {
+                    // You can add additional behavior here if needed
+                    console.log('Profile picture updated successfully!');
+                    
+                    // Example: Update session data
+                    if (data.data && data.data.profile_url) {
+                        sessionStorage.setItem('profile_url', data.data.profile_url);
+                    }
+                }
+            }
+        );
+
+        // Handle clearing the file input
+    const clearFileBtn = document.getElementById('clearFileBtn');
+    if (clearFileBtn) {
+        clearFileBtn.addEventListener('click', function() {
+            const fileInput = document.getElementById('profileImage');
+            fileInput.value = '';
+            
+            // Reset the image preview back to the current profile picture
+            const imagePreview = document.getElementById('profileImagePreview');
+            imagePreview.src = '<?= Session::get('profile_url') ?>';
+        });
+    }
+});
+
+const togglePasswordButtons = document.querySelectorAll('.toggle-password');
+    togglePasswordButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const passwordInput = document.getElementById(targetId);
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                this.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            } else {
+                passwordInput.type = 'password';
+                this.innerHTML = '<i class="bi bi-eye"></i>';
+            }
+        });
+    });
+    
+    // Handle delete account confirmation checkbox
+    const confirmDeleteCheck = document.getElementById('confirmDeleteCheck');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    if (confirmDeleteCheck && confirmDeleteBtn) {
+        confirmDeleteCheck.addEventListener('change', function() {
+            confirmDeleteBtn.disabled = !this.checked;
+        });
+    }
+    </script>
+
+    <?php
 // Include footer
 include $footerPath;
 ?>

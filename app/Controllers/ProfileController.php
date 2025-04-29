@@ -198,7 +198,7 @@ class ProfileController extends BaseController {
             'profile_url' => $newProfileUrl,
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'phone_number' => $phone // This will be empty string if not provided
+            'phone_numbe' => $phone // This will be empty string if not provided
         ];
 
         // Update the user profile

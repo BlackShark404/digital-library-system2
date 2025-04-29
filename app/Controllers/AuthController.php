@@ -51,44 +51,51 @@ class AuthController extends BaseController
         }
         
         // Check if account is soft deleted
-        if ($user['deleted_at'] !== null) {
+        if ($user['ua_deleted_at'] !== null) {
             return $this->jsonError('This account has been deactivated');
         }
         
         // Check password and active status
-        if (!$this->userModel->verifyPassword($password, $user['password'])) {
+        if (!$this->userModel->verifyPassword($password, $user['ua_hashed_password'])) {
             return $this->jsonError('Invalid email or password');
         }
         
-        if (!$user['is_active']) {
+        if (!$user['ua_is_active']) {
             return $this->jsonError('Account is inactive');
         }
 
         // Update last login timestamp
-        $this->userModel->updateLastLogin($user['id']);
+        $this->userModel->updateLastLogin($user['ua_id']);
 
         // Set session data
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['profile_url'] = $user['profile_url'];
-        $_SESSION['first_name'] = $user['first_name'];
-        $_SESSION['last_name'] = $user['last_name'];
-        $_SESSION['full_name'] = $user['first_name'] . ' ' . $user['last_name'];
-        $_SESSION['user_email'] = $user['email'];
-        $_SESSION['phone_number'] = $user['phone_number'];
+        $_SESSION['user_id'] = $user['ua_id'];
+        $_SESSION['profile_url'] = $user['ua_profile_url'];
+        $_SESSION['first_name'] = $user['ua_first_name'];
+        $_SESSION['last_name'] = $user['ua_last_name'];
+        $_SESSION['full_name'] = $user['ua_first_name'] . ' ' . $user['ua_last_name'];
+        $_SESSION['user_email'] = $user['ua_email'];
+        $_SESSION['phone_number'] = $user['ua_phone_number'];
         $_SESSION['user_role'] = $user['role_name'] ?? "user";
-        $_SESSION['member_since'] = (new DateTime($user['created_at']))->format('F j, Y');
+        $_SESSION['member_since'] = (new DateTime($user['ua_created_at']))->format('F j, Y');
 
         if ($remember) {
-            $token = $this->userModel->generateRememberToken($user['id'], 30);
+            $token = $this->userModel->generateRememberToken($user['ua_id'], 30);
             Cookie::set('remember_token', $token, 30);
         }
 
         $role = $user['role_name'] ?? "/";
+
         $redirectUrl = match ($role) {
             'admin'     => '/admin/dashboard',
             'user'      => '/user/dashboard',
             default     => '/'
         };
+
+        if ($role === "admin") {
+            Session::set("profile_route", '/admin/admin-profile');
+        } else {
+            Session::set("profile_route", '/user/user-profile');
+        }
 
         return $this->jsonSuccess(
             ['redirect_url' => $redirectUrl],
@@ -116,9 +123,10 @@ class AuthController extends BaseController
 
         $profileUrl = $avatar->generate($data['first_name'] . ' ' . $data['last_name']);
         $firstName = $data['first_name'];
-        $last_name = $data['last_name'];
+        $lastName = $data['last_name'];
         $email = $data['email'];
         $password = $data['password'];
+        $phoneNumber = $data['phone_number'] ?? null;
 
         // Validate email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -134,10 +142,11 @@ class AuthController extends BaseController
         $result = $this->userModel->createUser([
             'profile_url' => $profileUrl,
             'first_name' => $firstName,
-            'last_name' => $last_name,
+            'last_name' => $lastName,
             'email' => $email,
             'password' => $password,
-            'role_id' => '1',
+            'phone_number' => $phoneNumber,
+            'role_id' => 1, // Default role 'user'
             'is_active' => true
         ]);
 
@@ -167,7 +176,7 @@ class AuthController extends BaseController
             Cookie::delete('remember_token');
         }
 
-        // Flash logout success message
+        // Flash logout success message 
         Session::flash("success", "Logout successful");
 
         // Redirect to login page
@@ -192,20 +201,23 @@ class AuthController extends BaseController
             
             // If valid token and user is active
             // findByRememberToken now includes expiration check
-            if ($user && $user['is_active']) {
+            if ($user && $user['ua_is_active']) {
                 // Update last login timestamp
-                $this->userModel->updateLastLogin($user['id']);
+                $this->userModel->updateLastLogin($user['ua_id']);
                 
                 // Set session data
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_email'] = $user['email'];
-                $_SESSION['user_role'] = $user['role'];
-                $_SESSION['full_name'] = $user['full_name'];
-                $_SESSION['username'] = $user['username'];
+                $_SESSION['user_id'] = $user['ua_id'];
+                $_SESSION['user_email'] = $user['ua_email'];
+                $_SESSION['user_role'] = $user['role_name'];
+                $_SESSION['full_name'] = $user['ua_first_name'] . ' ' . $user['ua_last_name'];
+                $_SESSION['first_name'] = $user['ua_first_name'];
+                $_SESSION['last_name'] = $user['ua_last_name'];
+                $_SESSION['profile_url'] = $user['ua_profile_url'];
+                $_SESSION['phone_number'] = $user['ua_phone_number'];
                 
                 // Generate a new token for security
                 // This rotates the token on each successful auto-login
-                $newToken = $this->userModel->generateRememberToken($user['id'], 30);
+                $newToken = $this->userModel->generateRememberToken($user['ua_id'], 30);
                 Cookie::set('remember_token', $newToken, 30);
             } else {
                 // Token is invalid or expired, clear cookie
@@ -247,10 +259,10 @@ class AuthController extends BaseController
         $resetToken = bin2hex(random_bytes(32));
         
         // Store the token in the database (you'd need to add this field)
-        // $this->userModel->updateUser($user['id'], ['reset_token' => $resetToken]);
+        // $this->userModel->updateUser($user['ua_id'], ['reset_token' => $resetToken]);
         
         // Send email with reset link
-        // sendResetEmail($user['email'], $resetToken);
+        // sendResetEmail($user['ua_email'], $resetToken);
         
         Session::flash("success", "Password reset instructions sent to your email");
         return $this->jsonSuccess(null, 'Reset instructions sent');

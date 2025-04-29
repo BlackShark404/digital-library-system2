@@ -33,12 +33,12 @@ if (empty($adminExists)) {
     
     // Create admin user
     $userModel->insert([
-        'profile_url' => $adminProfileUrl,
-        'first_name' => $adminFirstName,
-        'last_name' => $adminLastName,
-        'email' => $adminEmail,
-        'password' => $hashedPassword,
-        'role_id' => $adminRoleId
+        'ua_profile_url' => $adminProfileUrl,
+        'ua_first_name' => $adminFirstName,
+        'ua_last_name' => $adminLastName,
+        'ua_email' => $adminEmail,
+        'ua_hashed_password' => $hashedPassword,
+        'ua_role_id' => $adminRoleId
     ]);
     
     // Log the creation of admin account (optional)

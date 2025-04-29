@@ -12,67 +12,72 @@ use App\Models\BaseModel;
  */
 class UserModel extends BaseModel
 {
-    protected $table = 'users';
-    protected $primaryKey = 'id';
+    protected $table = 'user_account';
+    protected $primaryKey = 'ua_id';
 
     protected $fillable = [
-        'profile_url',
-        'first_name',
-        'last_name',
-        'email',
-        'password',
-        'role_id',
-        'is_active',
-        'remember_token',
-        'remember_token_expires_at',
-        'last_login'
+        'ua_profile_url',
+        'ua_first_name',
+        'ua_last_name',
+        'ua_email',
+        'ua_hashed_password',
+        'ua_phone_number',
+        'ua_role_id',
+        'ua_is_active',
+        'ua_remember_token',
+        'ua_remember_token_expires_at',
+        'ua_last_login'
     ];
 
-    protected $searchableFields = ['first_name', 'last_name', 'email']; // Updated from 'name' to 'first_name' and 'last_name'
+    protected $searchableFields = ['ua_first_name', 'ua_last_name', 'ua_email'];
 
     protected $timestamps = true;
     protected $useSoftDeletes = true;
 
+    protected $createdAtColumn = 'ua_created_at';
+    protected $updatedAtColumn = 'ua_updated_at';
+    protected $deletedAtColumn = 'ua_deleted_at';
+
     public function findById($id) {
-        return $this->select('users.*, roles.name AS role_name')
-                    ->join('roles', 'users.role_id', 'roles.id')
-                    ->where('users.id = :id')
+        return $this->select('user_account.*, user_role.ur_role_name AS role_name')
+                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                    ->where('user_account.ua_id = :id')
                     ->bind(['id' => $id])
-                    ->whereSoftDeleted('users')
+                    ->whereSoftDeleted('user_account')
                     ->first();
     }
 
     public function findByEmail($email)
     {
-        return $this->select('users.*, roles.name AS role_name')
-                    ->join('roles', 'users.role_id', 'roles.id')
-                    ->where('users.email = :email')
+        return $this->select('user_account.*, user_role.ur_role_name AS role_name')
+                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                    ->where('user_account.ua_email = :email')
                     ->bind(['email' => $email])
                     ->first();
     }
 
     public function getByRole($roleName)
     {
-        return $this->select('users.*, roles.name AS role_name')
-                    ->join('roles', 'users.role_id', 'roles.id')
-                    ->where('roles.name = :role_name')
+        return $this->select('user_account.*, user_role.ur_role_name AS role_name')
+                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                    ->where('user_role.ur_role_name = :role_name')
                     ->bind(['role_name' => $roleName])
-                    ->whereSoftDeleted('users')
+                    ->whereSoftDeleted('user_account')
                     ->get();
     }
 
     public function getNewest()
     {
-        return $this->orderBy('created_at DESC')
+        return $this->orderBy('ua_created_at DESC')
                     ->get();
     }
 
     public function search($searchTerm)
     {
-        return $this->where("first_name ILIKE :search_term OR last_name ILIKE :search_term OR email ILIKE :search_term")
+        return $this->where("ua_first_name ILIKE :search_term OR ua_last_name ILIKE :search_term OR ua_email ILIKE :search_term")
                     ->bind(['search_term' => "%$searchTerm%"])
                     ->whereSoftDeleted()
-                    ->orderBy('last_name, first_name')
+                    ->orderBy('ua_last_name, ua_first_name')
                     ->get();
     }
 
@@ -88,22 +93,66 @@ class UserModel extends BaseModel
 
     public function createUser(array $data)
     {
+        // Map input data fields to database columns
+        $userData = [];
+        
+        // Field mappings from input to database columns
+        $mappings = [
+            'profile_url' => 'ua_profile_url',
+            'first_name' => 'ua_first_name',
+            'last_name' => 'ua_last_name',
+            'email' => 'ua_email',
+            'password' => 'ua_hashed_password',  // Note: Changed to ua_hashed_password
+            'role_id' => 'ua_role_id',
+            'is_active' => 'ua_is_active',
+            'phone_number' => 'ua_phone_number'
+        ];
+        
+        foreach ($mappings as $input => $dbField) {
+            if (isset($data[$input])) {
+                $userData[$dbField] = $data[$input];
+            }
+        }
+        
+        // Hash password if it exists
         if (isset($data['password'])) {
-            $data['password'] = $this->hashPassword($data['password']);
+            $userData['ua_hashed_password'] = $this->hashPassword($data['password']);
         }
         
         // No need to manually set timestamps as BaseModel.insert() handles this
-        return $this->insert($data);
+        return $this->insert($userData);
     }
 
     public function updateUser($id, array $data)
     {
-        if (isset($data['password'])) {
-            $data['password'] = $this->hashPassword($data['password']);
+        // Map input data fields to database columns
+        $userData = [];
+        
+        // Field mappings from input to database columns
+        $mappings = [
+            'profile_url' => 'ua_profile_url',
+            'first_name' => 'ua_first_name',
+            'last_name' => 'ua_last_name',
+            'email' => 'ua_email',
+            'password' => 'ua_hashed_password',  // Note: Changed to ua_hashed_password
+            'role_id' => 'ua_role_id',
+            'is_active' => 'ua_is_active',
+            'phone_number' => 'ua_phone_number'
+        ];
+        
+        foreach ($mappings as $input => $dbField) {
+            if (isset($data[$input])) {
+                $userData[$dbField] = $data[$input];
+            }
         }
-
+        
+        // Hash password if it exists
+        if (isset($data['password'])) {
+            $userData['ua_hashed_password'] = $this->hashPassword($data['password']);
+        }
+        
         // No need to manually set updated_at as BaseModel.update() handles this
-        return $this->update($data, "{$this->primaryKey} = :id", ['id' => $id]);
+        return $this->update($userData, "{$this->primaryKey} = :id", ['id' => $id]);
     }
 
     /**
@@ -129,28 +178,28 @@ class UserModel extends BaseModel
 
     public function emailExists($email)
     {
-        return $this->exists('email = :email', ['email' => $email]);
+        return $this->exists('ua_email = :email', ['email' => $email]);
     }
 
     public function getActiveUsers($days = 30)
     {
         $cutoff = date('Y-m-d H:i:s', strtotime("-$days days"));
-        return $this->where('is_active = :is_active')
-                    ->where('last_login >= :cutoff')
+        return $this->where('ua_is_active = :is_active')
+                    ->where('ua_last_login >= :cutoff')
                     ->bind([
                         'is_active' => true,
                         'cutoff' => $cutoff
                     ])
                     ->whereSoftDeleted()
-                    ->orderBy('last_login DESC')
+                    ->orderBy('ua_last_login DESC')
                     ->get();
     }
 
     public function findByRememberToken($token)
     {
         // Add check for token expiration
-        return $this->where('remember_token = :token')
-                    ->where('remember_token_expires_at > NOW()')
+        return $this->where('ua_remember_token = :token')
+                    ->where('ua_remember_token_expires_at > NOW()')
                     ->bind(['token' => $token])
                     ->first();
     }
@@ -159,7 +208,7 @@ class UserModel extends BaseModel
     {
         return $this->update(
             [
-                'last_login' => date('Y-m-d H:i:s')
+                'ua_last_login' => date('Y-m-d H:i:s')
             ],
             "{$this->primaryKey} = :id",
             ['id' => $userId]
@@ -173,8 +222,8 @@ class UserModel extends BaseModel
 
         $this->update(
             [
-                'remember_token' => $token,
-                'remember_token_expires_at' => $expiresAt
+                'ua_remember_token' => $token,
+                'ua_remember_token_expires_at' => $expiresAt
             ],
             "{$this->primaryKey} = :id",
             ['id' => $userId]
@@ -187,8 +236,8 @@ class UserModel extends BaseModel
     {
         return $this->update(
             [
-                'remember_token' => null,
-                'remember_token_expires_at' => null
+                'ua_remember_token' => null,
+                'ua_remember_token_expires_at' => null
             ],
             "{$this->primaryKey} = :id",
             ['id' => $userId]
@@ -197,13 +246,13 @@ class UserModel extends BaseModel
 
     public function getFullName($user)
     {
-        return $user['first_name'] . ' ' . $user['last_name'];
+        return $user['ua_first_name'] . ' ' . $user['ua_last_name'];
     }
 
     public function activateUser($userId)
     {
         return $this->update(
-            ['is_active' => true],
+            ['ua_is_active' => true],
             "{$this->primaryKey} = :id",
             ['id' => $userId]
         );
@@ -212,7 +261,7 @@ class UserModel extends BaseModel
     public function deactivateUser($userId)
     {
         return $this->update(
-            ['is_active' => false],
+            ['ua_is_active' => false],
             "{$this->primaryKey} = :id",
             ['id' => $userId]
         );
@@ -220,7 +269,7 @@ class UserModel extends BaseModel
 
     public function getActiveOnly()
     {
-        return $this->where('is_active = :is_active')
+        return $this->where('ua_is_active = :is_active')
                     ->bind(['is_active' => true])
                     ->get();
     }
@@ -229,23 +278,27 @@ class UserModel extends BaseModel
     {
         $cutoff = date('Y-m-d H:i:s', strtotime("-$days days"));
 
-        return $this->where('(last_login IS NULL OR last_login < :cutoff)')
+        return $this->where('(ua_last_login IS NULL OR ua_last_login < :cutoff)')
                     ->bind(['cutoff' => $cutoff])
                     ->whereSoftDeleted()
-                    ->orderBy('last_login ASC NULLS FIRST')
+                    ->orderBy('ua_last_login ASC NULLS FIRST')
                     ->get();
     }
 
     public function getAdmins()
     {
-        return $this->where('role = :role')
+        return $this->select('user_account.*')
+                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                    ->where('user_role.ur_role_name = :role')
                     ->bind(['role' => 'admin'])
                     ->get();
     }
 
     public function getRegularUsers()
     {
-        return $this->where('role = :role')
+        return $this->select('user_account.*')
+                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                    ->where('user_role.ur_role_name = :role')
                     ->bind(['role' => 'user'])
                     ->get();
     }
@@ -255,9 +308,20 @@ class UserModel extends BaseModel
         if (!in_array($role, ['user', 'admin'])) {
             return false;
         }
-
+        
+        // Get role ID from role name
+        $roleQuery = $this->execute(
+            "SELECT ur_id FROM user_role WHERE ur_role_name = :role_name",
+            ['role_name' => $role]
+        );
+        $roleData = $roleQuery->fetch(\PDO::FETCH_ASSOC);
+        
+        if (!$roleData) {
+            return false;
+        }
+        
         return $this->update(
-            ['role' => $role],
+            ['ua_role_id' => $roleData['ur_id']],
             "{$this->primaryKey} = :id",
             ['id' => $userId]
         );
@@ -271,12 +335,280 @@ class UserModel extends BaseModel
     {
         return $this->update(
             [
-                'remember_token' => null,
-                'remember_token_expires_at' => null
+                'ua_remember_token' => null,
+                'ua_remember_token_expires_at' => null
             ],
-            "remember_token IS NOT NULL AND remember_token_expires_at < NOW()",
+            "ua_remember_token IS NOT NULL AND ua_remember_token_expires_at < NOW()",
             []
         );
     }
 
+    /**
+ * These are additional methods to add to the UserModel class
+ * to support the DataTablesManager integration
+ */
+
+/**
+ * Get all users with optional filtering
+ * 
+ * @param string $role Optional role filter ('admin' or 'user')
+ * @param string $status Optional status filter ('active' or 'inactive')
+ * @return array User records with role information
+ */
+public function getUsers($role = '', $status = '')
+{
+    // Start with a select that includes role name
+    $this->select('user_account.*, user_role.ur_role_name AS role_name')
+         ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+         ->whereSoftDeleted('user_account');
+    
+    // Apply role filter if specified
+    if (!empty($role)) {
+        $this->where('user_role.ur_role_name = :role_name')
+             ->bind(['role_name' => $role]);
+    }
+    
+    // Apply status filter if specified
+    if (!empty($status)) {
+        $isActive = ($status === 'active') ? 1 : 0;
+        $this->where('user_account.ua_is_active = :is_active')
+             ->bind(['is_active' => $isActive]);
+    }
+    
+    // Order by last name, first name
+    $this->orderBy('user_account.ua_last_name, user_account.ua_first_name');
+    
+    // Get results
+    return $this->get();
+}
+
+/**
+ * Get all active users
+ * 
+ * @return array Active user records
+ */
+public function getAllActiveUsers()
+{
+    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
+                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                ->where('user_account.ua_is_active = :is_active')
+                ->bind(['is_active' => 1])
+                ->whereSoftDeleted('user_account')
+                ->orderBy('user_account.ua_last_name, user_account.ua_first_name')
+                ->get();
+}
+
+/**
+ * Get all inactive users
+ * 
+ * @return array Inactive user records
+ */
+public function getAllInactiveUsers()
+{
+    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
+                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                ->where('user_account.ua_is_active = :is_active')
+                ->bind(['is_active' => 0])
+                ->whereSoftDeleted('user_account')
+                ->orderBy('user_account.ua_last_name, user_account.ua_first_name')
+                ->get();
+}
+
+/**
+ * Search users by name or email with filtering
+ * 
+ * @param string $searchTerm The search term
+ * @param string $role Optional role filter
+ * @param string $status Optional status filter
+ * @return array Matching user records
+ */
+public function searchUsers($searchTerm, $role = '', $status = '')
+{
+    // Start with a basic select
+    $this->select('user_account.*, user_role.ur_role_name AS role_name')
+         ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+         ->whereSoftDeleted('user_account');
+    
+    // Add search conditions
+    $this->where("(user_account.ua_first_name LIKE :search_term OR user_account.ua_last_name LIKE :search_term OR user_account.ua_email LIKE :search_term)")
+         ->bind(['search_term' => "%$searchTerm%"]);
+    
+    // Apply role filter if specified
+    if (!empty($role)) {
+        $this->where('user_role.ur_role_name = :role_name')
+             ->bind(['role_name' => $role]);
+    }
+    
+    // Apply status filter if specified
+    if (!empty($status)) {
+        $isActive = ($status === 'active') ? 1 : 0;
+        $this->where('user_account.ua_is_active = :is_active')
+             ->bind(['is_active' => $isActive]);
+    }
+    
+    // Order by relevance (name matches first)
+    $this->orderBy("CASE 
+        WHEN user_account.ua_first_name LIKE :exact_match OR user_account.ua_last_name LIKE :exact_match THEN 1
+        WHEN user_account.ua_first_name LIKE :start_match OR user_account.ua_last_name LIKE :start_match THEN 2
+        ELSE 3
+    END, user_account.ua_last_name, user_account.ua_first_name")
+    ->bind([
+        'exact_match' => $searchTerm,
+        'start_match' => "$searchTerm%"
+    ]);
+    
+    // Get results
+    return $this->get();
+}
+
+/**
+ * Get user statistics
+ * 
+ * @param int $userId User ID
+ * @return array User statistics
+ */
+public function getUserStats($userId)
+{
+    // In a real implementation, these would be actual database queries
+    // For this example, we'll return placeholder data
+    return [
+        'logins' => rand(1, 100),
+        'purchases' => rand(0, 10),
+        'sessions' => rand(1, 50),
+        'hours' => rand(1, 200),
+        'comments' => rand(0, 30),
+        'ratings' => rand(0, 20)
+    ];
+}
+
+/**
+ * Get users by registration date range
+ * 
+ * @param string $startDate Start date in YYYY-MM-DD format
+ * @param string $endDate End date in YYYY-MM-DD format
+ * @return array User records
+ */
+public function getUsersByRegistrationDate($startDate, $endDate)
+{
+    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
+                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                ->where('user_account.ua_created_at BETWEEN :start_date AND :end_date')
+                ->bind([
+                    'start_date' => $startDate . ' 00:00:00',
+                    'end_date' => $endDate . ' 23:59:59'
+                ])
+                ->whereSoftDeleted('user_account')
+                ->orderBy('user_account.ua_created_at DESC')
+                ->get();
+}
+
+/**
+ * Get users by last login date range
+ * 
+ * @param string $startDate Start date in YYYY-MM-DD format
+ * @param string $endDate End date in YYYY-MM-DD format
+ * @return array User records
+ */
+public function getUsersByLastLogin($startDate, $endDate)
+{
+    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
+                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                ->where('user_account.ua_last_login BETWEEN :start_date AND :end_date')
+                ->bind([
+                    'start_date' => $startDate . ' 00:00:00',
+                    'end_date' => $endDate . ' 23:59:59'
+                ])
+                ->whereSoftDeleted('user_account')
+                ->orderBy('user_account.ua_last_login DESC')
+                ->get();
+}
+
+/**
+ * Get users who have never logged in
+ * 
+ * @return array User records
+ */
+public function getNeverLoggedInUsers()
+{
+    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
+                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                ->whereNull('user_account.ua_last_login')
+                ->whereSoftDeleted('user_account')
+                ->orderBy('user_account.ua_created_at DESC')
+                ->get();
+}
+
+
+/**
+ * Get user count by role
+ * 
+ * @return array Role counts indexed by role name
+ */
+public function getUserCountByRole()
+{
+    $roleCounts = [];
+    
+    $results = $this->select('user_role.ur_role_name AS role_name, COUNT(*) AS user_count')
+                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
+                    ->whereSoftDeleted('user_account')
+                    ->groupBy('user_role.ur_role_name')
+                    ->get();
+    
+    foreach ($results as $row) {
+        $roleCounts[$row['role_name']] = (int) $row['user_count'];
+    }
+    
+    return $roleCounts;
+}
+
+/**
+ * Get user registrations by month
+ * 
+ * @param int $months Number of months to include
+ * @return array Monthly registration counts
+ */
+public function getUserRegistrationsByMonth($months = 12)
+{
+    $registrations = [];
+    
+    // Calculate date range
+    $endDate = date('Y-m-d');
+    $startDate = date('Y-m-d', strtotime("-$months months"));
+    
+    $sql = "
+        SELECT 
+            DATE_FORMAT(ua_created_at, '%Y-%m') AS month,
+            COUNT(*) AS count
+        FROM 
+            {$this->table}
+        WHERE 
+            ua_created_at BETWEEN ? AND ?
+            AND {$this->deletedAtColumn} IS NULL
+        GROUP BY 
+            DATE_FORMAT(ua_created_at, '%Y-%m')
+        ORDER BY 
+            month ASC
+    ";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([$startDate, $endDate]);
+    $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    
+    // Fill gaps in the data
+    $currentDate = new \DateTime($startDate);
+    $endDateTime = new \DateTime($endDate);
+    
+    while ($currentDate <= $endDateTime) {
+        $monthKey = $currentDate->format('Y-m');
+        $registrations[$monthKey] = 0;
+        $currentDate->modify('+1 month');
+    }
+    
+    // Add actual counts
+    foreach ($results as $row) {
+        $registrations[$row['month']] = (int) $row['count'];
+    }
+    
+    return $registrations;
+}
 }

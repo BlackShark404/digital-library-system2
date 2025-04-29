@@ -4,10 +4,6 @@
 
 use Core\Session;
 
-$role = isset($_SESSION['user_role']) ?? 'user';
-
-$profileRoute = ($role === 'user') ? '/admin/admin-profile' : '/user/user-profile';
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -22,6 +18,7 @@ $profileRoute = ($role === 'user') ? '/admin/admin-profile' : '/user/user-profil
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -304,6 +301,55 @@ $profileRoute = ($role === 'user') ? '/admin/admin-profile' : '/user/user-profil
             display: block;
         }
 
+        /* Add these styles to your CSS */
+        .profile-picture-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        
+        .profile-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.3s ease;
+        }
+        
+        .profile-picture-overlay {
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+        
+        .profile-picture-container:hover .profile-image {
+            filter: brightness(80%);
+        }
+        
+        .profile-picture-container:hover .profile-picture-overlay {
+            opacity: 1;
+        }
+        
+        .icon-box {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .info-group {
+            padding-bottom: 8px;
+        }
+        
+        .reading-activity-item {
+            transition: transform 0.2s ease;
+        }
+        
+        .reading-activity-item:hover {
+            transform: translateY(-3px);
+        }
+
         /* Tooltip Styles */
         .tooltip {
             pointer-events: none;
@@ -430,7 +476,7 @@ $profileRoute = ($role === 'user') ? '/admin/admin-profile' : '/user/user-profil
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>
-                                <a class="dropdown-item" href="<?= $profileRoute ?>">
+                                <a class="dropdown-item" href="<?= Session::get("profile_route") ?>">
                                     <i class="fas fa-id-badge me-2"></i>Profile
                                 </a>
                             </li>

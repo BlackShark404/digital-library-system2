@@ -357,295 +357,341 @@ include $headerPath;
 <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
 
-<!-- Include DataTablesHelper -->
-<script src="/assets/js/utility/DataTablesHelper.js"></script>
-
-<script src="/assets/js/utility/toggle-password.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="/assets/js/utility/toast-notifications.js"></script>
-<script src="/assets/js/utility/form-handler.js"></script>
+<script src="/assets/js/utility/DataTablesManager.js"></script>
 
 <script>
     /**
  * User Management JavaScript
- * This script initializes the users DataTable and sets up event handlers for the user management interface
+ * Initializes DataTable with DataTablesManager and handles user actions
  */
 document.addEventListener('DOMContentLoaded', function() {
-    // Define column configurations for the DataTable
-    const columns = [
-        { data: 'id', title: 'ID' },
-        { data: 'first_name', title: 'First Name' },
-        { data: 'last_name', title: 'Last Name' },
-        { data: 'email', title: 'Email' },
-        { 
-            data: 'role', 
-            title: 'Role',
-            render: function(data) {
-                if (data === 'admin') {
-                    return '<span class="badge bg-primary">Admin</span>';
-                } else {
-                    return '<span class="badge bg-secondary">User</span>';
+    // Initialize DataTable with DataTablesManager
+    const userTableManager = new DataTablesManager('usersTable', {
+        ajaxUrl: '/api/users',
+        columns: [
+            { data: 'id', title: 'ID' },
+            { data: 'first_name', title: 'First Name' },
+            { data: 'last_name', title: 'Last Name' },
+            { data: 'email', title: 'Email' },
+            { 
+                data: 'role', 
+                title: 'Role',
+                badge: {
+                    type: 'primary',
+                    pill: true,
+                    valueMap: {
+                        'admin': {
+                            type: 'danger',
+                            display: 'Admin'
+                        },
+                        'user': {
+                            type: 'info',
+                            display: 'User'
+                        }
+                    }
                 }
-            }
-        },
-        { 
-            data: 'status', 
-            title: 'Status',
-            render: function(data) {
-                if (data === 'active') {
-                    return '<span class="badge bg-success">Active</span>';
-                } else {
-                    return '<span class="badge bg-danger">Inactive</span>';
+            },
+            { 
+                data: 'status', 
+                title: 'Status',
+                badge: {
+                    type: 'secondary',
+                    pill: true,
+                    valueMap: {
+                        'active': {
+                            type: 'success',
+                            display: 'Active'
+                        },
+                        'inactive': {
+                            type: 'danger',
+                            display: 'Inactive'
+                        }
+                    }
                 }
-            }
+            },
+            { data: 'registered', title: 'Registered' },
+            { data: 'last_login', title: 'Last Login' }
+        ],
+        // View user callback
+        viewRowCallback: function(rowData, tableManager) {
+            // Populate the view modal with user data
+            $('#viewUserId').text(rowData.id);
+            $('#viewUserName').text(rowData.first_name + ' ' + rowData.last_name);
+            $('#viewUserUsername').text(rowData.first_name + ' ' + rowData.last_name);
+            $('#viewUserEmail').text(rowData.email);
+            $('#viewUserRole').text(rowData.role);
+            $('#viewUserStatus').text(rowData.status);
+            $('#viewUserRegistered').text(rowData.registered);
+            $('#viewUserLastLogin').text(rowData.last_login || 'Never');
+            
+            // Set sample activity statistics
+            $('#viewUserLogins').text(rowData.logins || '0');
+            $('#viewUserPurchases').text(rowData.purchases || '0');
+            $('#viewUserSessions').text(rowData.sessions || '0');
+            $('#viewUserHours').text(rowData.hours || '0');
+            $('#viewUserComments').text(rowData.comments || '0');
+            $('#viewUserRatings').text(rowData.ratings || '0');
+            
+            // Show the modal
+            const viewModal = new bootstrap.Modal(document.getElementById('viewUserModal'));
+            viewModal.show();
+            
+            // Setup edit button in view modal
+            $('#editUserBtn').off('click').on('click', function() {
+                // Hide view modal
+                viewModal.hide();
+                
+                // Setup and show edit modal
+                setupEditUserModal(rowData);
+            });
         },
-        { 
-            data: 'registered_date',
-            title: 'Registered',
-            render: function(data) {
-                return new Date(data).toLocaleDateString();
-            }
+        
+        // Edit user callback
+        editRowCallback: function(rowData, tableManager) {
+            setupEditUserModal(rowData);
         },
-        { 
-            data: 'last_login',
-            title: 'Last Login',
-            render: function(data) {
-                return data ? new Date(data).toLocaleString() : 'Never';
-            }
-        },
-        { 
-            data: null,
-            title: 'Actions',
-            orderable: false,
-            render: DataTablesHelper.createActionColumn([
-                {
-                    name: 'view',
-                    icon: '<i class="fas fa-eye"></i>',
-                    class: 'btn-info',
-                    url: '#'
-                },
-                {
-                    name: 'edit',
-                    icon: '<i class="fas fa-edit"></i>',
-                    class: 'btn-warning',
-                    url: '#'
-                },
-                {
-                    name: 'delete',
-                    icon: '<i class="fas fa-trash"></i>',
-                    class: 'btn-danger',
-                    url: '#'
-                }
-            ])
-        }
-    ];
-
-    // Initialize the DataTable with server-side processing
-    const usersTable = DataTablesHelper.initServerSide('usersTable', '/api/users/list', columns, {
-        // Additional DataTable options
-        dom: 'Bfrtip',
-        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
-        pageLength: 10,
-        order: [[0, 'desc']],
-        // Add filter functionality
-        initComplete: function() {
-            // Apply filters when the select boxes change
-            $('#roleFilter, #statusFilter').on('change', function() {
-                applyFilters();
+        
+        // Delete user callback
+        deleteRowCallback: function(rowData, tableManager) {
+            // Set user info in delete confirmation modal
+            $('#deleteUserId').val(rowData.id);
+            $('#deleteUserName').text(rowData.first_name + ' ' + rowData.last_name);
+            
+            // Reset checkbox
+            $('#confirmDelete').prop('checked', false);
+            $('#deleteUserBtn').prop('disabled', true);
+            
+            // Show the modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+            deleteModal.show();
+            
+            // Handle delete button
+            $('#deleteUserBtn').off('click').on('click', function() {
+                const userId = $('#deleteUserId').val();
+                
+                // Call delete API
+                $.ajax({
+                    url: `/api/users/${userId}`,
+                    method: 'DELETE',
+                    success: function(response) {
+                        if (response.success) {
+                            // Delete succeeded
+                            tableManager.deleteRow(userId);
+                            deleteModal.hide();
+                            
+                            // Show success message
+                            tableManager.showSuccessToast('User Deleted', response.message);
+                        } else {
+                            // Delete failed
+                            tableManager.showErrorToast('Error', response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON || { message: 'Server error' };
+                        tableManager.showErrorToast('Error', response.message);
+                    }
+                });
             });
         }
     });
-
-    // Add event listeners for the action buttons
-    DataTablesHelper.bindActionEvents('usersTable', {
-        'view': function(id, rowData) {
-            viewUser(id, rowData);
-        },
-        'edit': function(id, rowData) {
-            editUser(id, rowData);
-        },
-        'delete': function(id, rowData) {
-            confirmDeleteUser(id, rowData);
-        }
+    
+    // Setup filter change listeners
+    $('#roleFilter, #statusFilter').on('change', function() {
+        applyFilters();
     });
-
-    // Handle the add user form submission
-    DataTablesHelper.handleFormSubmit('addUserForm', 'usersTable', '/api/users/add', function(response) {
-        // Additional success callback
-        $('#addUserModal').modal('hide');
-        DataTablesHelper.refreshTable('usersTable');
-    });
-
-    // Handle the edit user form submission
-    DataTablesHelper.handleFormSubmit('editUserForm', 'usersTable', '/api/users/update', function(response) {
-        // Additional success callback
-        $('#editUserModal').modal('hide');
-        DataTablesHelper.refreshTable('usersTable');
-    });
-
-    // Export functionality
-    $('#exportCsv').on('click', function(e) {
-        e.preventDefault();
-        DataTablesHelper.exportData('usersTable', 'csv', 'Users_Export');
-    });
-
-    $('#exportExcel').on('click', function(e) {
-        e.preventDefault();
-        DataTablesHelper.exportData('usersTable', 'excel', 'Users_Export');
-    });
-
-    $('#exportPdf').on('click', function(e) {
-        e.preventDefault();
-        DataTablesHelper.exportData('usersTable', 'pdf', 'Users_Export');
-    });
-
-    // Toggle delete button based on checkbox
-    $('#confirmDelete').on('change', function() {
-        $('#deleteUserBtn').prop('disabled', !this.checked);
-    });
-
-    // Handle delete user action
-    $('#deleteUserBtn').on('click', function() {
-        const userId = $('#deleteUserId').val();
-        
-        $.ajax({
-            url: '/api/users/delete',
-            type: 'POST',
-            data: { id: userId, _token: typeof csrfToken !== 'undefined' ? csrfToken : '' },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    $('#deleteUserModal').modal('hide');
-                    DataTablesHelper.refreshTable('usersTable');
-                    DataTablesHelper.showToast('User deleted successfully', 'success');
-                } else {
-                    DataTablesHelper.showToast(response.message || 'Failed to delete user', 'error');
-                }
-            },
-            error: function(xhr) {
-                let errorMessage = 'Server error occurred';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                DataTablesHelper.showToast(errorMessage, 'error');
-            }
-        });
-    });
-
-    // Toggle password visibility
-    $('.modal').on('click', '[id^=toggle]', function() {
-        const target = $(this).data('target');
-        const inputField = $(this).closest('.input-group').find('input');
-        const icon = $(this).find('i');
-        
-        if (inputField.attr('type') === 'password') {
-            inputField.attr('type', 'text');
-            icon.removeClass('fa-eye-slash').addClass('fa-eye');
-        } else {
-            inputField.attr('type', 'password');
-            icon.removeClass('fa-eye').addClass('fa-eye-slash');
-        }
-    });
-
-    // Function to apply filters to the DataTable
+    
+    // Function to apply table filters
     function applyFilters() {
         const roleFilter = $('#roleFilter').val();
         const statusFilter = $('#statusFilter').val();
         
-        // Apply filters using DataTables API
-        usersTable.column(4).search(roleFilter).draw();
-        usersTable.column(5).search(statusFilter).draw();
-    }
-
-    // Function to view user details
-    function viewUser(id, userData) {
-        // Set user data in the view modal
-        $('#viewUserId').text(userData.id);
-        $('#viewUserName').text(`${userData.first_name} ${userData.last_name}`);
-        $('#viewUserUsername').text(`${userData.first_name} ${userData.last_name}`);
-        $('#viewUserEmail').text(userData.email);
-        $('#viewUserRole').text(userData.role);
+        const filters = {};
+        if (roleFilter) filters.role = roleFilter;
+        if (statusFilter) filters.status = statusFilter;
         
-        // Set status with appropriate styling
-        if (userData.status === 'active') {
-            $('#viewUserStatus').html('<span class="badge bg-success">Active</span>');
-        } else {
-            $('#viewUserStatus').html('<span class="badge bg-danger">Inactive</span>');
+        userTableManager.applyFilters(filters);
+    }
+    
+    // Handle form submission for adding users
+    $('#addUserForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate passwords match
+        const password = $('#addPassword').val();
+        const confirmPassword = $('#addConfirmPassword').val();
+        
+        if (password !== confirmPassword) {
+            userTableManager.showErrorToast('Validation Error', 'Passwords do not match');
+            return false;
         }
         
-        $('#viewUserRegistered').text(new Date(userData.registered_date).toLocaleDateString());
-        $('#viewUserLastLogin').text(userData.last_login ? new Date(userData.last_login).toLocaleString() : 'Never');
+        // Get form data
+        const formData = {
+            first_name: $('#addFname').val(),
+            last_name: $('#addLname').val(),
+            email: $('#addEmail').val(),
+            password: password,
+            role_id: $('#addRole').val(),
+            is_active: $('#addStatus').val()
+        };
         
-        // Load additional user statistics
+        // Submit form via AJAX
         $.ajax({
-            url: '/api/users/statistics/' + id,
-            type: 'GET',
-            dataType: 'json',
+            url: '/api/users',
+            method: 'POST',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
             success: function(response) {
                 if (response.success) {
-                    const stats = response.data;
-                    $('#viewUserLogins').text(stats.total_logins || 0);
-                    $('#viewUserPurchases').text(stats.books_purchased || 0);
-                    $('#viewUserSessions').text(stats.reading_sessions || 0);
-                    $('#viewUserHours').text(stats.hours_read || 0);
-                    $('#viewUserComments').text(stats.comments_made || 0);
-                    $('#viewUserRatings').text(stats.ratings_given || 0);
+                    // Close modal
+                    const addModal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+                    addModal.hide();
+                    
+                    // Reset form
+                    $('#addUserForm')[0].reset();
+                    
+                    // Refresh table
+                    userTableManager.refresh();
+                    
+                    // Show success message
+                    userTableManager.showSuccessToast('User Added', response.message);
+                } else {
+                    userTableManager.showErrorToast('Error', response.message);
                 }
             },
-            error: function() {
-                // If error, show default values
-                $('.stats-value').text('N/A');
+            error: function(xhr) {
+                const response = xhr.responseJSON || { message: 'Server error' };
+                userTableManager.showErrorToast('Error', response.message);
             }
         });
+    });
+    
+    // Handle form submission for editing users
+    $('#editUserForm').on('submit', function(e) {
+        e.preventDefault();
         
-        // Store user ID for edit button
-        $('#editUserBtn').data('id', id);
+        // Get form data
+        const userId = $('#editUserId').val();
+        const formData = {
+            first_name: $('#editFirstName').val(),
+            last_name: $('#editLastName').val(),
+            email: $('#editEmail').val(),
+            role_id: $('#editRole').val(),
+            is_active: $('#editStatus').val()
+        };
         
-        // Show the modal
-        $('#viewUserModal').modal('show');
-    }
-
-    // Function to edit user
-    function editUser(id, userData) {
-        // Hide the view modal if it's open
-        $('#viewUserModal').modal('hide');
+        // Add password only if provided
+        const password = $('#editPassword').val();
+        if (password) {
+            formData.password = password;
+        }
         
-        // Set user data in the edit form
-        $('#editUserId').val(id);
-        $('#editUserName').text(`${userData.first_name} ${userData.last_name}`);
-        $('#editFirstName').val(userData.first_name);
-        $('#editLastName').val(userData.last_name);
-        $('#editEmail').val(userData.email);
-        $('#editRole').val(userData.role === 'admin' ? 2 : 1);
-        $('#editStatus').val(userData.status === 'active' ? 1 : 0);
+        // Submit form via AJAX
+        $.ajax({
+            url: `/api/users/${userId}`,
+            method: 'PUT',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    // Close modal
+                    const editModal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+                    editModal.hide();
+                    
+                    // Refresh table
+                    userTableManager.refresh();
+                    
+                    // Show success message
+                    userTableManager.showSuccessToast('User Updated', response.message);
+                } else {
+                    userTableManager.showErrorToast('Error', response.message);
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON || { message: 'Server error' };
+                userTableManager.showErrorToast('Error', response.message);
+            }
+        });
+    });
+    
+    // Function to set up the edit user modal
+    function setupEditUserModal(rowData) {
+        // Populate edit form
+        $('#editUserId').val(rowData.id);
+        $('#editFirstName').val(rowData.first_name);
+        $('#editLastName').val(rowData.last_name);
+        $('#editEmail').val(rowData.email);
+        $('#editUserName').text(rowData.first_name + ' ' + rowData.last_name);
         
-        // Clear password field as it's optional in edit mode
+        // Set dropdown values
+        const roleId = rowData.role === 'admin' ? 2 : 1;
+        const status = rowData.status === 'active' ? 1 : 0;
+        
+        $('#editRole').val(roleId);
+        $('#editStatus').val(status);
+        
+        // Clear password field (for security)
         $('#editPassword').val('');
         
-        // Show the edit modal
-        $('#editUserModal').modal('show');
+        // Show the modal
+        const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+        editModal.show();
     }
-
-    // Handle click on edit button in view modal
-    $('#editUserBtn').on('click', function() {
-        const userId = $(this).data('id');
-        const userData = usersTable.rows().data().toArray().find(row => row.id == userId);
+    
+    // Toggle password visibility for add form
+    $('#togglePassword, #toggleConfirmPassword').on('click', function() {
+        const targetId = $(this).data('target') === 'password' ? 'addPassword' : 'addConfirmPassword';
+        const passwordField = $('#' + targetId);
+        const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
         
-        if (userData) {
-            editUser(userId, userData);
-        }
+        // Toggle input type
+        passwordField.attr('type', type);
+        
+        // Toggle icon
+        const icon = $(this).find('i');
+        icon.toggleClass('fa-eye-slash fa-eye');
     });
-
-    // Function to show delete confirmation
-    function confirmDeleteUser(id, userData) {
-        $('#deleteUserId').val(id);
-        $('#deleteUserName').text(`${userData.first_name} ${userData.last_name}`);
-        $('#confirmDelete').prop('checked', false);
-        $('#deleteUserBtn').prop('disabled', true);
-        $('#deleteUserModal').modal('show');
+    
+    // Handle confirm delete checkbox
+    $('#confirmDelete').on('change', function() {
+        $('#deleteUserBtn').prop('disabled', !$(this).is(':checked'));
+    });
+    
+    // Handle export buttons
+    $('#exportCsv').on('click', function(e) {
+        e.preventDefault();
+        exportUsers('csv');
+    });
+    
+    $('#exportExcel').on('click', function(e) {
+        e.preventDefault();
+        exportUsers('excel');
+    });
+    
+    $('#exportPdf').on('click', function(e) {
+        e.preventDefault();
+        exportUsers('pdf');
+    });
+    
+    // Function to export users
+    function exportUsers(format) {
+        const roleFilter = $('#roleFilter').val();
+        const statusFilter = $('#statusFilter').val();
+        
+        // Build query string for filters
+        let queryString = '?format=' + format;
+        if (roleFilter) queryString += '&role=' + roleFilter;
+        if (statusFilter) queryString += '&status=' + statusFilter;
+        
+        // Redirect to export URL
+        window.location.href = '/api/users/export' + queryString;
+        
+        // Show info toast
+        userTableManager.showInfoToast('Export Started', `Exporting users to ${format.toUpperCase()}`);
     }
 });
 </script>
+
 
 <?php
 include $footerPath;

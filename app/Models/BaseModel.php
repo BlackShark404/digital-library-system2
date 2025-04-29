@@ -16,6 +16,7 @@ class BaseModel
     protected $joins = [];
     protected $wheres = [];
     protected $groupBy = '';
+    protected $having = '';
     protected $orderBy = '';
     protected $limit;
     protected $offset;
@@ -491,6 +492,22 @@ class BaseModel
     }
 
     /**
+     * Add a having clause for filtering grouped results
+     * 
+     * @param string $condition The HAVING condition
+     * @param array $params Optional parameters to bind to the condition
+     * @return $this
+     */
+    public function having($condition, array $params = [])
+    {
+        $this->having = "HAVING $condition";
+        if (!empty($params)) {
+            $this->bind($params);
+        }
+        return $this;
+    }
+
+    /**
      * Add an order by clause
      */
     public function orderBy($columns)
@@ -515,6 +532,25 @@ class BaseModel
     {
         $this->offset = (int) $number;
         return $this;
+    }
+
+    /**
+     * Execute a raw SQL query and return the results
+     * 
+     * @param string $sql The raw SQL query to execute
+     * @param array $params Parameters to bind to the query
+     * @param bool $fetch Whether to fetch results (true) or just execute (false)
+     * @return mixed Query results (if fetch is true) or execution status (if fetch is false)
+     */
+    public function raw($sql, array $params = [], $fetch = true)
+    {
+        if ($fetch) {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll();
+        } else {
+            return $this->execute($sql, $params);
+        }
     }
 
     // -----------------------------------------
@@ -646,6 +682,10 @@ class BaseModel
             $sql .= ' ' . $this->groupBy;
         }
 
+        if ($this->having) {
+            $sql .= ' ' . $this->having;
+        }
+
         if ($this->orderBy) {
             $sql .= ' ' . $this->orderBy;
         }
@@ -670,85 +710,6 @@ class BaseModel
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchColumn() !== false;
-    }
-
-    /**
-     * Paginate the results
-     *
-     * @param int $page The page number (1-based)
-     * @param int $perPage Number of items per page
-     * @return array Array with 'data', 'pagination' information
-     */
-    public function paginate($page = 1, $perPage = 15)
-    {
-        // Save the current query state
-        $originalSelect = $this->select;
-        $originalJoins = $this->joins;
-        $originalWheres = $this->wheres;
-        $originalParams = $this->params;
-        $originalGroupBy = $this->groupBy;
-        $originalOrderBy = $this->orderBy;
-        $originalLimit = $this->limit;
-        $originalOffset = $this->offset;
-        
-        // For the count query, we only need a simple COUNT
-        $this->select = "COUNT(*) as total";
-        
-        // If there are joins, we need to be more specific to avoid duplicate counting
-        if (!empty($this->joins)) {
-            $this->select = "COUNT(DISTINCT {$this->table}.{$this->primaryKey}) as total";
-        }
-        
-        // Temporarily remove ORDER BY as it's not needed for counting and can cause issues
-        $this->orderBy = '';
-        
-        // Get total count
-        $countResult = $this->get();
-        $total = isset($countResult[0]['total']) ? (int)$countResult[0]['total'] : 0;
-        
-        // Restore original query state
-        $this->select = $originalSelect;
-        $this->joins = $originalJoins;
-        $this->wheres = $originalWheres;
-        $this->params = $originalParams;
-        $this->groupBy = $originalGroupBy;
-        $this->orderBy = $originalOrderBy;
-        
-        // Calculate pagination values
-        $page = max(1, (int)$page); // Ensure page is at least 1
-        $perPage = max(1, (int)$perPage); // Ensure items per page is at least 1
-        $lastPage = ceil($total / $perPage);
-        $lastPage = max(1, $lastPage); // Ensure last page is at least 1
-        
-        // Apply pagination limits
-        $this->limit($perPage);
-        $this->offset(($page - 1) * $perPage);
-        
-        // Get the paginated data
-        $data = $this->get();
-        
-        // Restore original limit and offset
-        $this->limit = $originalLimit;
-        $this->offset = $originalOffset;
-        
-        // Create pagination information
-        $pagination = [
-            'total' => $total,
-            'per_page' => $perPage,
-            'current_page' => $page,
-            'last_page' => $lastPage,
-            'first_page_url' => 1,
-            'last_page_url' => $lastPage,
-            'next_page_url' => $page < $lastPage ? $page + 1 : null,
-            'prev_page_url' => $page > 1 ? $page - 1 : null,
-            'from' => ($page - 1) * $perPage + 1,
-            'to' => min($page * $perPage, $total),
-        ];
-        
-        return [
-            'data' => $data,
-            'pagination' => $pagination
-        ];
     }
 
     // -----------------------------------------
@@ -852,6 +813,7 @@ class BaseModel
         $this->joins = [];
         $this->wheres = [];
         $this->groupBy = '';
+        $this->having = '';
         $this->orderBy = '';
         $this->limit = null;
         $this->offset = null;
