@@ -84,15 +84,6 @@ $activity_logs = [
         'ip_address' => '192.168.1.100',
         'timestamp' => '2025-03-31 11:20:45'
     ],
-    [
-        'id' => 10,
-        'user_id' => 1,
-        'username' => 'admin',
-        'action' => 'User Banned',
-        'details' => 'Banned user "malicioususer" (ID: 27)',
-        'ip_address' => '192.168.1.100',
-        'timestamp' => '2025-03-30 16:12:33'
-    ]
 ];
 
 // Filter and pagination logic could be added here
@@ -150,10 +141,7 @@ sort($unique_usernames);
                     <label for="date" class="form-label">Date</label>
                     <input type="date" class="form-control" id="date" name="date" value="<?php echo $date_filter; ?>">
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2"><i class="bi bi-search me-1"></i> Filter</button>
-                    <a href="activity.php" class="btn btn-secondary"><i class="bi bi-x-circle me-1"></i> Reset</a>
-                </div>
+                
             </form>
         </div>
     </div>
@@ -170,7 +158,7 @@ sort($unique_usernames);
                     <thead class="table-light">
                         <tr>
                             <th>ID</th>
-                            <th>User</th>
+                            <th>Name</th>
                             <th>Action</th>
                             <th>Details</th>
                             <th>IP Address</th>
@@ -307,7 +295,6 @@ sort($unique_usernames);
                     <p>Use the filters above to narrow down the activity records by action type, username, or date.</p>
                     <p><strong>Tips:</strong></p>
                     <ul>
-                        <li>Click on a username to view the user's profile</li>
                         <li>Use the eye icon to view detailed information about an activity</li>
                         <li>Export options are available for reports</li>
                     </ul>
@@ -344,8 +331,6 @@ function getBadgeClass($action)
             return 'bg-info';
         case 'Profile Update':
             return 'bg-warning';
-        case 'User Banned':
-            return 'bg-danger';
         default:
             return 'bg-secondary';
     }

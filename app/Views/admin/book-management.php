@@ -153,9 +153,6 @@ include $headerPath;
 </div>
 
 
-
-
-
 <?php
 include $footerPath;
 ?>
