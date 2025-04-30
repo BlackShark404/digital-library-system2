@@ -8,19 +8,92 @@ include $headerPath;
     <!-- Search and Filter Options -->
     <div class="card mb-4">
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                   <!-- Additional filters can go here -->
+            <form id="bookSearchForm">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="searchQuery" placeholder="Search by title, author, or ISBN...">
+                            <button type="submit" class="btn btn-outline-primary">Search</button>
+                            <button type="button" class="btn btn-outline-secondary" id="clearSearch">Clear</button>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="resultsPerPage">
+                            <option value="10">10 per page</option>
+                            <option value="25">25 per page</option>
+                            <option value="50">50 per page</option>
+                            <option value="100">100 per page</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addBookModal">
+                            <i class="bi bi-plus-lg"></i> Add Book
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                  <!-- Additional filters can go here -->
+                
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="genreFilter" class="form-label">Genre</label>
+                        <select class="form-select" id="genreFilter">
+                            <option value="">All Genres</option>
+                            <option value="fiction">Fiction</option>
+                            <option value="non-fiction">Non-Fiction</option>
+                            <option value="mystery">Mystery</option>
+                            <option value="sci-fi">Science Fiction</option>
+                            <option value="fantasy">Fantasy</option>
+                            <option value="biography">Biography</option>
+                            <option value="history">History</option>
+                            <option value="self-help">Self-Help</option>
+                            <option value="business">Business</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="priceRangeFilter" class="form-label">Price Range</label>
+                        <select class="form-select" id="priceRangeFilter">
+                            <option value="">Any Price</option>
+                            <option value="0-10">$0 - $10</option>
+                            <option value="10-20">$10 - $20</option>
+                            <option value="20-30">$20 - $30</option>
+                            <option value="30+">$30+</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="in-stock">In Stock</option>
+                            <option value="low-stock">Low Stock</option>
+                            <option value="out-of-stock">Out of Stock</option>
+                            <option value="discontinued">Discontinued</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sortBy" class="form-label">Sort By</label>
+                        <select class="form-select" id="sortBy">
+                            <option value="title-asc">Title (A-Z)</option>
+                            <option value="title-desc">Title (Z-A)</option>
+                            <option value="price-asc">Price (Low to High)</option>
+                            <option value="price-desc">Price (High to Low)</option>
+                            <option value="date-added-desc">Newest First</option>
+                            <option value="date-added-asc">Oldest First</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addBookModal">
-                        <i class="fas fa-plus"></i> Add Book
-                    </button>
+                
+                <div class="row mt-3">
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Filters
+                        </button>
+                        <button type="submit" class="btn btn-success ms-2">
+                            <i class="bi bi-funnel me-1"></i>Apply Filters
+                        </button>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
@@ -79,157 +152,9 @@ include $headerPath;
     </div>
 </div>
 
-<!-- Include your modals here (addBookModal, editBookModal, etc.) -->
 
-<!-- Include jQuery first -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- Include DataTables CSS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.bootstrap5.min.css">
 
-<!-- Include DataTables JS -->
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.bootstrap5.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
-<script src="/assets/js/utility/DataTablesHelper.js"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Define columns for the DataTable
-    const columns = [
-        { data: 'id' },
-        { data: 'cover', orderable: false },
-        { data: 'title' },
-        { data: 'author' },
-        { data: 'genre' },
-        { data: 'price' },
-        { data: 'status' },
-        { 
-            data: null,
-            orderable: false,
-            render: DataTablesHelper.createActionColumn([
-                {
-                    name: 'edit',
-                    icon: '<i class="fas fa-pen"></i>',
-                    class: 'btn-outline-primary',
-                    attributes: 'data-bs-toggle="modal" data-bs-target="#editBookModal"'
-                },
-                {
-                    name: 'view',
-                    icon: '<i class="fas fa-eye"></i>',
-                    class: 'btn-outline-info',
-                    attributes: 'data-bs-toggle="modal" data-bs-target="#viewBookModal"'
-                },
-                {
-                    name: 'delete',
-                    icon: '<i class="fas fa-trash"></i>',
-                    class: 'btn-outline-danger',
-                    attributes: 'data-bs-toggle="modal" data-bs-target="#deleteBookModal"'
-                }
-            ])
-        }
-    ];
-
-    // Initialize DataTable with server-side processing
-    const table = DataTablesHelper.initServerSide('booksTable', '/admin/book-management/get-books', columns, {
-        pageLength: 10,
-        language: {
-            emptyTable: 'No books found',
-            zeroRecords: 'No books match your search criteria'
-        },
-        dom: '<"d-flex justify-content-between align-items-center mb-3"<"d-flex align-items-center"l><"d-flex"f>>rtip',
-        initComplete: function() {
-            // Add custom filters or buttons if needed
-        }
-    });
-
-    // Setup action button event handlers
-    DataTablesHelper.bindActionEvents('booksTable', {
-        'edit': function(id, rowData) {
-            // Populate edit modal with data
-            document.getElementById('editBookId').value = id;
-            document.getElementById('editTitle').value = rowData.title.split('<div')[0].trim();
-            document.getElementById('editAuthor').value = rowData.author;
-            // ... Set other fields
-            
-            // Show the modal
-            const editModal = new bootstrap.Modal(document.getElementById('editBookModal'));
-            editModal.show();
-        },
-        'view': function(id, rowData) {
-            // Fetch full book details with AJAX if needed, or use rowData
-            fetch(`/book/details/${id}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const book = data.data;
-                        // Populate view modal
-                        document.getElementById('viewBookTitle').textContent = book.title;
-                        // ... Set other fields
-                        
-                        // Show the modal
-                        const viewModal = new bootstrap.Modal(document.getElementById('viewBookModal'));
-                        viewModal.show();
-                    } else {
-                        DataTablesHelper.showToast(data.message, 'error');
-                    }
-                });
-        },
-        'delete': function(id, rowData) {
-            // Setup delete confirmation
-            document.getElementById('deleteBookId').value = id;
-            document.getElementById('deleteBookTitle').textContent = rowData.title.split('<div')[0].trim();
-            
-            // Show the modal
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteBookModal'));
-            deleteModal.show();
-        }
-    });
-
-    // Handle form submissions
-    DataTablesHelper.handleFormSubmit('addBookForm', 'booksTable', '/book/add', function(response) {
-        // Additional callback actions after successful add
-    });
-    
-    DataTablesHelper.handleFormSubmit('editBookForm', 'booksTable', '/book/update');
-    
-    // Handle delete form submission
-    document.getElementById('deleteBookForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const bookId = document.getElementById('deleteBookId').value;
-        
-        fetch(`/book/delete/${bookId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Close the modal
-            const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteBookModal'));
-            deleteModal.hide();
-            
-            if (data.success) {
-                // Refresh table and show success message
-                DataTablesHelper.refreshTable('booksTable');
-                DataTablesHelper.showToast(data.message, 'success');
-            } else {
-                DataTablesHelper.showToast(data.message, 'error');
-            }
-        });
-    });
-});
-</script>
 
 <?php
 include $footerPath;

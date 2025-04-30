@@ -202,7 +202,7 @@ class ProfileController extends BaseController {
         ];
 
         // Update the user profile
-        $updated = $this->userModel->updateUser($userId, $updateData);
+        $updated = $this->userModel->updateUser($user['ua_id'], $updateData);
         if (!$updated) {
             $this->jsonError('Failed to update profile. Please try again later.', 500);
             return;

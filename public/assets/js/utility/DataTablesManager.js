@@ -1,5 +1,5 @@
 /**
- * DataTablesManager Class with Badge Support
+ * DataTablesManager Class with Customizable Action Buttons
  * A class to handle DataTables initialization with advanced features:
  * - Search
  * - Filters
@@ -9,6 +9,7 @@
  * - Table refresh after add/edit/delete operations
  * - Toast notifications (success, error, warning, info)
  * - Bootstrap badges on column data
+ * - Highly customizable action buttons (buttons, icons, dropdowns, etc.)
  */
 class DataTablesManager {
   /**
@@ -20,6 +21,7 @@ class DataTablesManager {
    * @param {Function} options.editRowCallback - Function to call when edit action is clicked
    * @param {Function} options.deleteRowCallback - Function to call when delete action is confirmed
    * @param {Object} options.customButtons - Custom buttons configuration
+   * @param {Object} options.actionButtons - Custom action buttons configuration
    * @param {Object} options.toastOptions - Toast notification options
    */
   constructor(tableId, options = {}) {
@@ -35,6 +37,62 @@ class DataTablesManager {
       editRowCallback: null,
       deleteRowCallback: null,
       customButtons: {},
+      // Default action buttons configuration
+      actionButtons: {
+        // Column configuration
+        column: {
+          title: 'Actions',
+          width: '',
+          class: 'actions-column',
+          style: '',
+        },
+        // Container configuration
+        container: {
+          tag: 'div',
+          class: 'action-buttons',
+          style: '',
+        },
+        // Default action button configurations
+        buttons: {
+          view: {
+            enabled: true,
+            type: 'button',      // button, icon, link, dropdown, custom
+            text: 'View',        // Button text or title attribute for icons
+            class: 'btn btn-info btn-sm',
+            icon: '',            // Icon class (e.g., 'fas fa-eye') or leave empty for no icon
+            attributes: {},      // Additional HTML attributes as key-value pairs
+            tooltip: '',         // Tooltip text (if empty, text will be used)
+            position: 0,         // Position in the actions container (0 = first)
+            template: '',        // Custom HTML template (for custom type)
+            modalId: '',         // ID of modal to trigger (optional)
+          },
+          edit: {
+            enabled: true,
+            type: 'button',
+            text: 'Edit',
+            class: 'btn btn-warning btn-sm',
+            icon: '',
+            attributes: {},
+            tooltip: '',
+            position: 1,
+            template: '',
+            modalId: '',
+          },
+          delete: {
+            enabled: true,
+            type: 'button',
+            text: 'Delete',
+            class: 'btn btn-danger btn-sm',
+            icon: '',
+            attributes: {},
+            tooltip: '',
+            position: 2,
+            template: '',
+            modalId: 'deleteConfirmationModal',
+          },
+          // Add more custom actions as needed
+        },
+      },
       toastOptions: {
         position: 'bottom-right',     // toast position: top-right, top-left, bottom-right, bottom-left
         autoClose: 4000,              // auto close after 5 seconds
@@ -46,6 +104,40 @@ class DataTablesManager {
       },
       ...options
     };
+    
+    // Merge provided action buttons with defaults
+    if (options.actionButtons) {
+      // Deep merge column and container settings
+      if (options.actionButtons.column) {
+        this.options.actionButtons.column = {
+          ...this.options.actionButtons.column,
+          ...options.actionButtons.column
+        };
+      }
+      
+      if (options.actionButtons.container) {
+        this.options.actionButtons.container = {
+          ...this.options.actionButtons.container,
+          ...options.actionButtons.container
+        };
+      }
+      
+      // Merge button configurations
+      if (options.actionButtons.buttons) {
+        for (const [buttonKey, buttonConfig] of Object.entries(options.actionButtons.buttons)) {
+          if (this.options.actionButtons.buttons[buttonKey]) {
+            // Update existing button configuration
+            this.options.actionButtons.buttons[buttonKey] = {
+              ...this.options.actionButtons.buttons[buttonKey],
+              ...buttonConfig
+            };
+          } else {
+            // Add new button configuration
+            this.options.actionButtons.buttons[buttonKey] = buttonConfig;
+          }
+        }
+      }
+    }
     
     // Initialize toast container if it doesn't exist
     this._initializeToastContainer();
@@ -408,6 +500,124 @@ class DataTablesManager {
   }
   
   /**
+   * Generate action button HTML based on button config
+   * @param {Object} buttonConfig - Button configuration
+   * @param {Object} row - Row data
+   * @returns {string} HTML for the button
+   * @private
+   */
+  _generateActionButtonHtml(buttonConfig, row) {
+    if (!buttonConfig || !buttonConfig.enabled) {
+      return '';
+    }
+    
+    // Generate data attributes from attributes object
+    let dataAttributes = '';
+    if (buttonConfig.attributes) {
+      for (const [key, value] of Object.entries(buttonConfig.attributes)) {
+        dataAttributes += ` ${key}="${value}"`;
+      }
+    }
+    
+    // Add data-id attribute
+    dataAttributes += ` data-id="${row.id}"`;
+    
+    // Add modal trigger if specified
+    let modalTrigger = '';
+    if (buttonConfig.modalId) {
+      modalTrigger = ` data-toggle="modal" data-target="#${buttonConfig.modalId}"`;
+    }
+    
+    // Generate the button based on type
+    switch (buttonConfig.type) {
+      case 'button':
+        // Standard button
+        return `<button class="${buttonConfig.class}" ${dataAttributes}${modalTrigger} 
+                ${buttonConfig.tooltip ? `title="${buttonConfig.tooltip}"` : ''}>
+                ${buttonConfig.icon ? `<i class="${buttonConfig.icon}"></i> ` : ''}
+                ${buttonConfig.text}
+                </button>`;
+      
+      case 'icon':
+        // Icon only button
+        return `<button class="${buttonConfig.class}" ${dataAttributes}${modalTrigger} 
+                ${buttonConfig.tooltip || buttonConfig.text ? `title="${buttonConfig.tooltip || buttonConfig.text}"` : ''}>
+                <i class="${buttonConfig.icon || 'fas fa-ellipsis-h'}"></i>
+                </button>`;
+      
+      case 'link':
+        // Link style button
+        return `<a href="javascript:void(0)" class="${buttonConfig.class}" ${dataAttributes}${modalTrigger} 
+                ${buttonConfig.tooltip ? `title="${buttonConfig.tooltip}"` : ''}>
+                ${buttonConfig.icon ? `<i class="${buttonConfig.icon}"></i> ` : ''}
+                ${buttonConfig.text}
+                </a>`;
+      
+      case 'dropdown':
+        // Dropdown item - should be used within a dropdown container
+        return `<a class="dropdown-item ${buttonConfig.class}" href="javascript:void(0)" ${dataAttributes}${modalTrigger}>
+                ${buttonConfig.icon ? `<i class="${buttonConfig.icon}"></i> ` : ''}
+                ${buttonConfig.text}
+                </a>`;
+      
+      case 'custom':
+        // Custom template with replacements
+        if (buttonConfig.template) {
+          let template = buttonConfig.template;
+          
+          // Replace placeholders with actual values
+          template = template.replace(/\{id\}/g, row.id);
+          template = template.replace(/\{text\}/g, buttonConfig.text);
+          template = template.replace(/\{icon\}/g, buttonConfig.icon ? `<i class="${buttonConfig.icon}"></i>` : '');
+          
+          // Replace other row data placeholders
+          for (const [key, value] of Object.entries(row)) {
+            template = template.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+          }
+          
+          return template;
+        }
+        return '';
+      
+      default:
+        // Default to button if type is not recognized
+        return `<button class="${buttonConfig.class}" ${dataAttributes}>
+                ${buttonConfig.icon ? `<i class="${buttonConfig.icon}"></i> ` : ''}
+                ${buttonConfig.text}
+                </button>`;
+    }
+  }
+  
+  /**
+   * Generate dropdown container for action buttons
+   * @param {Array} dropdownItems - HTML for dropdown items
+   * @param {Object} dropdownConfig - Dropdown configuration
+   * @returns {string} HTML for the dropdown
+   * @private
+   */
+  _generateDropdownHtml(dropdownItems, dropdownConfig = {}) {
+    // Default dropdown configuration
+    const config = {
+      buttonText: 'Actions',
+      buttonIcon: 'fas fa-cog',
+      buttonClass: 'btn btn-secondary btn-sm dropdown-toggle',
+      menuClass: 'dropdown-menu dropdown-menu-right',
+      ...dropdownConfig
+    };
+    
+    return `
+      <div class="dropdown">
+        <button class="${config.buttonClass}" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          ${config.buttonIcon ? `<i class="${config.buttonIcon}"></i> ` : ''}${config.buttonText}
+        </button>
+        <div class="${config.menuClass}">
+          ${dropdownItems.join('')}
+        </div>
+      </div>
+    `;
+  }
+  
+  /**
    * Initialize the DataTable
    */
   initialize() {
@@ -439,30 +649,110 @@ class DataTablesManager {
     // Prepare columns with action buttons
     const columns = [...processedColumns];
     
-    // Add action column if any callback is provided
-    if (this.options.viewRowCallback || this.options.editRowCallback || this.options.deleteRowCallback) {
+    // Get all action buttons that have callbacks
+    const hasViewButton = this.options.viewRowCallback && 
+                         this.options.actionButtons.buttons.view && 
+                         this.options.actionButtons.buttons.view.enabled;
+                         
+    const hasEditButton = this.options.editRowCallback && 
+                         this.options.actionButtons.buttons.edit && 
+                         this.options.actionButtons.buttons.edit.enabled;
+                         
+    const hasDeleteButton = this.options.deleteRowCallback && 
+                           this.options.actionButtons.buttons.delete && 
+                           this.options.actionButtons.buttons.delete.enabled;
+    
+    // Get custom action buttons
+    const customActionButtons = Object.entries(this.options.actionButtons.buttons)
+      .filter(([key]) => !['view', 'edit', 'delete'].includes(key))
+      .filter(([_, config]) => config.enabled);
+    
+    // Add action column if any action button is enabled
+    if (hasViewButton || hasEditButton || hasDeleteButton || customActionButtons.length > 0) {
+      const actionColumnConfig = this.options.actionButtons.column;
+      const actionContainerConfig = this.options.actionButtons.container;
+      
       columns.push({
         data: null,
-        title: 'Actions',
+        title: actionColumnConfig.title || 'Actions',
         orderable: false,
-        className: 'actions-column',
+        width: actionColumnConfig.width || '',
+        className: actionColumnConfig.class || 'actions-column',
+        createdCell: function(td, cellData, rowData, row, col) {
+          if (actionColumnConfig.style) {
+            $(td).attr('style', actionColumnConfig.style);
+          }
+        },
         render: (data, type, row) => {
-          let actionsHtml = '<div class="action-buttons">';
-          
-          if (this.options.viewRowCallback) {
-            actionsHtml += `<button class="btn btn-info btn-sm view-btn" data-id="${row.id}">View</button> `;
+          if (type !== 'display') {
+            return '';
           }
           
-          if (this.options.editRowCallback) {
-            actionsHtml += `<button class="btn btn-warning btn-sm edit-btn" data-id="${row.id}">Edit</button> `;
+          // Container for action buttons
+          const containerTag = actionContainerConfig.tag || 'div';
+          const containerClass = actionContainerConfig.class || 'action-buttons';
+          const containerStyle = actionContainerConfig.style ? ` style="${actionContainerConfig.style}"` : '';
+          
+          // Determine if we should use dropdown layout
+          const useDropdown = this.options.actionButtons.layout === 'dropdown';
+          
+          // Get all enabled action buttons sorted by position
+          const allActionButtons = [];
+          
+          // Standard action buttons (view, edit, delete)
+          if (hasViewButton) {
+            allActionButtons.push({
+              config: this.options.actionButtons.buttons.view,
+              type: 'view'
+            });
           }
           
-          if (this.options.deleteRowCallback) {
-            actionsHtml += `<button class="btn btn-danger btn-sm delete-btn" data-id="${row.id}">Delete</button>`;
+          if (hasEditButton) {
+            allActionButtons.push({
+              config: this.options.actionButtons.buttons.edit,
+              type: 'edit'
+            });
           }
           
-          actionsHtml += '</div>';
-          return actionsHtml;
+          if (hasDeleteButton) {
+            allActionButtons.push({
+              config: this.options.actionButtons.buttons.delete,
+              type: 'delete'
+            });
+          }
+          
+          // Add custom action buttons
+          customActionButtons.forEach(([key, config]) => {
+            allActionButtons.push({
+              config: config,
+              type: key
+            });
+          });
+          
+          // Sort buttons by position
+          allActionButtons.sort((a, b) => (a.config.position || 0) - (b.config.position || 0));
+          
+          if (useDropdown) {
+            // Create dropdown items
+            const dropdownItems = allActionButtons.map(button => {
+              // Force dropdown type for items
+              const dropdownConfig = { ...button.config, type: 'dropdown' };
+              return this._generateActionButtonHtml(dropdownConfig, row);
+            });
+            
+            // Create dropdown container
+            return this._generateDropdownHtml(
+              dropdownItems, 
+              this.options.actionButtons.dropdown || {}
+            );
+          } else {
+            // Regular action buttons layout
+            const actionButtonsHtml = allActionButtons.map(button => 
+              this._generateActionButtonHtml(button.config, row)
+            ).join(' ');
+            
+            return `<${containerTag} class="${containerClass}"${containerStyle}>${actionButtonsHtml}</${containerTag}>`;
+          }
         }
       });
     }
@@ -492,6 +782,14 @@ class DataTablesManager {
     
     // Attach event listeners
     this._attachEventListeners();
+    
+    // Initialize tooltips if Bootstrap 4/5 is available
+    if (typeof $.fn.tooltip === 'function') {
+      $(`#${this.tableId}`).tooltip({
+        selector: '[title]',
+        container: 'body'
+      });
+    }
   }
   
   /**
@@ -503,7 +801,8 @@ class DataTablesManager {
     
     // View button click handler
     if (this.options.viewRowCallback) {
-      table.on('click', '.view-btn', (e) => {
+      const viewConfig = this.options.actionButtons.buttons.view;
+      table.on('click', `.view-btn, [data-action="view"], .${viewConfig.class.split(' ').join('.')}`, (e) => {
         const id = $(e.currentTarget).data('id');
         const rowData = this._findRowById(id);
         this.options.viewRowCallback(rowData, this);
@@ -515,7 +814,8 @@ class DataTablesManager {
     
     // Edit button click handler
     if (this.options.editRowCallback) {
-      table.on('click', '.edit-btn', (e) => {
+      const editConfig = this.options.actionButtons.buttons.edit;
+      table.on('click', `.edit-btn, [data-action="edit"], .${editConfig.class.split(' ').join('.')}`, (e) => {
         const id = $(e.currentTarget).data('id');
         const rowData = this._findRowById(id);
         this.options.editRowCallback(rowData, this);
@@ -527,213 +827,41 @@ class DataTablesManager {
     
     // Delete button click handler with confirmation modal
     if (this.options.deleteRowCallback) {
-      table.on('click', '.delete-btn', (e) => {
-        const id = $(e.currentTarget).data('id');
-        const rowData = this._findRowById(id);
-        
-        // Show confirmation modal
-        this._showDeleteConfirmationModal(rowData);
-      });
-    }
-  }
-  
-  /**
-   * Find a row by its ID
-   * @param {number|string} id - Row ID
-   * @returns {Object|null} Row data or null if not found
-   * @private
-   */
-  _findRowById(id) {
-    return this.data.find(row => row.id == id) || null;
-  }
-  
-  /**
-   * Show delete confirmation modal
-   * @param {Object} rowData - Row data
-   * @private
-   */
-  _showDeleteConfirmationModal(rowData) {
-    // Create modal if it doesn't exist
-    let modalId = 'deleteConfirmationModal';
-    let modal = $(`#${modalId}`);
-    
-    if (modal.length === 0) {
-      const modalHtml = `
-        <div class="modal fade" id="${modalId}" tabindex="-1" role="dialog" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
-          <div class="modal-dialog" role="document">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Delete</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div class="modal-body">
-                Are you sure you want to delete this record?
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
+      const deleteConfig = this.options.actionButtons.buttons.delete;
+      const modalSelector = deleteConfig.modalId || 'deleteConfirmationModal';
       
-      $('body').append(modalHtml);
-      modal = $(`#${modalId}`);
-    }
-    
-    // Attach delete confirmation handler
-    $('#confirmDeleteBtn').off('click').on('click', () => {
-      this.options.deleteRowCallback(rowData, this);
-      modal.modal('hide');
-      
-      // Show error toast for delete (since it's a destructive action)
-      this.showErrorToast('Delete Record', `Record #${rowData.id} has been deleted`);
-    });
-    
-    // Show modal
-    modal.modal('show');
-  }
-  
-  /**
-   * Refresh the DataTable with new data
-   * @param {Array} [newData] - New data to use (optional)
-   * @returns {DataTablesManager} this instance for chaining
-   */
-  refresh(newData = null) {
-    if (newData) {
-      this.data = newData;
-      this.dataTable.clear().rows.add(newData).draw();
-    } else {
-      this.dataTable.ajax.reload();
-    }
-    
-    // Show info toast
-    this.showInfoToast('Refresh', 'Table data has been refreshed');
-    
-    return this;
-  }
-  
-  /**
-   * Add a new row to the DataTable
-   * @param {Object} rowData - Row data
-   * @returns {DataTablesManager} this instance for chaining
-   */
-  addRow(rowData) {
-    this.data.push(rowData);
-    this.dataTable.row.add(rowData).draw();
-    
-    // Show success toast
-    this.showSuccessToast('Add Record', `New record #${rowData.id} has been added`);
-    
-    return this;
-  }
-  
-  /**
-   * Update a row in the DataTable
-   * @param {number|string} id - Row ID
-   * @param {Object} newData - New row data
-   * @returns {DataTablesManager} this instance for chaining
-   */
-  updateRow(id, newData) {
-    // Find the row index
-    const rowIndex = this.data.findIndex(row => row.id == id);
-    
-    if (rowIndex !== -1) {
-      // Update the data array
-      this.data[rowIndex] = { ...this.data[rowIndex], ...newData };
-      
-      // Update the DataTable row
-      const row = this.dataTable.row(function(idx, data) {
-        return data.id == id;
-      });
-      
-      if (row.length) {
-        row.data(this.data[rowIndex]).draw();
-        
-        // Show success toast
-        this.showSuccessToast('Update Record', `Record #${id} has been updated`);
-      }
-    } else {
-      // Show error toast if record not found
-      this.showErrorToast('Update Error', `Record #${id} not found`);
-    }
-    
-    return this;
-  }
-  
-  /**
-   * Delete a row from the DataTable
-   * @param {number|string} id - Row ID
-   * @returns {DataTablesManager} this instance for chaining
-   */
-  deleteRow(id) {
-    // Find the row index
-    const rowIndex = this.data.findIndex(row => row.id == id);
-    
-    if (rowIndex !== -1) {
-      // Remove from the data array
-      this.data.splice(rowIndex, 1);
-      
-      // Remove from the DataTable
-      const row = this.dataTable.row(function(idx, data) {
-        return data.id == id;
-      });
-      
-      if (row.length) {
-        row.remove().draw();
-        
-        // Show error toast (for destructive action)
-        this.showErrorToast('Delete Record', `Record #${id} has been deleted`);
-      }
-    } else {
-      // Show error toast if record not found
-      this.showErrorToast('Delete Error', `Record #${id} not found`);
-    }
-    
-    return this;
-  }
-  
-  /**
-   * Apply filters to the DataTable
-   * @param {Object} filters - Filter criteria
-   * @returns {DataTablesManager} this instance for chaining
-   */
-  applyFilters(filters) {
-    // Clear existing custom filters
-    $.fn.dataTable.ext.search.pop();
-    
-    // Add custom filter function
-    if (Object.keys(filters).length > 0) {
-      $.fn.dataTable.ext.search.push((settings, data, dataIndex, rowData) => {
-        // Check all filter criteria
-        for (const [key, value] of Object.entries(filters)) {
-          if (rowData[key] !== value) {
-            return false;
-          }
+      table.on('click', `.delete-btn, [data-action="delete"], .${deleteConfig.class.split(' ').join('.')}`, (e) => {
+        // Only handle click if not a modal trigger
+        if (!deleteConfig.modalId) {
+          const id = $(e.currentTarget).data('id');
+          const rowData = this._findRowById(id);
+          
+          // Show confirmation modal
+          this._showDeleteConfirmationModal(rowData, modalSelector);
         }
-        return true;
       });
-      
-      // Show info toast
-      this.showInfoToast('Filters Applied', 'Table data has been filtered');
-    } else {
-      // Show info toast for filter removal
-      this.showInfoToast('Filters Removed', 'All filters have been cleared');
     }
     
-    // Redraw the table
-    this.dataTable.draw();
-    return this;
-  }
-  
-  /**
-   * Get the currently selected rows
-   * @returns {Array} Selected row data
-   */
-  getSelectedRows() {
-    return this.dataTable.rows({ selected: true }).data().toArray();
+    // Custom action buttons
+    const customActionButtons = Object.entries(this.options.actionButtons.buttons)
+      .filter(([key]) => !['view', 'edit', 'delete'].includes(key));
+    
+    customActionButtons.forEach(([key, config]) => {
+      if (config.callback) {
+        table.on('click', `[data-action="${key}"], .${config.class.split(' ').join('.')}`, (e) => {
+          const id = $(e.currentTarget).data('id');
+          const rowData = this._findRowById(id);
+          config.callback(rowData, this);
+          
+          // Show toast if configured
+          if (config.toast) {
+            const toastType = config.toast.type || 'info';
+            const toastTitle = config.toast.title || `${key.charAt(0).toUpperCase() + key.slice(1)} Action`;
+            const toastMessage = config.toast.message || `Action performed on record #${id}`;
+            this.showToast(toastType, toastTitle, toastMessage, config.toast.options || {});
+          }
+        });
+      }
+    });
   }
 }
