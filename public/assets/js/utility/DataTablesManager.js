@@ -1,6 +1,7 @@
 /**
  * DataTablesManager Class with Badge Support
  * A class to handle DataTables initialization with advanced features:
+ * - Customizable search bar placement
  * - Search
  * - Filters
  * - Pagination
@@ -21,6 +22,14 @@ class DataTablesManager {
    * @param {Function} options.deleteRowCallback - Function to call when delete action is confirmed
    * @param {Object} options.customButtons - Custom buttons configuration
    * @param {Object} options.toastOptions - Toast notification options
+   * @param {Object} options.searchOptions - Customizable search options
+   * @param {string} options.searchOptions.containerId - ID of custom container for search bar (null = default position)
+   * @param {string} options.searchOptions.placeholder - Placeholder text for search input
+   * @param {string} options.searchOptions.className - CSS class for the search input
+   * @param {boolean} options.searchOptions.autoSearch - Auto search after typing (true) or on enter (false)
+   * @param {number} options.searchOptions.debounceTime - Debounce time in ms for auto search
+   * @param {string} options.searchOptions.position - Position of search in default DataTables ('top', 'bottom', 'both')
+   * @param {string} options.searchOptions.customHTML - Custom HTML template for search input
    */
   constructor(tableId, options = {}) {
     this.tableId = tableId;
@@ -28,6 +37,7 @@ class DataTablesManager {
     this.dataTable = null;
     this.data = [];
     this.toastTimeouts = new Map(); // Store toast timeouts for better memory management
+    this.searchDebounceTimer = null;
     
     // Default options with destructuring for better merging
     this.options = {
@@ -45,6 +55,15 @@ class DataTablesManager {
         pauseOnHover: true,           // pause countdown on hover
         draggable: true,              // allow dragging
         enableIcons: true,            // show icons
+      },
+      searchOptions: {
+        containerId: null,            // ID of custom container for search bar (null = default position)
+        placeholder: "Search records", // Placeholder text for search input
+        className: "form-control",    // CSS class for the search input
+        autoSearch: true,             // Auto search after typing (true) or on enter (false)
+        debounceTime: 400,            // Debounce time in ms for auto search
+        position: 'top',              // Position of search in default DataTables ('top', 'bottom', 'both')
+        customHTML: null,             // Custom HTML template for search input
       },
       ...options
     };
@@ -160,6 +179,28 @@ class DataTablesManager {
           width: 100%;
           background-color: rgba(255, 255, 255, 0.5);
           transition: width linear;
+        }
+        .dt-custom-search {
+          margin-bottom: 15px;
+          display: flex;
+          align-items: center;
+        }
+        .dt-custom-search input {
+          flex: 1;
+        }
+        .dt-custom-search .search-icon {
+          margin-right: 10px;
+          color: #777;
+        }
+        .dt-custom-search .clear-search {
+          cursor: pointer;
+          color: #777;
+          margin-left: 10px;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+        }
+        .dt-custom-search .clear-search:hover {
+          opacity: 1;
         }
       `;
       document.head.appendChild(styleElement);
@@ -409,6 +450,82 @@ class DataTablesManager {
   }
   
   /**
+   * Create a custom search input
+   * @private
+   */
+  _createCustomSearch() {
+    const searchOptions = this.options.searchOptions;
+    const containerSelector = searchOptions.containerId ? `#${searchOptions.containerId}` : null;
+    
+    // Return early if no custom container specified
+    if (!containerSelector) return;
+    
+    const container = document.querySelector(containerSelector);
+    if (!container) {
+      console.error(`Custom search container #${searchOptions.containerId} not found`);
+      return;
+    }
+    
+    // Clear any existing content from the container
+    container.innerHTML = '';
+    
+    // Create search input element based on options
+    const searchContainer = document.createElement('div');
+    searchContainer.className = 'dt-custom-search';
+    
+    // Use custom HTML template if provided
+    if (searchOptions.customHTML) {
+      searchContainer.innerHTML = searchOptions.customHTML;
+    } else {
+      // Default search input with icon
+      searchContainer.innerHTML = `
+        <span class="search-icon"><i class="fas fa-search"></i></span>
+        <input type="text" class="${searchOptions.className}" placeholder="${searchOptions.placeholder}">
+        <span class="clear-search" title="Clear search">&times;</span>
+      `;
+    }
+    
+    // Add search container to the specified container
+    container.appendChild(searchContainer);
+    
+    // Get input element and attach listeners
+    const inputElement = searchContainer.querySelector('input');
+    const clearButton = searchContainer.querySelector('.clear-search');
+    
+    if (inputElement) {
+      // Set up auto search with debounce if enabled
+      if (searchOptions.autoSearch) {
+        inputElement.addEventListener('input', (e) => {
+          clearTimeout(this.searchDebounceTimer);
+          this.searchDebounceTimer = setTimeout(() => {
+            this.dataTable.search(e.target.value).draw();
+          }, searchOptions.debounceTime);
+        });
+      } else {
+        // Search on enter key
+        inputElement.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            this.dataTable.search(e.target.value).draw();
+          }
+        });
+      }
+      
+      // Store reference for API usage
+      this.searchInput = inputElement;
+    }
+    
+    // Set up clear button if it exists
+    if (clearButton) {
+      clearButton.addEventListener('click', () => {
+        if (inputElement) {
+          inputElement.value = '';
+          this.dataTable.search('').draw();
+        }
+      });
+    }
+  }
+  
+  /**
    * Initialize the DataTable
    */
   initialize() {
@@ -465,12 +582,13 @@ class DataTablesManager {
         });
       }
       
-      // Initialize DataTable with jQuery (since DataTables is jQuery-based)
-      this.dataTable = $(`#${this.tableId}`).DataTable({
+      // Configure DataTables options based on our search settings
+      const searchOptions = this.options.searchOptions;
+      const dataTableOptions = {
         columns,
         responsive: true,
         processing: true,
-        dom: 'Bfrtip',
+        dom: 'Bfrtip', // Default DOM positioning
         buttons: [
           'copy', 'csv', 'excel', 'pdf', 'print',
           ...(this.options.customButtons ? Object.values(this.options.customButtons) : [])
@@ -488,10 +606,39 @@ class DataTablesManager {
           }
         },
         language: {
-          searchPlaceholder: "Search records",
+          searchPlaceholder: searchOptions.placeholder,
           emptyTable: "No data available"
         }
-      });
+      };
+      
+      // Customize search bar position for default DataTables search
+      // If we're using custom search container, remove the default search entirely
+      if (searchOptions.containerId) {
+        // Replace default search placement with custom one
+        dataTableOptions.searching = false; // Disable default search
+        
+        // Adjust DOM to remove default search
+        // Typically the DOM string has 'f' for the filter/search
+        dataTableOptions.dom = dataTableOptions.dom.replace('f', '');
+      } else {
+        // Configure default search position if not using custom container
+        const position = searchOptions.position || 'top';
+        if (position === 'top') {
+          dataTableOptions.dom = 'f' + dataTableOptions.dom.replace('f', '');
+        } else if (position === 'bottom') {
+          dataTableOptions.dom = dataTableOptions.dom.replace('f', '') + 'f';
+        } else if (position === 'both') {
+          dataTableOptions.dom = 'f' + dataTableOptions.dom.replace('f', '') + 'f';
+        }
+      }
+      
+      // Initialize DataTable with jQuery (since DataTables is jQuery-based)
+      this.dataTable = $(`#${this.tableId}`).DataTable(dataTableOptions);
+      
+      // Set up custom search if container ID is provided
+      if (searchOptions.containerId) {
+        this._createCustomSearch();
+      }
       
       // Attach event listeners with delegation for better performance
       this._attachEventListeners();
@@ -499,6 +646,29 @@ class DataTablesManager {
       console.error('Error initializing DataTable:', error);
       this.showErrorToast('Initialization Error', 'Failed to initialize table: ' + error.message);
     }
+  }
+  
+  /**
+   * Set search value programmatically
+   * @param {string} value - Search term
+   * @param {boolean} draw - Whether to redraw table immediately
+   * @returns {DataTablesManager} this instance for chaining
+   */
+  setSearch(value, draw = true) {
+    // Update custom search input if it exists
+    if (this.searchInput) {
+      this.searchInput.value = value;
+    }
+    
+    // Apply search to DataTable
+    this.dataTable.search(value);
+    
+    // Redraw if requested
+    if (draw) {
+      this.dataTable.draw();
+    }
+    
+    return this;
   }
   
   /**
@@ -792,6 +962,52 @@ class DataTablesManager {
   }
   
   /**
+   * Update search options and reinitialize search functionality
+   * @param {Object} newOptions - New search options
+   * @returns {DataTablesManager} this instance for chaining
+   */
+  updateSearchOptions(newOptions) {
+    try {
+      // Update search options
+      this.options.searchOptions = {
+        ...this.options.searchOptions,
+        ...newOptions
+      };
+      
+      // If we're changing container, need to recreate search
+      if (newOptions.containerId !== undefined) {
+        // First remove old custom search if it existed
+        if (this.searchInput && this.searchInput.parentNode) {
+          const oldContainer = this.searchInput.closest('.dt-custom-search');
+          if (oldContainer && oldContainer.parentNode) {
+            oldContainer.parentNode.removeChild(oldContainer);
+          }
+        }
+        
+        // Create new custom search
+        this._createCustomSearch();
+      }
+      
+      // Update search placeholder in the built-in search too
+      if (newOptions.placeholder) {
+        $('.dataTables_filter input')
+          .attr('placeholder', newOptions.placeholder);
+      }
+      
+      // Update search classes if needed
+      if (newOptions.className && this.searchInput) {
+        this.searchInput.className = newOptions.className;
+      }
+      
+      return this;
+    } catch (error) {
+      console.error('Error updating search options:', error);
+      this.showErrorToast('Search Error', `Failed to update search options: ${error.message}`);
+      return this;
+    }
+  }
+  
+  /**
    * Clean up resources when instance is no longer needed
    * Call this method to prevent memory leaks
    */
@@ -803,9 +1019,23 @@ class DataTablesManager {
       }
       this.toastTimeouts.clear();
       
+      // Clear search debounce timer
+      if (this.searchDebounceTimer) {
+        clearTimeout(this.searchDebounceTimer);
+        this.searchDebounceTimer = null;
+      }
+      
       // Remove event listeners
       if (this.tableElement) {
         $(this.tableElement).off('click', '.action-buttons button');
+      }
+      
+      // Remove custom search if it exists
+      if (this.searchInput && this.searchInput.parentNode) {
+        const searchContainer = this.searchInput.closest('.dt-custom-search');
+        if (searchContainer && searchContainer.parentNode) {
+          searchContainer.parentNode.removeChild(searchContainer);
+        }
       }
       
       // Destroy DataTable instance
@@ -816,6 +1046,7 @@ class DataTablesManager {
       
       // Clear data
       this.data = [];
+      this.searchInput = null;
     } catch (error) {
       console.error('Error during destroy:', error);
     }
