@@ -125,11 +125,10 @@ CREATE TABLE activity_log (
 INSERT INTO activity_type (at_code, at_name) VALUES
 ('LOGIN', 'Login'),
 ('LOGOUT', 'Logout'),
-('REGISTER', 'Registration'),
+('REGISTER', 'Register'),
 ('PROFILE_UPDATE', 'Profile Update'),
 ('PURCHASE', 'Book Purchase'),
 ('READ_SESSION', 'Reading Session'),
-('BOOK_RATING', 'Book Rating'),
 ('BOOK_ADDED', 'Book Added');
 
 INSERT INTO genre (g_name) VALUES

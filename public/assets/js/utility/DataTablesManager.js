@@ -610,8 +610,6 @@ class DataTablesManager {
       this.dataTable.ajax.reload();
     }
     
-    // Show info toast
-    this.showInfoToast('Refresh', 'Table data has been refreshed');
     
     return this;
   }
