@@ -75,7 +75,7 @@ if ($show_empty) {
             <p class="text-muted">Books you've saved for later</p>
         </div>
         <div class="col-auto">
-            <a href="../browse_books.php" class="btn btn-outline-primary">
+            <a href="/user/browse-books" class="btn btn-outline-primary">
                 <i class="bi bi-search"></i> Browse More Books
             </a>
         </div>
