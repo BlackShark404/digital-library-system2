@@ -109,7 +109,7 @@ class UserModel extends BaseModel
     {
         $userData = [];
         $mappings = [
-            'profile_url' => 'ua_profile_url',
+            'ua_profile_url' => 'ua_profile_url',
             'first_name' => 'ua_first_name',
             'last_name' => 'ua_last_name',
             'email' => 'ua_email',
@@ -154,7 +154,7 @@ class UserModel extends BaseModel
     {
         $userData = [];
         $mappings = [
-            'profile_url' => 'ua_profile_url',
+            'ua_profile_url' => 'ua_profile_url',
             'first_name' => 'ua_first_name',
             'last_name' => 'ua_last_name',
             'email' => 'ua_email',

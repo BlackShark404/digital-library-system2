@@ -2,6 +2,6 @@
 
 namespace App\Models;
 
-class BookModel {
+class BookModel extends BaseModel {
     
 }

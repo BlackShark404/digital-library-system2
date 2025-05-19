@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use Core\AvatarGenerator;
+
 class UserManagementController extends BaseController
 {
     protected $userModel;
@@ -110,6 +112,8 @@ class UserManagementController extends BaseController
      */
     public function createUser()
     {
+        $avatar = new AvatarGenerator();
+
         // Check if request is AJAX and POST
         if (!$this->isAjax() || !$this->isPost()) {
             $this->jsonError('Invalid request method', 400);
@@ -130,10 +134,13 @@ class UserManagementController extends BaseController
         if ($this->userModel->emailExists($data['email'])) {
             $this->jsonError('Email address already in use', 400);
         }
+
+        $profileUrl = $avatar->generate($data['first_name'] . ' ' . $data['last_name']);
         
         try {
             // Create user
             $result = $this->userModel->createUser([
+                'ua_profile_url' => $profileUrl,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
@@ -157,6 +164,8 @@ class UserManagementController extends BaseController
      */
     public function updateUser($id)
     {
+        $avatar = new AvatarGenerator();
+
         // Check if request is AJAX
         if (!$this->isAjax()) {
             $this->jsonError('Invalid request', 400);
@@ -183,10 +192,16 @@ class UserManagementController extends BaseController
         if ($data['email'] !== $user['ua_email'] && $this->userModel->emailExists($data['email'])) {
             $this->jsonError('Email address already in use', 400);
         }
+
+        $oldProfileUrl = $user['ua_profile_url'];
+        $newName = $data['first_name'] . ' ' . $data['last_name'];
+
+        $profileUrl = $avatar->updateNameKeepBackground($oldProfileUrl, $newName);
         
         try {
             // Update user data
             $updateData = [
+                'ua_profile_url' => $profileUrl,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
