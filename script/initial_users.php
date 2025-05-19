@@ -26,20 +26,17 @@ if (empty($adminExists)) {
     $adminEmail = $_ENV['ADMIN_EMAIL'];
     $adminPassword = $_ENV['ADMIN_PASSWORD'];
     $adminRoleId = (int) $_ENV['ADMIN_ROLE_ID'];
-
-    // Hash the password
-    $hashedPassword = $userModel->hashPassword($adminPassword);
     
     // Create admin user
     $userModel->createUser([
-        'ua_profile_url' => $adminProfileUrl,
-        'ua_first_name' => $adminFirstName,
-        'ua_last_name' => $adminLastName,
-        'ua_email' => $adminEmail,
-        'ua_hashed_password' => $hashedPassword,
-        'ua_role_id' => $adminRoleId
+        'profile_url' => $adminProfileUrl,
+        'first_name' => $adminFirstName,
+        'last_name' => $adminLastName,
+        'email' => $adminEmail,
+        'password' => $adminPassword,
+        'role_id' => $adminRoleId,
+        'is_active' => true
     ]);
-
 
     // Define user details
     $userProfileUrl = 'https://ui-avatars.com/api/?name=Khen+Sorela&background=1a2236&color=fff&size=128';
@@ -49,17 +46,15 @@ if (empty($adminExists)) {
     $password = 'ad';  // plaintext password
     $roleId = 1;  // User role
 
-    // Hash the password
-    $hashedPassword = $userModel->hashPassword($password);
-
     // Create user
     $userModel->createUser([
-        'ua_profile_url' => $userProfileUrl,
-        'ua_first_name' => $firstName,
-        'ua_last_name' => $lastName,
-        'ua_email' => $email,
-        'ua_hashed_password' => $hashedPassword,
-        'ua_role_id' => $roleId
+        'profile_url' => $userProfileUrl,
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'email' => $email,
+        'password' => $password,
+        'role_id' => $roleId,
+        'is_active' => true
     ]);
     
     // Log the creation of admin account (optional)

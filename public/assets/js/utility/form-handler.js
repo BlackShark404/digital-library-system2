@@ -9,7 +9,7 @@ function handleFormSubmission(formId, actionUrl, refreshPage = false) {
     }
 
     // Add an event listener for form submission
-    form.addEventListener('submit', function(event) {
+    form.addEventListener('submit', function (event) {
         event.preventDefault();  // Prevent the default form submission
 
         // Get form data
@@ -22,58 +22,58 @@ function handleFormSubmission(formId, actionUrl, refreshPage = false) {
         });
 
         // Make a POST request to the backend PHP script with custom headers
-        axios.post(actionUrl, data, {
+        axios.post(actionUrl, JSON.stringify(data), {
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => {
-            console.log('Response:', response.data);
-            
-            // Show success toast
-            showToast('Success', response.data.message || 'Operation completed successfully', 'success');
-            
-            // ✅ Hide the modal
-            const modalElement = bootstrap.Modal.getInstance(form.closest('.modal'));
-            if (modalElement) {
-                modalElement.hide();
-            }
+            .then(response => {
+                console.log('Response:', response.data);
 
-            // ✅ Reset the form
-            form.reset();
+                // Show success toast
+                showToast('Success', response.data.message || 'Operation completed successfully', 'success');
 
-            // Optionally refresh the page after a slight delay
-            if (refreshPage) {
-                setTimeout(() => {
-                    location.reload();
-                }, 1500); // Delay before refresh (adjustable)
-            }
+                // ✅ Hide the modal
+                const modalElement = bootstrap.Modal.getInstance(form.closest('.modal'));
+                if (modalElement) {
+                    modalElement.hide();
+                }
 
-            // Optionally, display the updated session value (if needed)
-            if (response.data.success && response.data.data.status) {
-                console.log("Updated session status:", response.data.data.status);
-                // Update the UI or perform any other actions based on the updated session value
-            }
+                // ✅ Reset the form
+                form.reset();
 
-            // Check if response contains a redirect URL
-            if (response.data.success && response.data.data && response.data.data.redirect_url) {
-                // Redirect to the specified URL after a short delay to allow toast to be seen
-                setTimeout(() => {
-                    window.location.href = response.data.data.redirect_url;
-                }, 1500);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            
-            // Display error message if available
-            const errorMessage = error.response && error.response.data && error.response.data.message 
-                ? error.response.data.message 
-                : 'An error occurred. Please try again.';
-            
-            // Show error toast
-            showToast('Error', errorMessage, 'danger');
-        });
+                // Optionally refresh the page after a slight delay
+                if (refreshPage) {
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500); // Delay before refresh (adjustable)
+                }
+
+                // Optionally, display the updated session value (if needed)
+                if (response.data.success && response.data.data.status) {
+                    console.log("Updated session status:", response.data.data.status);
+                    // Update the UI or perform any other actions based on the updated session value
+                }
+
+                // Check if response contains a redirect URL
+                if (response.data.success && response.data.data && response.data.data.redirect_url) {
+                    // Redirect to the specified URL after a short delay to allow toast to be seen
+                    setTimeout(() => {
+                        window.location.href = response.data.data.redirect_url;
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+
+                // Display error message if available
+                const errorMessage = error.response && error.response.data && error.response.data.message
+                    ? error.response.data.message
+                    : 'An error occurred. Please try again.';
+
+                // Show error toast
+                showToast('Error', errorMessage, 'danger');
+            });
     });
 }

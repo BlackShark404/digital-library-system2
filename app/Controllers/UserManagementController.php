@@ -146,7 +146,7 @@ class UserManagementController extends BaseController
         try {
             // Create user
             $result = $this->userModel->createUser([
-                'ua_profile_url' => $profileUrl,
+                'profile_url' => $profileUrl,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
@@ -214,7 +214,7 @@ class UserManagementController extends BaseController
         try {
             // Update user data
             $updateData = [
-                'ua_profile_url' => $profileUrl,
+                'profile_url' => $profileUrl,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
