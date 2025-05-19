@@ -1,81 +1,15 @@
 <?php
 include $headerPath;
 
-// Hardcoded activity log data
-$activity_logs = [
-    [
-        'id' => 1,
-        'user_id' => 5,
-        'username' => 'johndoe',
-        'action' => 'Login',
-        'details' => 'User logged in successfully',
-        'timestamp' => '2025-04-01 09:15:22'
-    ],
-    [
-        'id' => 2,
-        'user_id' => 12,
-        'username' => 'emilysmith',
-        'action' => 'Book Purchase',
-        'details' => 'Purchased "The Great Gatsby" (ID: 23)',
-        'timestamp' => '2025-04-01 08:42:15'
-    ],
-    [
-        'id' => 3,
-        'user_id' => 8,
-        'username' => 'michaelwilson',
-        'action' => 'Reading Session',
-        'details' => 'Started reading "1984" (ID: 14)',
-        'timestamp' => '2025-04-01 07:30:41'
-    ],
-    [
-        'id' => 4,
-        'user_id' => 3,
-        'username' => 'sarahparker',
-        'action' => 'Profile Update',
-        'details' => 'User updated profile information',
-        'timestamp' => '2025-03-31 23:18:05'
-    ],
-    [
-        'id' => 5,
-        'user_id' => 19,
-        'username' => 'robertjohnson',
-        'action' => 'Registration',
-        'details' => 'New user registered',
-        'timestamp' => '2025-03-31 20:45:19'
-    ],
-    [
-        'id' => 6,
-        'user_id' => 7,
-        'username' => 'davidbrown',
-        'action' => 'Logout',
-        'details' => 'User logged out',
-        'timestamp' => '2025-03-31 18:22:37'
-    ],
-    [
-        'id' => 7,
-        'user_id' => 5,
-        'username' => 'johndoe',
-        'action' => 'Book Rating',
-        'details' => 'Rated "To Kill a Mockingbird" (ID: 8) with 5 stars',
-        'timestamp' => '2025-03-31 16:08:52'
-    ],
-    [
-        'id' => 9,
-        'user_id' => 1,
-        'username' => 'admin',
-        'action' => 'Book Added',
-        'details' => 'Added new book "Dune" (ID: 42)',
-        'timestamp' => '2025-03-31 11:20:45'
-    ],
-];
-
-
+// Get action types for filtering from the controller data
+$unique_actions = $unique_actions ?? [];
+$action_filter = $action_filter ?? '';
 ?>
 
 <div class="container-fluid px-4">
     <h1 class="mt-4">Activity Log</h1>
     <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/admin/dashboard">Dashboard</a></li>
         <li class="breadcrumb-item active">Activity Log</li>
     </ol>
 
@@ -86,7 +20,7 @@ $activity_logs = [
             Filter Activity
         </div>
         <div class="card-body">
-            <form action="" method="GET" class="row g-3">
+            <form id="filterForm" class="row g-3">
                 <div class="col-md-3">
                     <label for="action" class="form-label">Action Type</label>
                     <select class="form-select" id="action" name="action">
@@ -97,6 +31,9 @@ $activity_logs = [
                             </option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+                <div class="col-md-12 mt-3">
+                    <button type="button" id="resetFilters" class="btn btn-secondary">Reset</button>
                 </div>
             </form>
         </div>
@@ -118,81 +55,14 @@ $activity_logs = [
                             <th>Action</th>
                             <th>Details</th>
                             <th>Timestamp</th>
-                            <th>Action</th>
+                            <th>View</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($activity_logs as $log): ?>
-                            <tr>
-                                <td><?php echo $log['id']; ?></td>
-                                <td>
-                                    <a href="user_management.php?id=<?php echo $log['user_id']; ?>" data-bs-toggle="tooltip" data-bs-title="View User Profile">
-                                        <?php echo htmlspecialchars($log['username']); ?>
-                                    </a>
-                                </td>
-                                <td>
-                                    <span class="badge <?php echo getBadgeClass($log['action']); ?>">
-                                        <?php echo htmlspecialchars($log['action']); ?>
-                                    </span>
-                                </td>
-                                <td><?php echo htmlspecialchars($log['details']); ?></td>
-                                <td><?php echo htmlspecialchars($log['timestamp']); ?></td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#logModal<?php echo $log['id']; ?>">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-
-                            <!-- Detail Modal for each log entry -->
-                            <div class="modal fade" id="logModal<?php echo $log['id']; ?>" tabindex="-1" aria-labelledby="logModalLabel<?php echo $log['id']; ?>" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="logModalLabel<?php echo $log['id']; ?>">Activity Details #<?php echo $log['id']; ?></h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <strong>User:</strong> <?php echo htmlspecialchars($log['username']); ?> (ID: <?php echo $log['user_id']; ?>)
-                                            </div>
-                                            <div class="mb-3">
-                                                <strong>Action:</strong> <?php echo htmlspecialchars($log['action']); ?>
-                                            </div>
-                                            <div class="mb-3">
-                                                <strong>Details:</strong> <?php echo htmlspecialchars($log['details']); ?>
-                                            </div>
-                                            <div class="mb-3">
-                                                <strong>Date/Time:</strong> <?php echo htmlspecialchars($log['timestamp']); ?>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
+                        <!-- The table data will be loaded by DataTables -->
                     </tbody>
                 </table>
             </div>
-
-            <!-- Pagination - would be dynamic in a real implementation -->
-            <nav aria-label="Activity log pagination">
-                <ul class="pagination justify-content-center mt-4">
-                    <li class="page-item disabled">
-                        <span class="page-link">Previous</span>
-                    </li>
-                    <li class="page-item active" aria-current="page">
-                        <span class="page-link">1</span>
-                    </li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item">
-                        <a class="page-link" href="#">Next</a>
-                    </li>
-                </ul>
-            </nav>
         </div>
     </div>
 
@@ -206,7 +76,7 @@ $activity_logs = [
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm">
+                        <table class="table table-sm" id="activitySummaryTable">
                             <thead>
                                 <tr>
                                     <th>Action Type</th>
@@ -214,18 +84,7 @@ $activity_logs = [
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php
-                                // Count occurrences of each action
-                                $action_counts = array_count_values(array_column($activity_logs, 'action'));
-                                arsort($action_counts); // Sort by count in descending order
-
-                                foreach ($action_counts as $action => $count) {
-                                    echo '<tr>';
-                                    echo '<td><span class="badge ' . getBadgeClass($action) . '">' . htmlspecialchars($action) . '</span></td>';
-                                    echo '<td>' . $count . '</td>';
-                                    echo '</tr>';
-                                }
-                                ?>
+                                <!-- Activity summary will be loaded dynamically -->
                             </tbody>
                         </table>
                     </div>
@@ -243,7 +102,7 @@ $activity_logs = [
                     <p>Use the filters above to narrow down the activity records by action type</p>
                     <p><strong>Tip:</strong></p>
                     <ul>
-                        <li>Use the eye icon to view detailed information about an activity</li>
+                        <li>Click the eye icon to view detailed information about an activity</li>
                     </ul>
                 </div>
             </div>
@@ -251,21 +110,67 @@ $activity_logs = [
     </div>
 </div>
 
-<?php
-// Helper function to get appropriate badge class based on action
-function getBadgeClass($action)
-{
-    switch ($action) {
+<!-- Log Detail Modal -->
+<div class="modal fade" id="logModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logModalLabel">Activity Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>User:</strong> <span id="modalUsername"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Action:</strong> <span id="modalAction"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Details:</strong> <span id="modalDetails"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Date/Time:</strong> <span id="modalTimestamp"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include jQuery first -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Include DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.bootstrap5.min.css">
+
+<!-- Include DataTables JS -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+
+<script>
+// Helper function to get badge class based on action type
+function getBadgeClass(action) {
+    switch (action) {
         case 'Login':
+            return 'bg-success';
         case 'Registration':
             return 'bg-success';
         case 'Logout':
             return 'bg-secondary';
         case 'Book Purchase':
+            return 'bg-primary';
         case 'Book Added':
             return 'bg-primary';
         case 'Reading Session':
-        case 'Book Rating':
+            return 'bg-warning';
         case 'Profile Update':
             return 'bg-warning';
         default:
@@ -273,6 +178,145 @@ function getBadgeClass($action)
     }
 }
 
+// Initialize DataTable when the document is ready
+$(document).ready(function() {
+    // Initialize the activity log DataTable
+    var table = $('#activityTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: '/api/activity-logs',
+            type: 'GET',
+            data: function(d) {
+                // Add filter parameters from the form
+                d.action = $('#action').val();
+            }
+        },
+        columns: [
+            { data: 'id' },
+            { 
+                data: 'username',
+                render: function(data, type, row) {
+                    if (!row.user_id) return 'System';
+                    return '<a href="/admin/user-management?id=' + row.user_id + '" data-bs-toggle="tooltip" data-bs-title="View User Profile">' 
+                         + data + '</a>';
+                }
+            },
+            { 
+                data: 'action',
+                render: function(data, type, row) {
+                    return '<span class="badge ' + getBadgeClass(data) + '">' + data + '</span>';
+                }
+            },
+            { data: 'details' },
+            { data: 'timestamp' },
+            {
+                data: null,
+                orderable: false,
+                render: function(data, type, row) {
+                    return '<button class="btn btn-sm btn-info view-log" data-id="' + row.id + '">'
+                         + '<i class="bi bi-eye"></i></button>';
+                }
+            }
+        ],
+        order: [[0, 'desc']],
+        pageLength: 10,
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ]
+    });
+    
+    // Load activity statistics
+    loadActivityStats();
+    
+    // Apply filters when the filter form is submitted
+    $('#filterForm').on('submit', function(e) {
+        e.preventDefault();
+        table.ajax.reload();
+    });
+    
+    // Reset filters
+    $('#resetFilters').on('click', function() {
+        $('#filterForm')[0].reset();
+        table.ajax.reload();
+    });
+    
+    // Also reload the table when the action dropdown changes
+    $('#action').on('change', function() {
+        table.ajax.reload();
+    });
+    
+    // Handle view log button click
+    $('#activityTable').on('click', '.view-log', function() {
+        var id = $(this).data('id');
+        
+        // Fetch log details
+        $.ajax({
+            url: '/api/activity-logs/' + id,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var log = response.data;
+                    
+                    // Update modal content
+                    $('#logModalLabel').text('Activity Details #' + log.id);
+                    $('#modalUsername').text(log.user_id ? log.username + ' (ID: ' + log.user_id + ')' : 'System');
+                    $('#modalAction').html('<span class="badge ' + getBadgeClass(log.action) + '">' + log.action + '</span>');
+                    $('#modalDetails').text(log.details);
+                    $('#modalTimestamp').text(log.timestamp);
+                    
+                    // Show the modal
+                    $('#logModal').modal('show');
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('An error occurred while fetching log details.');
+            }
+        });
+    });
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+
+// Function to load activity statistics
+function loadActivityStats() {
+    $.ajax({
+        url: '/api/activity-logs/stats',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                var stats = response.data;
+                var tbody = $('#activitySummaryTable tbody');
+                tbody.empty();
+                
+                // Add rows for each action type
+                $.each(stats, function(i, stat) {
+                    tbody.append(
+                        '<tr>' +
+                        '<td><span class="badge ' + getBadgeClass(stat.action) + '">' + stat.action + '</span></td>' +
+                        '<td>' + stat.count + '</td>' +
+                        '</tr>'
+                    );
+                });
+            } else {
+                alert('Error: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('An error occurred while fetching activity statistics.');
+        }
+    });
+}
+</script>
+
+<?php
 // Include footer
 include $footerPath;
 ?>

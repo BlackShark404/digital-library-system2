@@ -30,6 +30,11 @@ $accessMap = [
     '/admin/users/update' => ['admin'],
     '/admin/users/delete' => ['admin'],
     
+    // Activity Log API routes - Admin only
+    '/api/activity-logs' => ['admin'],
+    '/api/activity-logs/stats' => ['admin'],
+    '/api/activity-logs/view' => ['admin'],
+    
     // User Management API routes - Admin only
     '/api/users' => ['admin'],
     '/api/users/export' => ['admin'],
@@ -76,6 +81,11 @@ $router->map('GET', '/admin/reading-sessions', 'App\Controllers\AdminController#
 $router->map('GET', '/admin/purchases', 'App\Controllers\AdminController#renderPurchases', 'purchases');
 $router->map('GET', '/admin/activity-logs', 'App\Controllers\AdminController#renderActivityLogs', 'activity-log');
 $router->map('GET', '/admin/admin-profile', 'App\Controllers\AdminController#renderAdminProfile', 'admin-profile');
+
+// Activity Log Routes
+$router->map('GET', '/api/activity-logs', 'App\Controllers\ActivityLogController#getActivityLogs', 'api_get_activity_logs');
+$router->map('GET', '/api/activity-logs/[i:id]', 'App\Controllers\ActivityLogController#viewLog', 'api_view_activity_log');
+$router->map('GET', '/api/activity-logs/stats', 'App\Controllers\ActivityLogController#getActivityStats', 'api_get_activity_stats');
 
 // User Management Routes
 $router->map('GET', '/admin/user-management', 'App\Controllers\UserManagementController#index', 'user-management');

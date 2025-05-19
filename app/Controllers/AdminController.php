@@ -33,7 +33,9 @@ class AdminController extends BaseController {
     }
 
     public function renderActivityLogs() {
-        $this->render('admin/activity-log');
+        // Redirect to the ActivityLogController to handle the request
+        $activityLogController = new ActivityLogController();
+        $activityLogController->index();
     }
 
     public function renderAdminProfile() {
