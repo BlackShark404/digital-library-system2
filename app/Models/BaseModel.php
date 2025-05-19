@@ -7,7 +7,7 @@ use PDO;
 use PDOException;
 use Exception;
 
-class Model
+class BaseModel
 {
     protected $pdo;
     protected $table;

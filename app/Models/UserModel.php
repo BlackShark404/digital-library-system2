@@ -4,12 +4,7 @@ namespace App\Models;
 
 use App\Models\BaseModel;
 
-/**
- * User Model
- * 
- * This model represents a user in the system and demonstrates how to
- * extend the BaseModel class with specific functionality.
- */
+
 class UserModel extends BaseModel
 {
     protected $table = 'user_account';
@@ -29,8 +24,6 @@ class UserModel extends BaseModel
         'ua_last_login'
     ];
 
-    protected $searchableFields = ['ua_first_name', 'ua_last_name', 'ua_email'];
-
     protected $timestamps = true;
     protected $useSoftDeletes = true;
 
@@ -38,47 +31,68 @@ class UserModel extends BaseModel
     protected $updatedAtColumn = 'ua_updated_at';
     protected $deletedAtColumn = 'ua_deleted_at';
 
+    private function getSoftDeleteCondition($alias = null)
+    {
+        if (!$this->useSoftDeletes) {
+            return "";
+        }
+        $column = $alias ? "{$alias}.{$this->deletedAtColumn}" : $this->deletedAtColumn;
+        return " AND {$column} IS NULL";
+    }
+
     public function findById($id) {
-        return $this->select('user_account.*, user_role.ur_role_name AS role_name')
-                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                    ->where('user_account.ua_id = :id')
-                    ->bind(['id' => $id])
-                    ->whereSoftDeleted('user_account')
-                    ->first();
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE ua.{$this->primaryKey} = :id"
+               . $this->getSoftDeleteCondition('ua');
+        
+        return $this->queryOne($sql, ['id' => $id]);
     }
 
     public function findByEmail($email)
     {
-        return $this->select('user_account.*, user_role.ur_role_name AS role_name')
-                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                    ->where('user_account.ua_email = :email')
-                    ->bind(['email' => $email])
-                    ->first();
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE ua.ua_email = :email"
+               . $this->getSoftDeleteCondition('ua');
+        
+        return $this->queryOne($sql, ['email' => $email]);
     }
 
     public function getByRole($roleName)
     {
-        return $this->select('user_account.*, user_role.ur_role_name AS role_name')
-                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                    ->where('user_role.ur_role_name = :role_name')
-                    ->bind(['role_name' => $roleName])
-                    ->whereSoftDeleted('user_account')
-                    ->get();
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE ur.ur_role_name = :role_name"
+               . $this->getSoftDeleteCondition('ua');
+        
+        return $this->query($sql, ['role_name' => $roleName]);
     }
 
     public function getNewest()
     {
-        return $this->orderBy('ua_created_at DESC')
-                    ->get();
+        $sql = "SELECT * FROM {$this->table} ua WHERE 1=1"
+               . $this->getSoftDeleteCondition('ua') .
+               " ORDER BY ua.{$this->createdAtColumn} DESC";
+        
+        return $this->query($sql);
     }
 
     public function search($searchTerm)
     {
-        return $this->where("ua_first_name ILIKE :search_term OR ua_last_name ILIKE :search_term OR ua_email ILIKE :search_term")
-                    ->bind(['search_term' => "%$searchTerm%"])
-                    ->whereSoftDeleted()
-                    ->orderBy('ua_last_name, ua_first_name')
-                    ->get();
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                LEFT JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE (ua.ua_first_name ILIKE :search_term 
+                       OR ua.ua_last_name ILIKE :search_term 
+                       OR ua.ua_email ILIKE :search_term)"
+               . $this->getSoftDeleteCondition('ua') .
+               " ORDER BY ua.ua_last_name, ua.ua_first_name";
+        
+        return $this->query($sql, ['search_term' => "%{$searchTerm}%"]);
     }
 
     public function hashPassword($password)
@@ -93,16 +107,13 @@ class UserModel extends BaseModel
 
     public function createUser(array $data)
     {
-        // Map input data fields to database columns
         $userData = [];
-        
-        // Field mappings from input to database columns
         $mappings = [
             'profile_url' => 'ua_profile_url',
             'first_name' => 'ua_first_name',
             'last_name' => 'ua_last_name',
             'email' => 'ua_email',
-            'password' => 'ua_hashed_password',  // Note: Changed to ua_hashed_password
+            'password' => 'ua_hashed_password',
             'role_id' => 'ua_role_id',
             'is_active' => 'ua_is_active',
             'phone_number' => 'ua_phone_number'
@@ -114,27 +125,40 @@ class UserModel extends BaseModel
             }
         }
         
-        // Hash password if it exists
         if (isset($data['password'])) {
             $userData['ua_hashed_password'] = $this->hashPassword($data['password']);
         }
+
+        if ($this->timestamps) {
+            $now = date('Y-m-d H:i:s');
+            $userData[$this->createdAtColumn] = $now;
+            $userData[$this->updatedAtColumn] = $now;
+        }
         
-        // No need to manually set timestamps as BaseModel.insert() handles this
-        return $this->insert($userData);
+        // Filter $userData to only include $fillable fields + timestamp fields
+        $allowedKeys = array_merge($this->fillable, [$this->createdAtColumn, $this->updatedAtColumn, $this->deletedAtColumn]);
+        $insertData = array_intersect_key($userData, array_flip($allowedKeys));
+
+        $formattedInsert = $this->formatInsertData($insertData);
+        
+        $sql = "INSERT INTO {$this->table} ({$formattedInsert['columns']}) VALUES ({$formattedInsert['placeholders']})";
+        
+        $success = $this->execute($sql, $formattedInsert['filteredData']);
+        if ($success) {
+            return $this->lastInsertId("{$this->table}_{$this->primaryKey}_seq");
+        }
+        return false;
     }
 
     public function updateUser($id, array $data)
     {
-        // Map input data fields to database columns
         $userData = [];
-        
-        // Field mappings from input to database columns
         $mappings = [
             'profile_url' => 'ua_profile_url',
             'first_name' => 'ua_first_name',
             'last_name' => 'ua_last_name',
             'email' => 'ua_email',
-            'password' => 'ua_hashed_password',  // Note: Changed to ua_hashed_password
+            'password' => 'ua_hashed_password',
             'role_id' => 'ua_role_id',
             'is_active' => 'ua_is_active',
             'phone_number' => 'ua_phone_number'
@@ -146,102 +170,130 @@ class UserModel extends BaseModel
             }
         }
         
-        // Hash password if it exists
-        if (isset($data['password'])) {
+        if (isset($data['password']) && !empty($data['password'])) {
             $userData['ua_hashed_password'] = $this->hashPassword($data['password']);
+        } elseif (isset($data['password']) && empty($data['password'])) {
+            // Avoid updating password if it's an empty string in the form
+            unset($userData['ua_hashed_password']);
+        }
+
+        if ($this->timestamps) {
+            $userData[$this->updatedAtColumn] = date('Y-m-d H:i:s');
         }
         
-        // No need to manually set updated_at as BaseModel.update() handles this
-        return $this->update($userData, "{$this->primaryKey} = :id", ['id' => $id]);
+        // Filter $userData to only include $fillable fields + updated_at
+        $allowedKeys = array_merge($this->fillable, [$this->updatedAtColumn]);
+        $updateData = array_intersect_key($userData, array_flip($allowedKeys));
+        
+        // Prevent updating primary key or created_at from $fillable if accidentally included
+        unset($updateData[$this->primaryKey], $updateData[$this->createdAtColumn], $updateData[$this->deletedAtColumn]);
+
+
+        if (empty($updateData)) {
+            return true; // Nothing to update
+        }
+
+        $formattedUpdate = $this->formatUpdateData($updateData);
+        $params = $formattedUpdate['filteredData'];
+        $params['id'] = $id;
+        
+        $sql = "UPDATE {$this->table} SET {$formattedUpdate['updateClause']} WHERE {$this->primaryKey} = :id";
+        // Do not add soft delete condition here, we should be able to update a soft-deleted record if needed (e.g. to restore it)
+        
+        return $this->execute($sql, $params);
     }
 
-    /**
-     * Delete a user by ID
-     * 
-     * @param int $id The user ID to delete
-     * @param bool $permanent Whether to permanently delete the user or use soft delete
-     * @return bool Success status
-     */
     public function deleteUser($id, $permanent = false)
     {
-        if ($permanent && $this->useSoftDeletes) {
-            // Permanently delete the user from the database
-            return $this->execute(
-                "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id",
-                ['id' => $id]
-            );
+        if ($permanent) {
+            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id";
+            return $this->execute($sql, ['id' => $id]);
         }
         
-        // Use the standard delete method which respects soft deletes
-        return $this->delete("{$this->primaryKey} = :id", ['id' => $id]);
+        if ($this->useSoftDeletes) {
+            $data = [
+                $this->deletedAtColumn => date('Y-m-d H:i:s')
+            ];
+            if ($this->timestamps) { // Also update the updated_at column during soft delete
+                $data[$this->updatedAtColumn] = date('Y-m-d H:i:s');
+            }
+            
+            $formattedUpdate = $this->formatUpdateData($data);
+            $params = $formattedUpdate['filteredData'];
+            $params['id'] = $id;
+
+            $sql = "UPDATE {$this->table} SET {$formattedUpdate['updateClause']} 
+                    WHERE {$this->primaryKey} = :id AND {$this->deletedAtColumn} IS NULL"; // Only soft delete if not already soft-deleted
+            return $this->execute($sql, $params);
+        } else {
+            // If not using soft deletes, permanent delete is the only option
+            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = :id";
+            return $this->execute($sql, ['id' => $id]);
+        }
     }
 
     public function emailExists($email)
     {
-        return $this->exists('ua_email = :email', ['email' => $email]);
+        $sql = "SELECT COUNT(*) FROM {$this->table} ua 
+                WHERE ua.ua_email = :email" 
+               . $this->getSoftDeleteCondition('ua');
+        return $this->queryScalar($sql, ['email' => $email]) > 0;
     }
 
     public function getActiveUsers($days = 30)
     {
-        $cutoff = date('Y-m-d H:i:s', strtotime("-$days days"));
-        return $this->where('ua_is_active = :is_active')
-                    ->where('ua_last_login >= :cutoff')
-                    ->bind([
-                        'is_active' => true,
-                        'cutoff' => $cutoff
-                    ])
-                    ->whereSoftDeleted()
-                    ->orderBy('ua_last_login DESC')
-                    ->get();
+        $cutoff = date('Y-m-d H:i:s', strtotime("-{$days} days"));
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE ua.ua_is_active = :is_active
+                AND ua.ua_last_login >= :cutoff"
+               . $this->getSoftDeleteCondition('ua') .
+               " ORDER BY ua.ua_last_login DESC";
+        
+        return $this->query($sql, ['is_active' => true, 'cutoff' => $cutoff]);
     }
 
     public function findByRememberToken($token)
     {
-        // Add check for token expiration
-        return $this->where('ua_remember_token = :token')
-                    ->where('ua_remember_token_expires_at > NOW()')
-                    ->bind(['token' => $token])
-                    ->first();
+        $sql = "SELECT ua.* FROM {$this->table} ua
+                WHERE ua.ua_remember_token = :token
+                AND ua.ua_remember_token_expires_at > :now"
+               . $this->getSoftDeleteCondition('ua');
+        
+        return $this->queryOne($sql, ['token' => $token, 'now' => date('Y-m-d H:i:s')]);
     }
 
     public function updateLastLogin($userId)
     {
-        return $this->update(
-            [
-                'ua_last_login' => date('Y-m-d H:i:s')
-            ],
-            "{$this->primaryKey} = :id",
-            ['id' => $userId]
-        );
+        $sql = "UPDATE {$this->table} SET ua_last_login = :last_login 
+                WHERE {$this->primaryKey} = :id";
+        return $this->execute($sql, ['last_login' => date('Y-m-d H:i:s'), 'id' => $userId]);
     }
 
     public function generateRememberToken($userId, $days = 30)
     {
         $token = bin2hex(random_bytes(32));
-        $expiresAt = date('Y-m-d H:i:s', strtotime("+$days days"));
+        $expiresAt = date('Y-m-d H:i:s', strtotime("+{$days} days"));
 
-        $this->update(
-            [
-                'ua_remember_token' => $token,
-                'ua_remember_token_expires_at' => $expiresAt
-            ],
-            "{$this->primaryKey} = :id",
-            ['id' => $userId]
-        );
-
+        $sql = "UPDATE {$this->table} 
+                SET ua_remember_token = :token, ua_remember_token_expires_at = :expires_at
+                WHERE {$this->primaryKey} = :id";
+        
+        $this->execute($sql, [
+            'token' => $token,
+            'expires_at' => $expiresAt,
+            'id' => $userId
+        ]);
         return $token;
     }
 
     public function clearRememberToken($userId)
     {
-        return $this->update(
-            [
-                'ua_remember_token' => null,
-                'ua_remember_token_expires_at' => null
-            ],
-            "{$this->primaryKey} = :id",
-            ['id' => $userId]
-        );
+        $sql = "UPDATE {$this->table} 
+                SET ua_remember_token = NULL, ua_remember_token_expires_at = NULL
+                WHERE {$this->primaryKey} = :id";
+        return $this->execute($sql, ['id' => $userId]);
     }
 
     public function getFullName($user)
@@ -251,80 +303,77 @@ class UserModel extends BaseModel
 
     public function activateUser($userId)
     {
-        return $this->update(
-            ['ua_is_active' => true],
-            "{$this->primaryKey} = :id",
-            ['id' => $userId]
-        );
+        $sql = "UPDATE {$this->table} SET ua_is_active = :is_active 
+                WHERE {$this->primaryKey} = :id";
+        return $this->execute($sql, ['is_active' => true, 'id' => $userId]);
     }
 
     public function deactivateUser($userId)
     {
-        return $this->update(
-            ['ua_is_active' => false],
-            "{$this->primaryKey} = :id",
-            ['id' => $userId]
-        );
+        $sql = "UPDATE {$this->table} SET ua_is_active = :is_active
+                WHERE {$this->primaryKey} = :id";
+        return $this->execute($sql, ['is_active' => false, 'id' => $userId]);
     }
 
     public function getActiveOnly()
     {
-        return $this->where('ua_is_active = :is_active')
-                    ->bind(['is_active' => true])
-                    ->get();
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE ua.ua_is_active = :is_active"
+               . $this->getSoftDeleteCondition('ua');
+        return $this->query($sql, ['is_active' => true]);
     }
 
     public function getInactiveUsers($days = 90)
     {
-        $cutoff = date('Y-m-d H:i:s', strtotime("-$days days"));
-
-        return $this->where('(ua_last_login IS NULL OR ua_last_login < :cutoff)')
-                    ->bind(['cutoff' => $cutoff])
-                    ->whereSoftDeleted()
-                    ->orderBy('ua_last_login ASC NULLS FIRST')
-                    ->get();
+        $cutoff = date('Y-m-d H:i:s', strtotime("-{$days} days"));
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE (ua.ua_last_login IS NULL OR ua.ua_last_login < :cutoff)"
+               . $this->getSoftDeleteCondition('ua') .
+               " ORDER BY ua.ua_last_login ASC NULLS FIRST";
+        
+        return $this->query($sql, ['cutoff' => $cutoff]);
     }
 
     public function getAdmins()
     {
-        return $this->select('user_account.*')
-                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                    ->where('user_role.ur_role_name = :role')
-                    ->bind(['role' => 'admin'])
-                    ->get();
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE ur.ur_role_name = :role"
+               . $this->getSoftDeleteCondition('ua');
+        return $this->query($sql, ['role' => 'admin']);
     }
 
     public function getRegularUsers()
     {
-        return $this->select('user_account.*')
-                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                    ->where('user_role.ur_role_name = :role')
-                    ->bind(['role' => 'user'])
-                    ->get();
+        $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+                FROM {$this->table} ua
+                JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+                WHERE ur.ur_role_name = :role"
+               . $this->getSoftDeleteCondition('ua');
+        return $this->query($sql, ['role' => 'user']);
     }
 
-    public function changeRole($userId, $role)
+    public function changeRole($userId, $roleName)
     {
-        if (!in_array($role, ['user', 'admin'])) {
+        if (!in_array($roleName, ['user', 'admin'])) {
             return false;
         }
         
-        // Get role ID from role name
-        $roleQuery = $this->execute(
-            "SELECT ur_id FROM user_role WHERE ur_role_name = :role_name",
-            ['role_name' => $role]
-        );
-        $roleData = $roleQuery->fetch(\PDO::FETCH_ASSOC);
+        $roleSql = "SELECT ur_id FROM user_role WHERE ur_role_name = :role_name";
+        $roleData = $this->queryOne($roleSql, ['role_name' => $roleName]);
         
-        if (!$roleData) {
+        if (!$roleData || !isset($roleData['ur_id'])) {
             return false;
         }
         
-        return $this->update(
-            ['ua_role_id' => $roleData['ur_id']],
-            "{$this->primaryKey} = :id",
-            ['id' => $userId]
-        );
+        $updateSql = "UPDATE {$this->table} SET ua_role_id = :role_id 
+                      WHERE {$this->primaryKey} = :id";
+        return $this->execute($updateSql, ['role_id' => $roleData['ur_id'], 'id' => $userId]);
     }
     
     /**
@@ -333,17 +382,15 @@ class UserModel extends BaseModel
      */
     public function cleanupExpiredTokens()
     {
-        return $this->update(
-            [
-                'ua_remember_token' => null,
-                'ua_remember_token_expires_at' => null
-            ],
-            "ua_remember_token IS NOT NULL AND ua_remember_token_expires_at < NOW()",
-            []
-        );
+        $sql = "UPDATE {$this->table} 
+                SET ua_remember_token = NULL, ua_remember_token_expires_at = NULL
+                WHERE ua_remember_token IS NOT NULL AND ua_remember_token_expires_at < :now";
+        // Soft delete condition is not typically applied here, as we are cleaning up tokens
+        // regardless of user's soft delete status. If required, it can be added.
+        return $this->execute($sql, ['now' => date('Y-m-d H:i:s')]);
     }
 
-    /**
+/**
  * These are additional methods to add to the UserModel class
  * to support the DataTablesManager integration
  */
@@ -357,29 +404,25 @@ class UserModel extends BaseModel
  */
 public function getUsers($role = '', $status = '')
 {
-    // Start with a select that includes role name
-    $this->select('user_account.*, user_role.ur_role_name AS role_name')
-         ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-         ->whereSoftDeleted('user_account');
+    $params = [];
+    $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+            FROM {$this->table} ua
+            JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+            WHERE 1=1" . $this->getSoftDeleteCondition('ua');
     
-    // Apply role filter if specified
     if (!empty($role)) {
-        $this->where('user_role.ur_role_name = :role_name')
-             ->bind(['role_name' => $role]);
+        $sql .= " AND ur.ur_role_name = :role_name";
+        $params['role_name'] = $role;
     }
     
-    // Apply status filter if specified
     if (!empty($status)) {
-        $isActive = ($status === 'active') ? 1 : 0;
-        $this->where('user_account.ua_is_active = :is_active')
-             ->bind(['is_active' => $isActive]);
+        $isActive = ($status === 'active');
+        $sql .= " AND ua.ua_is_active = :is_active";
+        $params['is_active'] = $isActive;
     }
     
-    // Order by last name, first name
-    $this->orderBy('user_account.ua_last_name, user_account.ua_first_name');
-    
-    // Get results
-    return $this->get();
+    $sql .= " ORDER BY ua.ua_last_name, ua.ua_first_name";
+    return $this->query($sql, $params);
 }
 
 /**
@@ -389,13 +432,13 @@ public function getUsers($role = '', $status = '')
  */
 public function getAllActiveUsers()
 {
-    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
-                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                ->where('user_account.ua_is_active = :is_active')
-                ->bind(['is_active' => 1])
-                ->whereSoftDeleted('user_account')
-                ->orderBy('user_account.ua_last_name, user_account.ua_first_name')
-                ->get();
+    $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+            FROM {$this->table} ua
+            JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+            WHERE ua.ua_is_active = :is_active"
+           . $this->getSoftDeleteCondition('ua') .
+           " ORDER BY ua.ua_last_name, ua.ua_first_name";
+    return $this->query($sql, ['is_active' => true]);
 }
 
 /**
@@ -405,13 +448,13 @@ public function getAllActiveUsers()
  */
 public function getAllInactiveUsers()
 {
-    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
-                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                ->where('user_account.ua_is_active = :is_active')
-                ->bind(['is_active' => 0])
-                ->whereSoftDeleted('user_account')
-                ->orderBy('user_account.ua_last_name, user_account.ua_first_name')
-                ->get();
+    $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+            FROM {$this->table} ua
+            JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+            WHERE ua.ua_is_active = :is_active"
+           . $this->getSoftDeleteCondition('ua') .
+           " ORDER BY ua.ua_last_name, ua.ua_first_name";
+    return $this->query($sql, ['is_active' => false]);
 }
 
 /**
@@ -424,41 +467,38 @@ public function getAllInactiveUsers()
  */
 public function searchUsers($searchTerm, $role = '', $status = '')
 {
-    // Start with a basic select
-    $this->select('user_account.*, user_role.ur_role_name AS role_name')
-         ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-         ->whereSoftDeleted('user_account');
-    
-    // Add search conditions
-    $this->where("(user_account.ua_first_name LIKE :search_term OR user_account.ua_last_name LIKE :search_term OR user_account.ua_email LIKE :search_term)")
-         ->bind(['search_term' => "%$searchTerm%"]);
-    
-    // Apply role filter if specified
-    if (!empty($role)) {
-        $this->where('user_role.ur_role_name = :role_name')
-             ->bind(['role_name' => $role]);
-    }
-    
-    // Apply status filter if specified
-    if (!empty($status)) {
-        $isActive = ($status === 'active') ? 1 : 0;
-        $this->where('user_account.ua_is_active = :is_active')
-             ->bind(['is_active' => $isActive]);
-    }
-    
-    // Order by relevance (name matches first)
-    $this->orderBy("CASE 
-        WHEN user_account.ua_first_name LIKE :exact_match OR user_account.ua_last_name LIKE :exact_match THEN 1
-        WHEN user_account.ua_first_name LIKE :start_match OR user_account.ua_last_name LIKE :start_match THEN 2
-        ELSE 3
-    END, user_account.ua_last_name, user_account.ua_first_name")
-    ->bind([
+    $params = [
+        'search_term_like' => "%{$searchTerm}%",
         'exact_match' => $searchTerm,
-        'start_match' => "$searchTerm%"
-    ]);
+        'start_match' => "{$searchTerm}%"
+    ];
+
+    $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+            FROM {$this->table} ua
+            JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+            WHERE (ua.ua_first_name ILIKE :search_term_like 
+                   OR ua.ua_last_name ILIKE :search_term_like 
+                   OR ua.ua_email ILIKE :search_term_like)"
+           . $this->getSoftDeleteCondition('ua');
     
-    // Get results
-    return $this->get();
+    if (!empty($role)) {
+        $sql .= " AND ur.ur_role_name = :role_name";
+        $params['role_name'] = $role;
+    }
+    
+    if (!empty($status)) {
+        $isActive = ($status === 'active');
+        $sql .= " AND ua.ua_is_active = :is_active";
+        $params['is_active'] = $isActive;
+    }
+    
+    $sql .= " ORDER BY CASE 
+                WHEN ua.ua_first_name ILIKE :exact_match OR ua.ua_last_name ILIKE :exact_match THEN 1
+                WHEN ua.ua_first_name ILIKE :start_match OR ua.ua_last_name ILIKE :start_match THEN 2
+                ELSE 3
+              END, ua.ua_last_name, ua.ua_first_name";
+    
+    return $this->query($sql, $params);
 }
 
 /**
@@ -490,16 +530,17 @@ public function getUserStats($userId)
  */
 public function getUsersByRegistrationDate($startDate, $endDate)
 {
-    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
-                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                ->where('user_account.ua_created_at BETWEEN :start_date AND :end_date')
-                ->bind([
-                    'start_date' => $startDate . ' 00:00:00',
-                    'end_date' => $endDate . ' 23:59:59'
-                ])
-                ->whereSoftDeleted('user_account')
-                ->orderBy('user_account.ua_created_at DESC')
-                ->get();
+    $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+            FROM {$this->table} ua
+            JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+            WHERE ua.{$this->createdAtColumn} BETWEEN :start_date AND :end_date"
+           . $this->getSoftDeleteCondition('ua') .
+           " ORDER BY ua.{$this->createdAtColumn} DESC";
+    
+    return $this->query($sql, [
+        'start_date' => $startDate . ' 00:00:00',
+        'end_date' => $endDate . ' 23:59:59'
+    ]);
 }
 
 /**
@@ -511,16 +552,17 @@ public function getUsersByRegistrationDate($startDate, $endDate)
  */
 public function getUsersByLastLogin($startDate, $endDate)
 {
-    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
-                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                ->where('user_account.ua_last_login BETWEEN :start_date AND :end_date')
-                ->bind([
-                    'start_date' => $startDate . ' 00:00:00',
-                    'end_date' => $endDate . ' 23:59:59'
-                ])
-                ->whereSoftDeleted('user_account')
-                ->orderBy('user_account.ua_last_login DESC')
-                ->get();
+    $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+            FROM {$this->table} ua
+            JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+            WHERE ua.ua_last_login BETWEEN :start_date AND :end_date"
+           . $this->getSoftDeleteCondition('ua') .
+           " ORDER BY ua.ua_last_login DESC";
+            
+    return $this->query($sql, [
+        'start_date' => $startDate . ' 00:00:00',
+        'end_date' => $endDate . ' 23:59:59'
+    ]);
 }
 
 /**
@@ -530,12 +572,14 @@ public function getUsersByLastLogin($startDate, $endDate)
  */
 public function getNeverLoggedInUsers()
 {
-    return $this->select('user_account.*, user_role.ur_role_name AS role_name')
-                ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                ->whereNull('user_account.ua_last_login')
-                ->whereSoftDeleted('user_account')
-                ->orderBy('user_account.ua_created_at DESC')
-                ->get();
+    $sql = "SELECT ua.*, ur.ur_role_name AS role_name
+            FROM {$this->table} ua
+            JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+            WHERE ua.ua_last_login IS NULL"
+           . $this->getSoftDeleteCondition('ua') .
+           " ORDER BY ua.{$this->createdAtColumn} DESC";
+           
+    return $this->query($sql);
 }
 
 /**
@@ -546,12 +590,14 @@ public function getNeverLoggedInUsers()
 public function getUserCountByRole()
 {
     $roleCounts = [];
-    
-    $results = $this->select('user_role.ur_role_name AS role_name, COUNT(*) AS user_count')
-                    ->join('user_role', 'user_account.ua_role_id', 'user_role.ur_id')
-                    ->whereSoftDeleted('user_account')
-                    ->groupBy('user_role.ur_role_name')
-                    ->get();
+    $sql = "SELECT ur.ur_role_name AS role_name, COUNT(ua.{$this->primaryKey}) AS user_count
+            FROM {$this->table} ua
+            JOIN user_role ur ON ua.ua_role_id = ur.ur_id
+            WHERE 1=1"
+           . $this->getSoftDeleteCondition('ua') .
+           " GROUP BY ur.ur_role_name";
+            
+    $results = $this->query($sql);
     
     foreach ($results as $row) {
         $roleCounts[$row['role_name']] = (int) $row['user_count'];
