@@ -130,14 +130,14 @@ class UserManagementController extends BaseController
         $requiredFields = ['first_name', 'last_name', 'email', 'password', 'role_id', 'is_active'];
         foreach ($requiredFields as $field) {
             if (!isset($data[$field]) || empty($data[$field])) {
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_CREATE', "Failed to create user: missing required field $field");
+                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: missing required field $field");
                 $this->jsonError("Missing required field: $field", 400);
             }
         }
         
         // Check if email already exists
         if ($this->userModel->emailExists($data['email'])) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_CREATE', "Failed to create user: email already exists (" . $data['email'] . ")");
+            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: email already exists (" . $data['email'] . ")");
             $this->jsonError('Email address already in use', 400);
         }
 
@@ -157,10 +157,10 @@ class UserManagementController extends BaseController
             
             if ($result) {
                 $roleName = $data['role_id'] == 2 ? 'admin' : 'user';
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_CREATE', "Admin created new $roleName account: " . $data['first_name'] . ' ' . $data['last_name'] . " (" . $data['email'] . ")");
+                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Admin created new $roleName account: " . $data['first_name'] . ' ' . $data['last_name'] . " (" . $data['email'] . ")");
                 $this->jsonSuccess([], 'User created successfully');
             } else {
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_CREATE', "Failed to create user: database error");
+                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: database error");
                 $this->jsonError('Failed to create user', 500);
             }
         } catch (\Exception $e) {
