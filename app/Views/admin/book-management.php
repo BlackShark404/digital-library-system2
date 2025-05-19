@@ -18,7 +18,6 @@ include $headerPath;
                             <th>Author</th>
                             <th>Genre</th>
                             <th>Price</th>
-                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
