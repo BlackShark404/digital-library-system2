@@ -161,7 +161,7 @@ function getBadgeClass(action) {
     switch (action) {
         case 'Login':
             return 'bg-success';
-        case 'Registration':
+        case 'Register':
             return 'bg-success';
         case 'Logout':
             return 'bg-secondary';
