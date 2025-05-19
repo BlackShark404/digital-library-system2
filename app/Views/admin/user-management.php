@@ -7,6 +7,12 @@ include $headerPath;
 <div class="container">
     <h1 class="mb-4 text-primary"><i class="bi bi-people me-2"></i>User Management</h1>
 
+
+    <div class="col-md-3 ms-auto">
+        <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center shadow-sm" data-bs-toggle="modal" data-bs-target="#addUserModal" type="button">
+            <i class="fas fa-plus-circle me-2"></i> Add User
+        </button>
+    </div>
     <!-- Search and Filter Options with Export Dropdown -->
     <div class="card mb-4 shadow-sm border-0">
         <div class="card-header bg-light py-3">
@@ -41,43 +47,7 @@ include $headerPath;
                             </select>
                         </div>
                     </div>
-                    
-                    
-                    
-                    <div class="col-md-3">
-                        <label class="form-label small text-muted">Export Data</label>
-                        <div class="dropdown">
-                            <button class="btn btn-success w-100 d-flex align-items-center justify-content-center shadow-sm dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-file-export me-2"></i> Export Data
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end w-100 shadow-sm border-0" aria-labelledby="exportDropdown">
-                                <li>
-                                    <a class="dropdown-item py-2 d-flex align-items-center" href="#" id="exportCsv">
-                                        <i class="fas fa-file-csv me-2 text-success"></i> Export CSV
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item py-2 d-flex align-items-center" href="#" id="exportExcel">
-                                        <i class="fas fa-file-excel me-2 text-success"></i> Export Excel
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item py-2 d-flex align-items-center" href="#" id="exportPdf">
-                                        <i class="fas fa-file-pdf me-2 text-danger"></i> Export PDF
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label small text-muted">Add New</label>
-                        <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center shadow-sm" data-bs-toggle="modal" data-bs-target="#addUserModal" type="button">
-                            <i class="fas fa-plus-circle me-2"></i> Add User
-                        </button>
-                    </div>
                 </div>
             </form>
         </div>
@@ -116,9 +86,7 @@ include $headerPath;
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-md">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-plus me-2 text-muted"></i>Add New User
-                </h5>
+                <h5 class="modal-title">Add New User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -126,42 +94,24 @@ include $headerPath;
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label for="addFname" class="form-label">First Name</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="fas fa-user text-muted"></i>
-                                </span>
-                                <input type="text" class="form-control border-start-0" id="addFname" name="first_name" required>
-                            </div>
+                            <input type="text" class="form-control" id="addFname" name="first_name" required>
                         </div>
                         <div class="col-md-6">
                             <label for="addLname" class="form-label">Last Name</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="fas fa-user text-muted"></i>
-                                </span>
-                                <input type="text" class="form-control border-start-0" id="addLname" name="last_name" required>
-                            </div>
+                            <input type="text" class="form-control" id="addLname" name="last_name" required>
                         </div>
                     </div>
 
                     <div class="mb-3 mt-2">
                         <label for="addEmail" class="form-label">Email</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">
-                                <i class="fas fa-envelope text-muted"></i>
-                            </span>
-                            <input type="email" class="form-control border-start-0" id="addEmail" name="email" required>
-                        </div>
+                        <input type="email" class="form-control" id="addEmail" name="email" required>
                     </div>
 
                     <!-- Password field (Full width) -->
                     <div class="mb-3">
                         <label for="addPassword" class="form-label">Password</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">
-                                <i class="fas fa-lock text-muted"></i>
-                            </span>
-                            <input type="password" class="form-control border-start-0" id="addPassword" name="password" required>
+                            <input type="password" class="form-control" id="addPassword" name="password" required>
                             <button class="btn btn-outline-secondary" type="button" id="togglePassword" data-target="password">
                                 <i class="fas fa-eye-slash"></i>
                             </button>
@@ -172,10 +122,7 @@ include $headerPath;
                     <div class="mb-3">
                         <label for="addConfirmPassword" class="form-label">Confirm Password</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">
-                                <i class="fas fa-lock text-muted"></i>
-                            </span>
-                            <input type="password" class="form-control border-start-0" id="addConfirmPassword" name="confirm_password" required>
+                            <input type="password" class="form-control" id="addConfirmPassword" name="confirm_password" required>
                             <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword" data-target="confirmPassword">
                                 <i class="fas fa-eye-slash"></i>
                             </button>
@@ -185,28 +132,18 @@ include $headerPath;
                     <div class="row g-2 mt-2">
                         <div class="col-md-6">
                             <label for="addRole" class="form-label">Role</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="fas fa-briefcase text-muted"></i>
-                                </span>
-                                <select class="form-select border-start-0" id="addRole" name="role_id" required>
-                                    <option value="">Select Role</option>
-                                    <option value="1" selected>User</option>
-                                    <option value="2">Admin</option>
-                                </select>
-                            </div>
+                            <select class="form-select" id="addRole" name="role_id" required>
+                                <option value="">Select Role</option>
+                                <option value="1" selected>User</option>
+                                <option value="2">Admin</option>
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label for="addStatus" class="form-label">Status</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="fas fa-toggle-on text-muted"></i>
-                                </span>
-                                <select class="form-select border-start-0" id="addStatus" name="is_active" required>
-                                    <option value="1" selected>Active</option>
-                                    <option value="0">Inactive</option>
-                                </select>
-                            </div>
+                            <select class="form-select" id="addStatus" name="is_active" required>
+                                <option value="1" selected>Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
                         </div>
                     </div>
                 </form>
@@ -219,6 +156,7 @@ include $headerPath;
         </div>
     </div>
 </div>
+
 
 <!-- Edit User Modal Template -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
@@ -278,29 +216,25 @@ include $headerPath;
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-id-badge me-2"></i>User Details: <span id="viewUserUsername"></span></h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-id-badge me-2"></i>User Details: 
+                    <span id="viewUserUsername"></span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <h6 class="border-bottom pb-2 mb-3">Basic Information</h6>
                 <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="border-bottom pb-2 mb-3">Basic Information</h6>
+                    <div class="col-md-6 mb-2">
                         <p><strong>User ID:</strong> <span id="viewUserId"></span></p>
                         <p><strong>Name:</strong> <span id="viewUserName"></span></p>
                         <p><strong>Email:</strong> <span id="viewUserEmail"></span></p>
                         <p><strong>Role:</strong> <span id="viewUserRole"></span></p>
+                    </div>
+                    <div class="col-md-6 mb-2">
                         <p><strong>Status:</strong> <span id="viewUserStatus"></span></p>
                         <p><strong>Registered:</strong> <span id="viewUserRegistered"></span></p>
                         <p><strong>Last Login:</strong> <span id="viewUserLastLogin"></span></p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="border-bottom pb-2 mb-3">Activity Statistics</h6>
-                        <p><strong>Total Logins:</strong> <span id="viewUserLogins"></span></p>
-                        <p><strong>Books Purchased:</strong> <span id="viewUserPurchases"></span></p>
-                        <p><strong>Reading Sessions:</strong> <span id="viewUserSessions"></span></p>
-                        <p><strong>Hours Read:</strong> <span id="viewUserHours"></span></p>
-                        <p><strong>Comments Made:</strong> <span id="viewUserComments"></span></p>
-                        <p><strong>Ratings Given:</strong> <span id="viewUserRatings"></span></p>
                     </div>
                 </div>
             </div>
@@ -312,32 +246,7 @@ include $headerPath;
     </div>
 </div>
 
-<!-- Delete User Confirmation Modal Template -->
-<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-triangle-exclamation me-2 text-danger"></i>Delete User</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the user <strong id="deleteUserName"></strong>?</p>
-                <p class="text-danger"><strong>Warning:</strong> This action cannot be undone. All user data will be permanently removed.</p>
-                <div class="form-check mt-3">
-                    <input class="form-check-input" type="checkbox" id="confirmDelete" required>
-                    <label class="form-check-label" for="confirmDelete">
-                        I understand the consequences of this action
-                    </label>
-                </div>
-                <input type="hidden" id="deleteUserId">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="deleteUserBtn" disabled>Delete User</button>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Include jQuery first -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -449,48 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setupEditUserModal(rowData);
         },
         
-        // Delete user callback
-        deleteRowCallback: function(rowData, tableManager) {
-            // Set user info in delete confirmation modal
-            $('#deleteUserId').val(rowData.id);
-            $('#deleteUserName').text(rowData.first_name + ' ' + rowData.last_name);
-            
-            // Reset checkbox
-            $('#confirmDelete').prop('checked', false);
-            $('#deleteUserBtn').prop('disabled', true);
-            
-            // Show the modal
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
-            deleteModal.show();
-            
-            // Handle delete button
-            $('#deleteUserBtn').off('click').on('click', function() {
-                const userId = $('#deleteUserId').val();
-                
-                // Call delete API
-                $.ajax({
-                    url: `/api/users/${userId}`,
-                    method: 'DELETE',
-                    success: function(response) {
-                        if (response.success) {
-                            // Delete succeeded
-                            tableManager.deleteRow(userId);
-                            deleteModal.hide();
-                            
-                            // Show success message
-                            tableManager.showSuccessToast('User Deleted', response.message);
-                        } else {
-                            // Delete failed
-                            tableManager.showErrorToast('Error', response.message);
-                        }
-                    },
-                    error: function(xhr) {
-                        const response = xhr.responseJSON || { message: 'Server error' };
-                        tableManager.showErrorToast('Error', response.message);
-                    }
-                });
-            });
-        }
+        
     });
     
     // Setup filter change listeners
@@ -655,38 +523,6 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#deleteUserBtn').prop('disabled', !$(this).is(':checked'));
     });
     
-    // Handle export buttons
-    $('#exportCsv').on('click', function(e) {
-        e.preventDefault();
-        exportUsers('csv');
-    });
-    
-    $('#exportExcel').on('click', function(e) {
-        e.preventDefault();
-        exportUsers('excel');
-    });
-    
-    $('#exportPdf').on('click', function(e) {
-        e.preventDefault();
-        exportUsers('pdf');
-    });
-    
-    // Function to export users
-    function exportUsers(format) {
-        const roleFilter = $('#roleFilter').val();
-        const statusFilter = $('#statusFilter').val();
-        
-        // Build query string for filters
-        let queryString = '?format=' + format;
-        if (roleFilter) queryString += '&role=' + roleFilter;
-        if (statusFilter) queryString += '&status=' + statusFilter;
-        
-        // Redirect to export URL
-        window.location.href = '/api/users/export' + queryString;
-        
-        // Show info toast
-        userTableManager.showInfoToast('Export Started', `Exporting users to ${format.toUpperCase()}`);
-    }
 });
 </script>
 

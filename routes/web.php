@@ -86,7 +86,6 @@ $router->map('GET', '/api/users/[i:id]', 'App\Controllers\UserManagementControll
 $router->map('POST', '/api/users', 'App\Controllers\UserManagementController#createUser', 'api_create_user');
 $router->map('PUT', '/api/users/[i:id]', 'App\Controllers\UserManagementController#updateUser', 'api_update_user');
 $router->map('DELETE', '/api/users/[i:id]', 'App\Controllers\UserManagementController#deleteUser', 'api_delete_user');
-$router->map('GET', '/api/users/export', 'App\Controllers\UserManagementController#exportUsers', 'api_export_users');
 
 // User routes
 $router->map('GET', '/user/dashboard', 'App\Controllers\UserController#renderUserDashboard', 'user_dashboard');
@@ -95,7 +94,6 @@ $router->map('GET', '/user/reading-sessions', 'App\Controllers\UserController#re
 $router->map('GET', '/user/wishlist', 'App\Controllers\UserController#renderWishlist', 'user_wishlist');
 $router->map('GET', '/user/purchases', 'App\Controllers\UserController#renderPurchases', 'user_purchases');
 $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#renderUserProfile', 'user_profile');
-
 
 // Profile routes 
 $router->map('POST', '/user/user-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-user-profile-pic');

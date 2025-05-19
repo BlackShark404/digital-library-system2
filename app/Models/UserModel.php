@@ -538,7 +538,6 @@ public function getNeverLoggedInUsers()
                 ->get();
 }
 
-
 /**
  * Get user count by role
  * 
@@ -559,56 +558,5 @@ public function getUserCountByRole()
     }
     
     return $roleCounts;
-}
-
-/**
- * Get user registrations by month
- * 
- * @param int $months Number of months to include
- * @return array Monthly registration counts
- */
-public function getUserRegistrationsByMonth($months = 12)
-{
-    $registrations = [];
-    
-    // Calculate date range
-    $endDate = date('Y-m-d');
-    $startDate = date('Y-m-d', strtotime("-$months months"));
-    
-    $sql = "
-        SELECT 
-            DATE_FORMAT(ua_created_at, '%Y-%m') AS month,
-            COUNT(*) AS count
-        FROM 
-            {$this->table}
-        WHERE 
-            ua_created_at BETWEEN ? AND ?
-            AND {$this->deletedAtColumn} IS NULL
-        GROUP BY 
-            DATE_FORMAT(ua_created_at, '%Y-%m')
-        ORDER BY 
-            month ASC
-    ";
-    
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([$startDate, $endDate]);
-    $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-    
-    // Fill gaps in the data
-    $currentDate = new \DateTime($startDate);
-    $endDateTime = new \DateTime($endDate);
-    
-    while ($currentDate <= $endDateTime) {
-        $monthKey = $currentDate->format('Y-m');
-        $registrations[$monthKey] = 0;
-        $currentDate->modify('+1 month');
-    }
-    
-    // Add actual counts
-    foreach ($results as $row) {
-        $registrations[$row['month']] = (int) $row['count'];
-    }
-    
-    return $registrations;
 }
 }

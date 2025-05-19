@@ -9,7 +9,6 @@ $activity_logs = [
         'username' => 'johndoe',
         'action' => 'Login',
         'details' => 'User logged in successfully',
-        'ip_address' => '192.168.1.105',
         'timestamp' => '2025-04-01 09:15:22'
     ],
     [
@@ -18,7 +17,6 @@ $activity_logs = [
         'username' => 'emilysmith',
         'action' => 'Book Purchase',
         'details' => 'Purchased "The Great Gatsby" (ID: 23)',
-        'ip_address' => '192.168.1.78',
         'timestamp' => '2025-04-01 08:42:15'
     ],
     [
@@ -27,7 +25,6 @@ $activity_logs = [
         'username' => 'michaelwilson',
         'action' => 'Reading Session',
         'details' => 'Started reading "1984" (ID: 14)',
-        'ip_address' => '192.168.1.93',
         'timestamp' => '2025-04-01 07:30:41'
     ],
     [
@@ -36,7 +33,6 @@ $activity_logs = [
         'username' => 'sarahparker',
         'action' => 'Profile Update',
         'details' => 'User updated profile information',
-        'ip_address' => '192.168.1.112',
         'timestamp' => '2025-03-31 23:18:05'
     ],
     [
@@ -45,7 +41,6 @@ $activity_logs = [
         'username' => 'robertjohnson',
         'action' => 'Registration',
         'details' => 'New user registered',
-        'ip_address' => '192.168.1.87',
         'timestamp' => '2025-03-31 20:45:19'
     ],
     [
@@ -54,7 +49,6 @@ $activity_logs = [
         'username' => 'davidbrown',
         'action' => 'Logout',
         'details' => 'User logged out',
-        'ip_address' => '192.168.1.65',
         'timestamp' => '2025-03-31 18:22:37'
     ],
     [
@@ -63,17 +57,7 @@ $activity_logs = [
         'username' => 'johndoe',
         'action' => 'Book Rating',
         'details' => 'Rated "To Kill a Mockingbird" (ID: 8) with 5 stars',
-        'ip_address' => '192.168.1.105',
         'timestamp' => '2025-03-31 16:08:52'
-    ],
-    [
-        'id' => 8,
-        'user_id' => 11,
-        'username' => 'jenniferthomas',
-        'action' => 'Comment',
-        'details' => 'Added comment on "Pride and Prejudice" (ID: 17)',
-        'ip_address' => '192.168.1.124',
-        'timestamp' => '2025-03-31 14:37:10'
     ],
     [
         'id' => 9,
@@ -81,23 +65,11 @@ $activity_logs = [
         'username' => 'admin',
         'action' => 'Book Added',
         'details' => 'Added new book "Dune" (ID: 42)',
-        'ip_address' => '192.168.1.100',
         'timestamp' => '2025-03-31 11:20:45'
     ],
 ];
 
-// Filter and pagination logic could be added here
-$action_filter = isset($_GET['action']) ? $_GET['action'] : '';
-$username_filter = isset($_GET['username']) ? $_GET['username'] : '';
-$date_filter = isset($_GET['date']) ? $_GET['date'] : '';
 
-// Get unique action types for filter dropdown
-$unique_actions = array_unique(array_column($activity_logs, 'action'));
-sort($unique_actions);
-
-// Get unique usernames for filter dropdown
-$unique_usernames = array_unique(array_column($activity_logs, 'username'));
-sort($unique_usernames);
 ?>
 
 <div class="container-fluid px-4">
@@ -126,22 +98,6 @@ sort($unique_usernames);
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="username" class="form-label">Username</label>
-                    <select class="form-select" id="username" name="username">
-                        <option value="">All Users</option>
-                        <?php foreach ($unique_usernames as $username): ?>
-                            <option value="<?php echo htmlspecialchars($username); ?>" <?php echo ($username_filter === $username) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($username); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="date" class="form-label">Date</label>
-                    <input type="date" class="form-control" id="date" name="date" value="<?php echo $date_filter; ?>">
-                </div>
-                
             </form>
         </div>
     </div>
@@ -161,9 +117,8 @@ sort($unique_usernames);
                             <th>Name</th>
                             <th>Action</th>
                             <th>Details</th>
-                            <th>IP Address</th>
                             <th>Timestamp</th>
-                            <th>Actions</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -181,7 +136,6 @@ sort($unique_usernames);
                                     </span>
                                 </td>
                                 <td><?php echo htmlspecialchars($log['details']); ?></td>
-                                <td><?php echo htmlspecialchars($log['ip_address']); ?></td>
                                 <td><?php echo htmlspecialchars($log['timestamp']); ?></td>
                                 <td>
                                     <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#logModal<?php echo $log['id']; ?>">
@@ -209,17 +163,11 @@ sort($unique_usernames);
                                                 <strong>Details:</strong> <?php echo htmlspecialchars($log['details']); ?>
                                             </div>
                                             <div class="mb-3">
-                                                <strong>IP Address:</strong> <?php echo htmlspecialchars($log['ip_address']); ?>
-                                            </div>
-                                            <div class="mb-3">
                                                 <strong>Date/Time:</strong> <?php echo htmlspecialchars($log['timestamp']); ?>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            <?php if ($log['action'] !== 'User Banned' && strpos($log['details'], 'malicious') === false): ?>
-                                                <a href="user_management.php?id=<?php echo $log['user_id']; ?>" class="btn btn-primary">View User</a>
-                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
@@ -292,20 +240,11 @@ sort($unique_usernames);
                 </div>
                 <div class="card-body">
                     <p>The activity log tracks all significant actions performed by users and administrators in the system.</p>
-                    <p>Use the filters above to narrow down the activity records by action type, username, or date.</p>
-                    <p><strong>Tips:</strong></p>
+                    <p>Use the filters above to narrow down the activity records by action type</p>
+                    <p><strong>Tip:</strong></p>
                     <ul>
                         <li>Use the eye icon to view detailed information about an activity</li>
-                        <li>Export options are available for reports</li>
                     </ul>
-                    <div class="mt-3">
-                        <button class="btn btn-success me-2" id="exportCsv">
-                            <i class="bi bi-file-earmark-excel me-1"></i> Export CSV
-                        </button>
-                        <button class="btn btn-danger" id="exportPdf">
-                            <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -327,8 +266,6 @@ function getBadgeClass($action)
             return 'bg-primary';
         case 'Reading Session':
         case 'Book Rating':
-        case 'Comment':
-            return 'bg-info';
         case 'Profile Update':
             return 'bg-warning';
         default:
