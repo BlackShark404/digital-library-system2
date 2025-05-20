@@ -101,7 +101,7 @@ include $headerPath;
                                         ?>
                                     </span>
                                     <div>
-                                        <a href="/user/book-details?id=<?php echo $book['id']; ?>" class="btn btn-sm btn-outline-primary">Details</a>
+                                        <button type="button" class="btn btn-sm btn-outline-primary view-book-details" data-book-id="<?php echo $book['id']; ?>">Details</button>
                                         <a href="/user/read?id=<?php echo $book['id']; ?>" class="btn btn-sm btn-primary">Read</a>
                                     </div>
                                 </div>
@@ -120,6 +120,53 @@ include $headerPath;
                 <?php
                 }
                 ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Book Details Modal -->
+<div class="modal fade" id="bookDetailModal" tabindex="-1" aria-labelledby="bookDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bookDetailModalLabel">Book Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <img id="modalCoverImage" src="" alt="Book Cover" class="img-fluid border rounded" style="max-height: 280px;">
+                    </div>
+                    <div class="col-md-8">
+                        <h3 id="modalTitle" class="fw-bold"></h3>
+                        <h5 id="modalAuthor" class="text-secondary mb-3"></h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Genre:</strong> <span id="modalGenre"></span></p>
+                                <p><strong>Publisher:</strong> <span id="modalPublisher"></span></p>
+                                <p><strong>Publication Date:</strong> <span id="modalPublicationDate"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>ISBN:</strong> <span id="modalIsbn"></span></p>
+                                <p><strong>Pages:</strong> <span id="modalPages"></span></p>
+                                <p><strong>Price:</strong> <span id="modalPrice" class="fw-bold"></span></p>
+                            </div>
+                        </div>
+                         <div id="modalFileSection" class="mt-3" style="display: none;"> <!-- Hidden by default -->
+                            <p><strong>Book File:</strong> <a id="modalFileLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-pdf"></i> View PDF</a></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h5>Description</h5>
+                    <div id="modalDescription" class="border rounded p-3 bg-light" style="min-height: 100px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="buyBookBtn"><i class="bi bi-cart-plus me-2"></i>Buy Now</button>
             </div>
         </div>
     </div>
@@ -205,6 +252,90 @@ include $headerPath;
                 // Redirect to the base page to clear all filters
                 window.location.href = '/user/browse-books';
             });
+        }
+
+        // Handle "View Details" button click to show modal
+        const bookDetailModal = new bootstrap.Modal(document.getElementById('bookDetailModal'));
+        document.querySelectorAll('.view-book-details').forEach(button => {
+            button.addEventListener('click', function() {
+                const bookId = this.getAttribute('data-book-id');
+                fetchBookDetailsAndShowModal(bookId);
+            });
+        });
+
+        function fetchBookDetailsAndShowModal(bookId) {
+            // Show a loading state in modal (optional)
+            document.getElementById('modalTitle').textContent = 'Loading...';
+            // ... reset other fields ...
+
+            fetch(`/api/books/${bookId}`, {
+                method: 'GET', // Explicitly stating GET, though it's default
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json' // Though not strictly necessary for GET, good practice if server checks
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && data.data) {
+                        const book = data.data;
+                        document.getElementById('modalCoverImage').src = book.cover_url || '../assets/images/book-cover/default-cover.svg';
+                        document.getElementById('modalTitle').textContent = book.b_title || 'N/A';
+                        document.getElementById('modalAuthor').textContent = book.b_author ? `by ${book.b_author}` : 'N/A';
+                        document.getElementById('modalGenre').textContent = book.genre || 'N/A'; // Assumes 'genre' field exists, adjust if it's 'g_name' or from a join
+                        document.getElementById('modalPublisher').textContent = book.b_publisher || 'N/A';
+                        document.getElementById('modalPublicationDate').textContent = book.b_publication_date ? formatDate(book.b_publication_date) : 'N/A';
+                        document.getElementById('modalIsbn').textContent = book.b_isbn || 'N/A';
+                        document.getElementById('modalPages').textContent = book.b_pages || 'N/A';
+                        document.getElementById('modalPrice').textContent = book.b_price ? `$${parseFloat(book.b_price).toFixed(2)}` : 'Free';
+                        document.getElementById('modalDescription').innerHTML = book.b_description ? book.b_description.replace(/\\n/g, '<br>') : 'No description available.';
+                        
+                        // Update Buy button with book ID for potential future use
+                        document.getElementById('buyBookBtn').setAttribute('data-book-id', bookId);
+
+                        // Handle file link (similar to admin view book modal)
+                        const modalFileSection = document.getElementById('modalFileSection');
+                        const modalFileLink = document.getElementById('modalFileLink');
+                        if (book.file_url) { // Check if file_url is part of the response
+                            modalFileLink.href = book.file_url;
+                            modalFileSection.style.display = 'block';
+                        } else {
+                            modalFileSection.style.display = 'none';
+                        }
+
+                        bookDetailModal.show();
+                    } else {
+                        showToast(data.message || 'Failed to load book details.', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching book details:', error);
+                    showToast('Error fetching book details. Please try again.', 'danger');
+                    document.getElementById('modalTitle').textContent = 'Error';
+                    // Potentially hide modal or show error message inside it
+                });
+        }
+        
+        // Add event listener for Buy button (no backend yet)
+        document.getElementById('buyBookBtn').addEventListener('click', function() {
+            const bookId = this.getAttribute('data-book-id');
+            // For now, just log or show an alert. Later, this will trigger purchase flow.
+            console.log('Buy button clicked for book ID:', bookId);
+            showToast(`"Buy" clicked for book ID: ${bookId}. Functionality to be implemented.`, 'info');
+            // bookDetailModal.hide(); // Optionally hide modal after clicking buy
+        });
+
+        // Format Date (if not already present)
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString(undefined, options);
         }
 
         // Toast notification function
