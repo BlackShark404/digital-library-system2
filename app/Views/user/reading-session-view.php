@@ -171,6 +171,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let book, rendition;
     const sessionId = <?= $session['rs_id'] ?>;
     let currentLocation = '';
+    let currentPage = 1; // Initialize current page to 1
+    let totalPages = 0;
     const bookPath = "<?= $filePath ?>";
     
     // Book Elements
@@ -206,6 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Initial location (use saved location or start at beginning)
             const savedPage = <?= $session['current_page'] ?? 1 ?>;
+            currentPage = savedPage; // Set initial page from saved page
             
             // Set up error handling on book loading
             book.ready.then(() => {
@@ -215,20 +218,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 console.log("Book loaded successfully");
                 
-                // Set initial location or chapter based on saved progress
-                if (savedPage > 1) {
-                    book.locations.generate().then(() => {
-                        const location = book.locations.cfiFromPercentage((savedPage - 1) / book.locations.total);
-                        rendition.display(location);
-                    });
-                } else {
-                    rendition.display();
-                }
-                
-                // Update total pages
+                // Generate locations for pagination
                 book.locations.generate(1024).then(() => {
-                    totalPagesEl.textContent = book.locations.total || '?';
-                    updatePageCountDisplay();
+                    totalPages = book.locations.total || 100;
+                    totalPagesEl.textContent = totalPages;
+                    
+                    // Ensure current page is within valid range
+                    currentPage = Math.max(1, Math.min(currentPage, totalPages));
+                    
+                    // Update page display
+                    updatePageDisplay();
+                    
+                    // Set initial location based on saved page
+                    if (savedPage > 1) {
+                        // Calculate percentage based on page number
+                        const percentage = (savedPage - 1) / totalPages;
+                        const cfi = book.locations.cfiFromPercentage(percentage);
+                        rendition.display(cfi);
+                    } else {
+                        rendition.display();
+                    }
                 });
                 
                 // Generate and display the table of contents
@@ -244,22 +253,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>`;
             });
             
-            // Event listeners for page change
+            // Track location changes
             rendition.on('locationChanged', function(location) {
                 currentLocation = location.start.cfi;
-                updatePageCountDisplay();
-                
-                // Save progress
-                saveReadingProgress();
+                console.log("Location changed to:", location.start.cfi);
             });
             
-            // Add error handling for rendition
+            // Add event when section is rendered
             rendition.on('rendered', (section) => {
                 console.log('Rendered section:', section.href);
             });
             
+            // Handle relocated event 
             rendition.on('relocated', (location) => {
                 console.log('Relocated to:', location);
+                // Try to update currentPage based on location percentage
+                if (location && typeof location.start.percentage === 'number') {
+                    const calculatedPage = Math.floor(location.start.percentage * totalPages) + 1;
+                    // Only update if it's a significant change
+                    if (Math.abs(calculatedPage - currentPage) > 0) {
+                        currentPage = calculatedPage;
+                        updatePageDisplay();
+                        saveReadingProgress();
+                    }
+                }
             });
             
             // Set up event listeners
@@ -267,6 +284,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Apply any saved reader settings
             applyReaderSettings();
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (rendition) {
+                    rendition.resize();
+                }
+            });
         } catch (error) {
             console.error("Error initializing book:", error);
             loadingEl.innerHTML = `<div class="alert alert-danger">
@@ -277,10 +301,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    function updatePageCountDisplay() {
-        const currentPage = book.locations.percentageFromCfi(currentLocation);
-        const pageNum = Math.ceil(currentPage * book.locations.total);
-        currentPageEl.textContent = pageNum || 1;
+    function updatePageDisplay() {
+        // Ensure page number is within bounds
+        currentPage = Math.max(1, Math.min(currentPage, totalPages || 100));
+        currentPageEl.textContent = currentPage;
+        totalPagesEl.textContent = totalPages || '?';
+        console.log(`Page display updated: ${currentPage} of ${totalPages}`);
     }
     
     function generateTOC(toc) {
@@ -319,21 +345,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function setUpEventListeners() {
-        // Navigation buttons
+        // Navigation buttons with direct page number updates
         prevButton.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePageDisplay();
+            }
             rendition.prev();
+            saveReadingProgress();
         });
         
         nextButton.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePageDisplay();
+            }
             rendition.next();
+            saveReadingProgress();
         });
         
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft') {
+                if (currentPage > 1) {
+                    currentPage--;
+                    updatePageDisplay();
+                }
                 rendition.prev();
+                saveReadingProgress();
             } else if (e.key === 'ArrowRight') {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    updatePageDisplay();
+                }
                 rendition.next();
+                saveReadingProgress();
             }
         });
         
@@ -395,10 +441,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function saveReadingProgress() {
-        if (!currentLocation) return;
-        
-        const currentPage = book.locations.percentageFromCfi(currentLocation);
-        const pageNum = Math.ceil(currentPage * book.locations.total) || 1;
+        // Use the directly managed currentPage value rather than calculating from CFI
+        if (!book || !book.locations || currentPage < 1) return;
         
         // Save reading progress via AJAX
         fetch('/user/reading-sessions/update-progress', {
@@ -409,8 +453,8 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({
                 session_id: sessionId,
-                current_page: pageNum,
-                is_completed: pageNum >= book.locations.total
+                current_page: currentPage,
+                is_completed: currentPage >= totalPages
             })
         })
         .then(response => response.json())
