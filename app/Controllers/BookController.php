@@ -151,8 +151,8 @@ class BookController extends BaseController
         }
         
         // Check if book exists
-        $book = $this->bookModel->getBookById($id);
-        if (!$book) {
+        $existingBook = $this->bookModel->getBookById($id);
+        if (!$existingBook) {
             $this->jsonError('Book not found', 404);
         }
         
@@ -178,19 +178,38 @@ class BookController extends BaseController
         
         // Handle cover image
         if (!empty($jsonData['cover_image_data'])) {
+            // Delete old cover image if it exists and a new one is provided
+            if (!empty($existingBook['b_cover_path'])) {
+                $oldCoverPath = __DIR__ . '/../../public/assets/images/book-cover/' . $existingBook['b_cover_path'];
+                if (file_exists($oldCoverPath)) {
+                    unlink($oldCoverPath);
+                }
+            }
             $coverData = $jsonData['cover_image_data'];
             $coverFilename = $this->processBase64Image($coverData, 'book-cover');
             if ($coverFilename) {
                 $bookData['cover_path'] = $coverFilename;
+            } else {
+                // Optionally handle error if new image processing fails but old one was deleted
+                // For now, we'll proceed, and the DB will just have a null/empty path if it was new
             }
         }
         
         // Handle book file
         if (!empty($jsonData['book_file_data'])) {
+            // Delete old book file if it exists and a new one is provided
+            if (!empty($existingBook['b_file_path'])) {
+                $oldBookFilePath = __DIR__ . '/../../public/assets/books/' . $existingBook['b_file_path'];
+                if (file_exists($oldBookFilePath)) {
+                    unlink($oldBookFilePath);
+                }
+            }
             $fileData = $jsonData['book_file_data'];
             $bookFilename = $this->processBase64File($fileData, 'books');
             if ($bookFilename) {
                 $bookData['file_path'] = $bookFilename;
+            } else {
+                // Optionally handle error
             }
         }
         
@@ -249,7 +268,7 @@ class BookController extends BaseController
             
             // Generate unique filename
             $filename = uniqid() . '.' . $imageType;
-            $uploadPath = __DIR__ . '/../../assets/images/' . $directory . '/' . $filename;
+            $uploadPath = __DIR__ . '/../../public/assets/images/' . $directory . '/' . $filename;
             
             // Ensure directory exists
             $dirPath = dirname($uploadPath);
@@ -280,8 +299,11 @@ class BookController extends BaseController
     private function processBase64File($base64Data, $directory)
     {
         // Extract the base64 encoded file content
-        if (preg_match('/^data:application\/(\w+);base64,/', $base64Data, $matches)) {
+        // Allowing for pdf, epub, mobi
+        if (preg_match('/^data:application\/(pdf|epub|x-mobipocket-ebook);base64,/', $base64Data, $matches)) {
             $fileType = $matches[1];
+            if ($fileType === 'x-mobipocket-ebook') $fileType = 'mobi'; // Normalize mobi extension
+
             $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
             $decodedData = base64_decode($base64Data);
             
@@ -292,7 +314,7 @@ class BookController extends BaseController
             
             // Generate unique filename
             $filename = uniqid() . '.' . $fileType;
-            $uploadPath = __DIR__ . '/../../assets/' . $directory . '/' . $filename;
+            $uploadPath = __DIR__ . '/../../public/assets/' . $directory . '/' . $filename;
             
             // Ensure directory exists
             $dirPath = dirname($uploadPath);
