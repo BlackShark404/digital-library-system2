@@ -1,70 +1,7 @@
 <?php
 include $headerPath;
 
-// Hardcoded wishlist data
-$wishlist_books = [
-    [
-        'wishlist_id' => 1,
-        'book_id' => 101,
-        'title' => 'The Silent Patient',
-        'author' => 'Alex Michaelides',
-        'cover_image' => 'https://placekitten.com/200/300', // Placeholder image
-        'price' => 24.99,
-        'discount_price' => 19.99,
-        'publication_date' => '2019-02-05',
-        'genre' => 'Psychological Thriller'
-    ],
-    [
-        'wishlist_id' => 2,
-        'book_id' => 102,
-        'title' => 'Atomic Habits',
-        'author' => 'James Clear',
-        'cover_image' => 'https://placekitten.com/201/300', // Placeholder image
-        'price' => 27.99,
-        'discount_price' => null,
-        'publication_date' => '2018-10-16',
-        'genre' => 'Self-Help'
-    ],
-    [
-        'wishlist_id' => 3,
-        'book_id' => 103,
-        'title' => 'Project Hail Mary',
-        'author' => 'Andy Weir',
-        'cover_image' => 'https://placekitten.com/202/300', // Placeholder image
-        'price' => 28.99,
-        'discount_price' => 22.50,
-        'publication_date' => '2021-05-04',
-        'genre' => 'Science Fiction'
-    ],
-    [
-        'wishlist_id' => 4,
-        'book_id' => 104,
-        'title' => 'The Midnight Library',
-        'author' => 'Matt Haig',
-        'cover_image' => 'https://placekitten.com/203/300', // Placeholder image
-        'price' => 26.99,
-        'discount_price' => 21.99,
-        'publication_date' => '2020-09-29',
-        'genre' => 'Fantasy Fiction'
-    ],
-    [
-        'wishlist_id' => 5,
-        'book_id' => 105,
-        'title' => 'The Psychology of Money',
-        'author' => 'Morgan Housel',
-        'cover_image' => 'https://placekitten.com/204/300', // Placeholder image
-        'price' => 19.99,
-        'discount_price' => 16.99,
-        'publication_date' => '2020-09-08',
-        'genre' => 'Finance'
-    ]
-];
-
-// Check if we're simulating an empty wishlist
-$show_empty = isset($_GET['empty']) && $_GET['empty'] == 'true';
-if ($show_empty) {
-    $wishlist_books = [];
-}
+// Wishlist data is now passed from the controller
 ?>
 
 <!-- Main content area -->
@@ -97,16 +34,20 @@ if ($show_empty) {
         <!-- Wishlist items -->
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             <?php foreach ($wishlist_books as $book): ?>
-                <div class="col">
+                <div class="col wishlist-item" data-wishlist-id="<?php echo $book['wl_id']; ?>">
                     <div class="card h-100 shadow-sm">
                         <div class="position-relative">
-                            <img src="<?php echo $book['cover_image']; ?>" class="card-img-top" alt="<?php echo htmlspecialchars($book['title']); ?>" style="height: 250px; object-fit: cover;">
-                            <form method="post" action="remove_wishlist.php" class="position-absolute" style="top: 10px; right: 10px;">
-                                <input type="hidden" name="wishlist_id" value="<?php echo $book['wishlist_id']; ?>">
-                                <button type="submit" class="btn btn-sm btn-light rounded-circle" data-bs-toggle="tooltip" title="Remove from wishlist">
-                                    <i class="bi bi-x"></i>
-                                </button>
-                            </form>
+                            <img src="<?php echo !empty($book['cover_image']) ? htmlspecialchars($book['cover_image']) : '/assets/images/book-cover/default-cover.svg'; ?>" 
+                                 class="card-img-top" 
+                                 alt="<?php echo htmlspecialchars($book['title']); ?>" 
+                                 style="height: 250px; object-fit: cover;">
+                            <button type="button" 
+                                   class="btn btn-sm btn-light rounded-circle position-absolute top-0 end-0 m-2 remove-wishlist-btn" 
+                                   data-wishlist-id="<?php echo $book['wl_id']; ?>"
+                                   data-bs-toggle="tooltip" 
+                                   title="Remove from wishlist">
+                                <i class="bi bi-x"></i>
+                            </button>
                         </div>
                         <div class="card-body">
                             <span class="badge bg-secondary mb-2"><?php echo htmlspecialchars($book['genre']); ?></span>
@@ -128,13 +69,13 @@ if ($show_empty) {
                         </div>
                         <div class="card-footer bg-white border-top-0">
                             <div class="d-grid gap-2 d-md-flex justify-content-between">
-                                <a href="../book_detail.php?id=<?php echo $book['book_id']; ?>" class="btn btn-outline-secondary">
+                                <a href="/user/book-details?id=<?php echo $book['b_id']; ?>" class="btn btn-outline-secondary">
                                     <i class="bi bi-info-circle"></i> Details
                                 </a>
-                                <form method="post" action="add_to_cart.php" class="d-inline">
-                                    <input type="hidden" name="book_id" value="<?php echo $book['book_id']; ?>">
+                                <form method="post" action="/user/purchase/add" class="d-inline">
+                                    <input type="hidden" name="book_id" value="<?php echo $book['b_id']; ?>">
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-cart-plus"></i> Add to Cart
+                                        <i class="bi bi-cart-plus"></i> Purchase
                                     </button>
                                 </form>
                             </div>
@@ -145,5 +86,99 @@ if ($show_empty) {
         </div>
     <?php endif; ?>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle remove wishlist buttons
+        const removeButtons = document.querySelectorAll('.remove-wishlist-btn');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const wishlistId = this.getAttribute('data-wishlist-id');
+                
+                if (confirm('Are you sure you want to remove this book from your wishlist?')) {
+                    // Send AJAX request
+                    fetch('/user/wishlist/remove', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            wishlist_id: parseInt(wishlistId)
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the item from the DOM
+                            const wishlistItem = document.querySelector(`.wishlist-item[data-wishlist-id="${wishlistId}"]`);
+                            if (wishlistItem) {
+                                wishlistItem.remove();
+                                
+                                // Show toast notification
+                                showToast('Book removed from wishlist', 'info');
+                                
+                                // If no items left, refresh page to show empty state
+                                const remainingItems = document.querySelectorAll('.wishlist-item');
+                                if (remainingItems.length === 0) {
+                                    window.location.reload();
+                                }
+                            }
+                        } else {
+                            // Show error notification
+                            showToast(data.message || 'Failed to remove from wishlist', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('An error occurred', 'danger');
+                    });
+                }
+            });
+        });
+        
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            // Create toast container if it doesn't exist
+            let toastContainer = document.querySelector('.toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(toastContainer);
+            }
+
+            // Create toast element
+            const toastEl = document.createElement('div');
+            toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+
+            // Toast content
+            toastEl.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+
+            // Add to container
+            toastContainer.appendChild(toastEl);
+
+            // Initialize and show toast
+            const toast = new bootstrap.Toast(toastEl, {
+                delay: 3000
+            });
+            toast.show();
+
+            // Remove from DOM after hiding
+            toastEl.addEventListener('hidden.bs.toast', function() {
+                toastEl.remove();
+            });
+        }
+    });
+</script>
 
 <?php include $footerPath; ?>

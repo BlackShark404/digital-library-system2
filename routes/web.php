@@ -52,6 +52,9 @@ $accessMap = [
     '/user/user-profile/delete-account' => ['user'],
     '/user/user-profile/change-password' => ['user'],
     '/user/user-profile/update-profile-info' => ['user'],
+    '/user/wishlist/add' => ['user'],
+    '/user/wishlist/remove' => ['user'],
+    '/user/wishlist/toggle' => ['user'],
 
     // Shared (admin and user)
     '/logout' => ['admin', 'user'],
@@ -114,6 +117,11 @@ $router->map('GET', '/user/reading-sessions', 'App\Controllers\UserController#re
 $router->map('GET', '/user/wishlist', 'App\Controllers\UserController#renderWishlist', 'user_wishlist');
 $router->map('GET', '/user/purchases', 'App\Controllers\UserController#renderPurchases', 'user_purchases');
 $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#renderUserProfile', 'user_profile');
+
+// Wishlist routes
+$router->map('POST', '/user/wishlist/add', 'App\Controllers\UserController#addToWishlist', 'add_to_wishlist');
+$router->map('POST', '/user/wishlist/remove', 'App\Controllers\UserController#removeFromWishlist', 'remove_from_wishlist');
+$router->map('POST', '/user/wishlist/toggle', 'App\Controllers\UserController#toggleWishlist', 'toggle_wishlist');
 
 // Profile routes 
 $router->map('POST', '/user/user-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-user-profile-pic');
