@@ -4,8 +4,6 @@
  * - Search
  * - Filters
  * - Pagination
- * - Per page selection (customizable placement)
- * - External search and per page controls 
  * - Custom modals (view, edit, delete with confirmation)
  * - Client-side rendering
  * - Table refresh after add/edit/delete operations
@@ -23,9 +21,6 @@ class DataTablesManager {
    * @param {Function} options.deleteRowCallback - Function to call when delete action is confirmed
    * @param {Object} options.customButtons - Custom buttons configuration
    * @param {Object} options.toastOptions - Toast notification options
-   * @param {Object} options.paginationOptions - Pagination and display options
-   * @param {string} options.externalSearchId - ID of external search input element
-   * @param {string} options.externalPerPageId - ID of external per page select element
    */
   constructor(tableId, options = {}) {
     this.tableId = tableId;
@@ -51,13 +46,6 @@ class DataTablesManager {
         draggable: true,              // allow dragging
         enableIcons: true,            // show icons
       },
-      paginationOptions: {
-        lengthMenu: [10, 25, 50, 100], // Options for rows per page
-        pageLength: 10,                // Default rows per page
-        lengthChange: true,            // Show length changing controls
-      },
-      externalSearchId: null,          // ID of external search input
-      externalPerPageId: null,         // ID of external per page select
       ...options
     };
     
@@ -182,65 +170,6 @@ class DataTablesManager {
       toastContainer.id = 'toastContainer';
       toastContainer.className = position;
       document.body.appendChild(toastContainer);
-    }
-  }
-  
-  /**
-   * Create external pagination controls if not existing
-   * @private
-   */
-  _initializeExternalControls() {
-    // Set up external search if specified
-    if (this.options.externalSearchId) {
-      const searchInput = document.getElementById(this.options.externalSearchId);
-      if (searchInput) {
-        // Clear previous event listeners to prevent duplication
-        const newSearchInput = searchInput.cloneNode(true);
-        searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-        
-        // Add event listener for search
-        newSearchInput.addEventListener('keyup', (e) => {
-          this.dataTable.search(e.target.value).draw();
-        });
-
-        // Set placeholder if not already set
-        if (!newSearchInput.getAttribute('placeholder')) {
-          newSearchInput.setAttribute('placeholder', 'Search records...');
-        }
-      } else {
-        console.warn(`External search element with ID '${this.options.externalSearchId}' not found.`);
-      }
-    }
-    
-    // Set up external per page select if specified
-    if (this.options.externalPerPageId) {
-      const perPageSelect = document.getElementById(this.options.externalPerPageId);
-      if (perPageSelect) {
-        // Clear previous event listeners to prevent duplication
-        const newPerPageSelect = perPageSelect.cloneNode(true);
-        perPageSelect.parentNode.replaceChild(newPerPageSelect, perPageSelect);
-        
-        // Check if select already has options
-        if (newPerPageSelect.options.length === 0) {
-          // Populate select with options if empty
-          this.options.paginationOptions.lengthMenu.forEach(length => {
-            const option = document.createElement('option');
-            option.value = length;
-            option.textContent = length;
-            newPerPageSelect.appendChild(option);
-          });
-          
-          // Set default value
-          newPerPageSelect.value = this.options.paginationOptions.pageLength;
-        }
-        
-        // Add event listener for per page change
-        newPerPageSelect.addEventListener('change', (e) => {
-          this.dataTable.page.len(parseInt(e.target.value)).draw();
-        });
-      } else {
-        console.warn(`External per page element with ID '${this.options.externalPerPageId}' not found.`);
-      }
     }
   }
   
@@ -536,43 +465,12 @@ class DataTablesManager {
         });
       }
       
-      // Configure DataTable DOM layout based on external controls
-      let domLayout = 'Bfrtip';
-      
-      // Modify DOM layout when using external controls
-      if (this.options.externalSearchId || this.options.externalPerPageId) {
-        // Customize DOM layout based on which external controls are used
-        domLayout = '';
-        
-        // If not using external search, include filter in DOM
-        if (!this.options.externalSearchId) {
-          domLayout += 'f';
-        }
-        
-        // Include processing indicator and table
-        domLayout += 'rt';
-        
-        // If not using external per page, include length menu in DOM
-        if (!this.options.externalPerPageId && this.options.paginationOptions.lengthChange) {
-          domLayout += 'l';
-        }
-        
-        // Include pagination and info
-        domLayout += 'ip';
-        
-        // Include buttons
-        domLayout += 'B';
-      }
-      
       // Initialize DataTable with jQuery (since DataTables is jQuery-based)
       this.dataTable = $(`#${this.tableId}`).DataTable({
         columns,
         responsive: true,
         processing: true,
-        dom: domLayout,
-        lengthMenu: this.options.paginationOptions.lengthMenu,
-        pageLength: this.options.paginationOptions.pageLength,
-        lengthChange: this.options.paginationOptions.lengthChange,
+        dom: 'Bfrtip',
         buttons: [
           'copy', 'csv', 'excel', 'pdf', 'print',
           ...(this.options.customButtons ? Object.values(this.options.customButtons) : [])
@@ -591,13 +489,9 @@ class DataTablesManager {
         },
         language: {
           searchPlaceholder: "Search records",
-          emptyTable: "No data available",
-          lengthMenu: "Show _MENU_ entries per page"
+          emptyTable: "No data available"
         }
       });
-      
-      // Initialize external controls after DataTable is created
-      this._initializeExternalControls();
       
       // Attach event listeners with delegation for better performance
       this._attachEventListeners();
@@ -826,7 +720,7 @@ class DataTablesManager {
         
         if (row.length) {
           row.remove().draw();
-          this.showSuccessToast('Delete Record', `Record #${id} has been deleted`);
+          this.showErrorToast('Delete Record', `Record #${id} has been deleted`);
         } else {
           throw new Error(`Row found in data array but not in DataTable`);
         }
@@ -898,129 +792,6 @@ class DataTablesManager {
   }
   
   /**
-   * Set the page length (rows per page)
-   * @param {number} length - Number of rows per page
-   * @returns {DataTablesManager} this instance for chaining
-   */
-  setPageLength(length) {
-    try {
-      if (typeof length !== 'number' || length <= 0) {
-        throw new Error('Invalid page length value');
-      }
-      
-      this.dataTable.page.len(length).draw();
-      
-      // Update external per page dropdown if exists
-      if (this.options.externalPerPageId) {
-        const perPageSelect = document.getElementById(this.options.externalPerPageId);
-        if (perPageSelect) {
-          perPageSelect.value = length;
-        }
-      }
-      
-      this.showInfoToast('Display Updated', `Now showing ${length} records per page`);
-    } catch (error) {
-      console.error('Error setting page length:', error);
-      this.showErrorToast('Page Length Error', `Failed to update page length: ${error.message}`);
-    }
-    
-    return this;
-  }
-  
-  /**
-   * Get the current page length (rows per page)
-   * @returns {number} Current page length
-   */
-  getPageLength() {
-    return this.dataTable.page.len();
-  }
-  
-  /**
-   * Set search term programmatically
-   * @param {string} term - Search term
-   * @returns {DataTablesManager} this instance for chaining
-   */
-  setSearch(term) {
-    try {
-      this.dataTable.search(term).draw();
-      
-      // Update external search input if exists
-      if (this.options.externalSearchId) {
-        const searchInput = document.getElementById(this.options.externalSearchId);
-        if (searchInput) {
-          searchInput.value = term;
-        }
-      }
-    } catch (error) {
-      console.error('Error setting search term:', error);
-      this.showErrorToast('Search Error', `Failed to set search term: ${error.message}`);
-    }
-    
-    return this;
-  }
-  
-  /**
-   * Get available page length options
-   * @returns {Array} Page length options
-   */
-  getPageLengthOptions() {
-    return this.options.paginationOptions.lengthMenu;
-  }
-  
-  /**
-   * Update pagination options and refresh the table
-   * @param {Object} options - Pagination options
-   * @param {Array} options.lengthMenu - Options for rows per page
-   * @param {number} options.pageLength - Default rows per page
-   * @returns {DataTablesManager} this instance for chaining
-   */
-  updatePaginationOptions(options) {
-    try {
-      // Update options
-      if (options.lengthMenu) {
-        this.options.paginationOptions.lengthMenu = options.lengthMenu;
-      }
-      
-      if (options.pageLength) {
-        this.options.paginationOptions.pageLength = options.pageLength;
-      }
-      
-      // Update DataTable settings
-      this.dataTable.page.len(this.options.paginationOptions.pageLength);
-      
-      // Update external per page select if exists
-      if (this.options.externalPerPageId) {
-        const perPageSelect = document.getElementById(this.options.externalPerPageId);
-        if (perPageSelect) {
-          // Clear existing options
-          perPageSelect.innerHTML = '';
-          
-          // Add new options
-          this.options.paginationOptions.lengthMenu.forEach(length => {
-            const option = document.createElement('option');
-            option.value = length;
-            option.textContent = length;
-            perPageSelect.appendChild(option);
-          });
-          
-          // Set selected value
-          perPageSelect.value = this.options.paginationOptions.pageLength;
-        }
-      }
-      
-      // Redraw table
-      this.dataTable.draw();
-      
-      this.showInfoToast('Pagination Updated', 'Table pagination options have been updated');
-    } catch (error) {
-      console.error('Error updating pagination options:', error);
-      this.showErrorToast('Pagination Error', `Failed to update pagination options: ${error.message}`);
-    }
-    
-    return this;
-  }
-  
-  /**
    * Clean up resources when instance is no longer needed
    * Call this method to prevent memory leaks
    */
@@ -1031,23 +802,6 @@ class DataTablesManager {
         clearTimeout(timeoutId);
       }
       this.toastTimeouts.clear();
-      
-      // Remove event listeners from external controls
-      if (this.options.externalSearchId) {
-        const searchInput = document.getElementById(this.options.externalSearchId);
-        if (searchInput) {
-          const newSearchInput = searchInput.cloneNode(true);
-          searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-        }
-      }
-      
-      if (this.options.externalPerPageId) {
-        const perPageSelect = document.getElementById(this.options.externalPerPageId);
-        if (perPageSelect) {
-          const newPerPageSelect = perPageSelect.cloneNode(true);
-          perPageSelect.parentNode.replaceChild(newPerPageSelect, perPageSelect);
-        }
-      }
       
       // Remove event listeners
       if (this.tableElement) {
