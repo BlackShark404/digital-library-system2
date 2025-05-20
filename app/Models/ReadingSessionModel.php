@@ -25,6 +25,7 @@ class ReadingSessionModel extends BaseModel
                 b.b_title, 
                 b.b_author, 
                 b.b_cover_path,
+                b.b_pages,
                 rp.current_page,
                 rp.is_completed,
                 CASE
@@ -66,6 +67,7 @@ class ReadingSessionModel extends BaseModel
                 b.b_author, 
                 b.b_cover_path,
                 b.b_file_path,
+                b.b_pages,
                 rp.current_page,
                 rp.is_completed,
                 CASE
@@ -102,6 +104,7 @@ class ReadingSessionModel extends BaseModel
                 b.b_author, 
                 b.b_cover_path,
                 b.b_file_path,
+                b.b_pages,
                 rp.current_page,
                 rp.is_completed,
                 CASE
