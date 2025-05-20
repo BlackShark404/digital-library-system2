@@ -44,6 +44,9 @@ include $headerPath;
                         <div class="col-md-1">
                             <button type="submit" class="btn btn-primary w-100">Filter</button>
                         </div>
+                        <div class="col-md-1">
+                            <button type="button" id="resetFiltersBtnUser" class="btn btn-secondary w-100">Reset</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -176,6 +179,33 @@ include $headerPath;
                 });
             });
         });
+
+        // Handle Reset Filters button
+        const resetFiltersBtn = document.getElementById('resetFiltersBtnUser');
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', function() {
+                // Clear search input
+                const searchInput = document.querySelector('input[name="search"]');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+
+                // Reset genre select
+                const genreSelect = document.querySelector('select[name="genre"]');
+                if (genreSelect) {
+                    genreSelect.value = ''; // Assuming 'All Genres' has an empty value
+                }
+
+                // Reset sort select to default (e.g., title_asc)
+                const sortSelect = document.querySelector('select[name="sort"]');
+                if (sortSelect) {
+                    sortSelect.value = 'title_asc'; 
+                }
+
+                // Redirect to the base page to clear all filters
+                window.location.href = '/user/browse-books';
+            });
+        }
 
         // Toast notification function
         function showToast(message, type = 'info') {
