@@ -23,7 +23,7 @@ CREATE TABLE user_account (
     ua_remember_token_expires_at   TIMESTAMP,
     ua_last_login                  TIMESTAMP,
     ua_created_at                  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ua_updated_at                  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ua_updated_at                  TIMESTAMP DEFAULT NULL,
     ua_deleted_at                  TIMESTAMP,
     CONSTRAINT fk_user_role FOREIGN KEY (ua_role_id)
         REFERENCES user_role(ur_id) ON DELETE SET DEFAULT ON UPDATE CASCADE
@@ -51,11 +51,10 @@ CREATE TABLE books (
     b_description        TEXT,
     b_created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     b_updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    b_deleted_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    b_deleted_at         TIMESTAMP DEFAULT NULL,
 
     CONSTRAINT fk_book_genre FOREIGN KEY (b_genre_id) REFERENCES genre(g_id) ON DELETE SET NULL
 );
-
 
 
 -- Wishlist Table
