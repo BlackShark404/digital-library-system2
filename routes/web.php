@@ -46,6 +46,9 @@ $accessMap = [
     '/user/dashboard' => ['user'],
     '/user/browse-books' => ['user'],
     '/user/reading-sessions' => ['user'],
+    '/user/reading-sessions/view' => ['user'],
+    '/user/reading-sessions/update-progress' => ['user'],
+    '/user/read' => ['user'],
     '/user/wishlist' => ['user'],
     '/user/purchases' => ['user'],
     '/user/user-profile' => ['user'],
@@ -113,10 +116,15 @@ $router->map('DELETE', '/api/books/[i:id]', 'App\Controllers\BookController#dele
 // User routes
 $router->map('GET', '/user/dashboard', 'App\Controllers\UserController#renderUserDashboard', 'user_dashboard');
 $router->map('GET', '/user/browse-books', 'App\Controllers\UserController#renderBrowseBooks', 'user_browse_books');
-$router->map('GET', '/user/reading-sessions', 'App\Controllers\UserController#renderReadingSessions', 'user_reading_sessions');
 $router->map('GET', '/user/wishlist', 'App\Controllers\UserController#renderWishlist', 'user_wishlist');
 $router->map('GET', '/user/purchases', 'App\Controllers\UserController#renderPurchases', 'user_purchases');
 $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#renderUserProfile', 'user_profile');
+
+// Reading Session routes
+$router->map('GET', '/user/reading-sessions', 'App\Controllers\ReadingSessionController#index', 'user_reading_sessions');
+$router->map('GET', '/user/reading-sessions/view', 'App\Controllers\ReadingSessionController#viewSession', 'view_reading_session');
+$router->map('GET', '/user/read', 'App\Controllers\ReadingSessionController#read', 'start_reading_session');
+$router->map('POST', '/user/reading-sessions/update-progress', 'App\Controllers\ReadingSessionController#updateProgress', 'update_reading_progress');
 
 // Wishlist routes
 $router->map('POST', '/user/wishlist/add', 'App\Controllers\UserController#addToWishlist', 'add_to_wishlist');

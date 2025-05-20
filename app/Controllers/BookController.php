@@ -298,12 +298,9 @@ class BookController extends BaseController
      */
     private function processBase64File($base64Data, $directory)
     {
-        // Extract the base64 encoded file content
-        // Allowing for pdf, epub, mobi
-        if (preg_match('/^data:application\/(pdf|epub|x-mobipocket-ebook);base64,/', $base64Data, $matches)) {
-            $fileType = $matches[1];
-            if ($fileType === 'x-mobipocket-ebook') $fileType = 'mobi'; // Normalize mobi extension
-
+        // Extract the base64 encoded file content for EPUB files
+        if (preg_match('/^data:application\/epub\+zip;base64,/', $base64Data)) {
+            $fileType = 'epub';
             $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
             $decodedData = base64_decode($base64Data);
             

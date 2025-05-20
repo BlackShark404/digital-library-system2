@@ -118,8 +118,8 @@ include $headerPath;
                     </div>
                     
                     <div class="mb-3">
-                        <label for="bookFileUpload" class="form-label">Book File (PDF)</label>
-                        <input type="file" class="form-control" id="bookFileUpload" accept="application/pdf">
+                        <label for="bookFileUpload" class="form-label">Book File (EPUB)</label>
+                        <input type="file" class="form-control" id="bookFileUpload" accept="application/epub+zip">
                         <input type="hidden" id="book_file_data" name="book_file_data">
                         <div id="currentFileInfo" class="small text-muted mt-1"></div>
                     </div>
@@ -164,7 +164,7 @@ include $headerPath;
                         </div>
                         
                         <div id="viewFileSection" class="mt-3">
-                            <p><strong>Book File:</strong> <a id="viewFileLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-pdf"></i> View PDF</a></p>
+                            <p><strong>Book File:</strong> <a id="viewFileLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-book"></i> View EPUB</a></p>
                         </div>
                     </div>
                 </div>
@@ -343,7 +343,7 @@ include $headerPath;
             $('#bookFileUpload').on('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
-                    if (file.type === 'application/pdf') {
+                    if (file.type === 'application/epub+zip') {
                         const reader = new FileReader();
                         reader.onload = function(e) {
                             $('#book_file_data').val(e.target.result);
@@ -351,7 +351,7 @@ include $headerPath;
                         };
                         reader.readAsDataURL(file);
                     } else {
-                        alert('Please select a PDF file for the book.');
+                        alert('Please select an EPUB file for the book.');
                         $(this).val('');
                         $('#currentFileInfo').text('');
                     }
@@ -441,6 +441,7 @@ include $headerPath;
                         // Handle file link
                         if (book.file_url) {
                             $('#viewFileLink').attr('href', book.file_url);
+                            $('#viewFileLink').html('<i class="bi bi-book"></i> View EPUB');
                             $('#viewFileSection').show();
                         } else {
                             $('#viewFileSection').hide();
