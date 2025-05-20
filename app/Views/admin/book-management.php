@@ -82,7 +82,7 @@ include $headerPath;
                             <div class="mb-3 text-center">
                                 <label for="coverUpload" class="form-label">Book Cover</label>
                                 <div class="cover-preview-container border rounded p-2 mb-2" style="height: 200px; display: flex; align-items: center; justify-content: center;">
-                                    <img id="coverPreview" src="/public/assets/images/book-cover/default-cover.svg" alt="Book Cover" class="img-fluid" style="max-height: 180px;">
+                                    <img id="coverPreview" src="/assets/images/book-cover/default-cover.svg" alt="Book Cover" class="img-fluid" style="max-height: 180px;">
                                 </div>
                                 <input type="file" class="form-control" id="coverUpload" accept="image/*">
                                 <input type="hidden" id="cover_image_data" name="cover_image_data">
@@ -575,7 +575,7 @@ include $headerPath;
             $('#bookId').val('');
             $('#cover_image_data').val('');
             $('#book_file_data').val('');
-                         $('#coverPreview').attr('src', '/public/assets/images/book-cover/default-cover.svg');
+                         $('#coverPreview').attr('src', '/assets/images/book-cover/default-cover.svg');
             $('#currentFileInfo').text('');
         }
         

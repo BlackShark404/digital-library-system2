@@ -72,7 +72,6 @@ class BookModel extends BaseModel
                 genre g ON b.b_genre_id = g.g_id
             WHERE 
                 b.b_id = :id
-                AND b.b_deleted_at IS NULL
         ";
         
         return $this->queryOne($sql, ['id' => $id]);

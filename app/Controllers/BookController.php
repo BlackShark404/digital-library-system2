@@ -40,8 +40,8 @@ class BookController extends BaseController
         $data = [];
         foreach ($books as $book) {
             $coverPath = $book['b_cover_path'] 
-                ? '/public/assets/images/book-cover/' . $book['b_cover_path'] 
-                : '/public/assets/images/book-cover/default-cover.svg';
+                ? '/assets/images/book-cover/' . $book['b_cover_path'] 
+                : '/assets/images/book-cover/default-cover.svg';
             
             $data[] = [
                 'id' => $book['b_id'],
@@ -74,11 +74,11 @@ class BookController extends BaseController
         
         // Transform data
         $book['cover_url'] = $book['b_cover_path'] 
-            ? '/public/assets/images/book-cover/' . $book['b_cover_path'] 
-            : '/public/assets/images/book-cover/default-cover.svg';
+            ? '/assets/images/book-cover/' . $book['b_cover_path'] 
+            : '/assets/images/book-cover/default-cover.svg';
             
         $book['file_url'] = $book['b_file_path'] 
-            ? '/public/assets/books/' . $book['b_file_path'] 
+            ? '/assets/books/' . $book['b_file_path'] 
             : '';
         
         $this->jsonSuccess($book);
@@ -249,7 +249,7 @@ class BookController extends BaseController
             
             // Generate unique filename
             $filename = uniqid() . '.' . $imageType;
-            $uploadPath = __DIR__ . '/../../public/assets/images/' . $directory . '/' . $filename;
+            $uploadPath = __DIR__ . '/../../assets/images/' . $directory . '/' . $filename;
             
             // Ensure directory exists
             $dirPath = dirname($uploadPath);
@@ -292,7 +292,7 @@ class BookController extends BaseController
             
             // Generate unique filename
             $filename = uniqid() . '.' . $fileType;
-            $uploadPath = __DIR__ . '/../../public/assets/' . $directory . '/' . $filename;
+            $uploadPath = __DIR__ . '/../../assets/' . $directory . '/' . $filename;
             
             // Ensure directory exists
             $dirPath = dirname($uploadPath);
