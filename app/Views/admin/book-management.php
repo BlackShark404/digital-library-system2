@@ -4,7 +4,7 @@ include $headerPath;
 
 <div class="container">
     <h1 class="mb-4"><i class="bi bi-book me-2"></i>Book Management</h1>
-    
+
     <!-- Book Actions -->
     <div class="mb-4">
         <button id="addBookBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookFormModal">
