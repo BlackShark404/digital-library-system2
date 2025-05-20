@@ -152,7 +152,8 @@ include $headerPath;
     </div>
 </div>
 
-<!-- Include EPUB.js library -->
+<!-- Include required libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
 
 <script>
@@ -181,60 +182,88 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function initializeReader() {
         // Create a new Book
-        book = ePub(bookPath);
-        
-        // Generate rendition
-        rendition = book.renderTo(viewer, {
-            width: '100%',
-            height: '100%',
-            spread: 'none'
-        });
-        
-        // Initial location (use saved location or start at beginning)
-        const savedPage = <?= $session['current_page'] ?? 1 ?>;
-        
-        // Load book
-        book.ready.then(() => {
-            // Hide loading spinner and show controls
-            loadingEl.classList.add('d-none');
-            controlsEl.classList.remove('d-none');
+        try {
+            console.log("Loading book from path:", bookPath);
+            book = ePub(bookPath);
             
-            // Set initial location or chapter based on saved progress
-            if (savedPage > 1) {
-                book.locations.generate().then(() => {
-                    const location = book.locations.cfiFromPercentage((savedPage - 1) / book.locations.total);
-                    rendition.display(location);
+            // Generate rendition
+            rendition = book.renderTo(viewer, {
+                width: '100%',
+                height: '100%',
+                spread: 'none'
+            });
+            
+            // Initial location (use saved location or start at beginning)
+            const savedPage = <?= $session['current_page'] ?? 1 ?>;
+            
+            // Set up error handling on book loading
+            book.ready.then(() => {
+                // Hide loading spinner and show controls
+                loadingEl.classList.add('d-none');
+                controlsEl.classList.remove('d-none');
+                
+                console.log("Book loaded successfully");
+                
+                // Set initial location or chapter based on saved progress
+                if (savedPage > 1) {
+                    book.locations.generate().then(() => {
+                        const location = book.locations.cfiFromPercentage((savedPage - 1) / book.locations.total);
+                        rendition.display(location);
+                    });
+                } else {
+                    rendition.display();
+                }
+                
+                // Update total pages
+                book.locations.generate(1024).then(() => {
+                    totalPagesEl.textContent = book.locations.total || '?';
+                    updatePageCountDisplay();
                 });
-            } else {
-                rendition.display();
-            }
+                
+                // Generate and display the table of contents
+                book.loaded.navigation.then(toc => {
+                    generateTOC(toc.toc);
+                });
+            }).catch(error => {
+                console.error("Error loading book:", error);
+                loadingEl.innerHTML = `<div class="alert alert-danger">
+                    <h4>Error Loading Book</h4>
+                    <p>${error.message || 'Could not load the book file.'}</p>
+                    <p>Please try a different book or contact support.</p>
+                </div>`;
+            });
             
-            // Update total pages
-            book.locations.generate(1024).then(() => {
-                totalPagesEl.textContent = book.locations.total || '?';
+            // Event listeners for page change
+            rendition.on('locationChanged', function(location) {
+                currentLocation = location.start.cfi;
                 updatePageCountDisplay();
+                
+                // Save progress
+                saveReadingProgress();
             });
             
-            // Generate and display the table of contents
-            book.loaded.navigation.then(toc => {
-                generateTOC(toc.toc);
+            // Add error handling for rendition
+            rendition.on('rendered', (section) => {
+                console.log('Rendered section:', section.href);
             });
-        });
-        
-        // Event listeners for page change
-        rendition.on('locationChanged', function(location) {
-            currentLocation = location.start.cfi;
-            updatePageCountDisplay();
             
-            // Save progress
-            saveReadingProgress();
-        });
-        
-        // Set up event listeners
-        setUpEventListeners();
-        
-        // Apply any saved reader settings
-        applyReaderSettings();
+            rendition.on('relocated', (location) => {
+                console.log('Relocated to:', location);
+            });
+            
+            // Set up event listeners
+            setUpEventListeners();
+            
+            // Apply any saved reader settings
+            applyReaderSettings();
+        } catch (error) {
+            console.error("Error initializing book:", error);
+            loadingEl.innerHTML = `<div class="alert alert-danger">
+                <h4>Error Initializing Book</h4>
+                <p>${error.message || 'Could not initialize the book reader.'}</p>
+                <p>Please try a different book or contact support.</p>
+            </div>`;
+        }
     }
     
     function updatePageCountDisplay() {
