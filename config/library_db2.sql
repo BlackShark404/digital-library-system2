@@ -125,7 +125,9 @@ INSERT INTO activity_type (at_code, at_name) VALUES
 ('PROFILE_UPDATE', 'Profile Update'),
 ('PURCHASE', 'Book Purchase'),
 ('READ_SESSION', 'Reading Session'),
-('BOOK_ADDED', 'Book Added');
+('BOOK_ADDED', 'Book Added'),
+('BOOK_UPDATED', 'Book Updated'),
+('BOOK_DELETED', 'Book Deleted');
 
 INSERT INTO genre (g_name) VALUES
 ('Fiction'),
