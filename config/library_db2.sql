@@ -38,7 +38,7 @@ CREATE TABLE genre (
 -- BOOKS Table
 CREATE TABLE books (
     b_id                 SERIAL PRIMARY KEY,
-    b_cover_path 		  VARCHAR(255),
+    b_cover_path 		 VARCHAR(255),
     b_title              VARCHAR(255) NOT NULL,
     b_author             VARCHAR(255) NOT NULL,
     b_publisher          VARCHAR(255),
