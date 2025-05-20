@@ -36,8 +36,6 @@ class BookModel extends BaseModel
                 {$this->table} b
             LEFT JOIN 
                 genre g ON b.b_genre_id = g.g_id
-            WHERE 
-                b.b_deleted_at IS NULL
             ORDER BY 
                 b.b_id DESC
         ";
