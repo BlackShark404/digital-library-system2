@@ -38,7 +38,8 @@ CREATE TABLE genre (
 -- BOOKS Table
 CREATE TABLE books (
     b_id                 SERIAL PRIMARY KEY,
-    b_cover_path 		 VARCHAR(255),
+    b_cover_path         VARCHAR(255),
+    b_file_path          VARCHAR(255), -- ⬅️ added to store the path of the book file
     b_title              VARCHAR(255) NOT NULL,
     b_author             VARCHAR(255) NOT NULL,
     b_publisher          VARCHAR(255),
@@ -52,8 +53,9 @@ CREATE TABLE books (
     b_updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     b_deleted_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-	CONSTRAINT fk_book_genre FOREIGN KEY (b_genre_id) REFERENCES genre(g_id) ON DELETE SET NULL
+    CONSTRAINT fk_book_genre FOREIGN KEY (b_genre_id) REFERENCES genre(g_id) ON DELETE SET NULL
 );
+
 
 
 -- Wishlist Table
