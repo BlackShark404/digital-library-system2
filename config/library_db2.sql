@@ -8,7 +8,6 @@ INSERT INTO user_role (ur_role_name) VALUES
 ('user'),
 ('admin');
 
-
 -- USERS Table
 CREATE TABLE user_account (
     ua_id                          SERIAL PRIMARY KEY,
@@ -85,13 +84,10 @@ CREATE TABLE reading_session (
     ua_id         INT NOT NULL,
     b_id          INT NOT NULL,
     rs_started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    rs_expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '3 days'),
+    rs_expires_at TIMESTAMP GENERATED ALWAYS AS (rs_started_at + INTERVAL '3 days') STORED,
     CONSTRAINT fk_reading_user FOREIGN KEY (ua_id) REFERENCES user_account(ua_id) ON DELETE CASCADE,
-    CONSTRAINT fk_reading_book FOREIGN KEY (b_id) REFERENCES books(b_id) ON DELETE CASCADE,
-	CONSTRAINT unique_user_book_session UNIQUE (ua_id, b_id)
-
+    CONSTRAINT fk_reading_book FOREIGN KEY (b_id) REFERENCES books(b_id) ON DELETE CASCADE
 );
-
 
 -- Reading Progress Tracking
 CREATE TABLE reading_progress (
