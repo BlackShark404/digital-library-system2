@@ -11,11 +11,7 @@ include $headerPath;
             <h1 class="h3 mb-0">My Wishlist</h1>
             <p class="text-muted">Books you've saved for later</p>
         </div>
-        <div class="col-auto">
-            <a href="/user/browse-books" class="btn btn-outline-primary">
-                <i class="bi bi-search"></i> Browse More Books
-            </a>
-        </div>
+        
     </div>
 
     <?php if (empty($wishlist_books)): ?>
@@ -25,7 +21,7 @@ include $headerPath;
                 <i class="bi bi-heart text-muted" style="font-size: 3rem;"></i>
                 <h3 class="mt-4">Your wishlist is empty</h3>
                 <p class="text-muted mb-4">Save books you're interested in to your wishlist for easy access later.</p>
-                <a href="../browse_books.php" class="btn btn-primary">
+                <a href="/user/browse-books" class="btn btn-primary">
                     <i class="bi bi-search"></i> Discover Books
                 </a>
             </div>
