@@ -54,16 +54,9 @@ include $headerPath;
                             <h5 class="card-title"><?php echo htmlspecialchars($book['title']); ?></h5>
                             <p class="card-text text-muted">by <?php echo htmlspecialchars($book['author']); ?></p>
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <?php if ($book['discount_price']): ?>
-                                    <div>
-                                        <span class="text-decoration-line-through text-muted">$<?php echo number_format($book['price'], 2); ?></span>
-                                        <span class="ms-2 fw-bold text-danger">$<?php echo number_format($book['discount_price'], 2); ?></span>
-                                    </div>
-                                <?php else: ?>
-                                    <div>
-                                        <span class="fw-bold">$<?php echo number_format($book['price'], 2); ?></span>
-                                    </div>
-                                <?php endif; ?>
+                                <div>
+                                    <span class="fw-bold">$<?php echo number_format($book['price'], 2); ?></span>
+                                </div>
                                 <small class="text-muted">Published: <?php echo date('M Y', strtotime($book['publication_date'])); ?></small>
                             </div>
                         </div>
