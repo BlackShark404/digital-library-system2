@@ -2,6 +2,16 @@
 include $headerPath;
 ?>
 
+<style>
+    /* Make iframe content scrollable */
+    #epub-viewer iframe {
+        overflow-y: auto !important;
+    }
+    #epub-viewer {
+        background-color: #f8f9fa;
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col-12">
@@ -45,7 +55,7 @@ include $headerPath;
                             </div>
                             <p class="mt-3">Loading book...</p>
                         </div>
-                        <div id="epub-viewer" style="height: 70vh;"></div>
+                        <div id="epub-viewer" style="height: 80vh; overflow-y: auto;"></div>
                         
                         <div id="reader-controls" class="p-2 bg-light border-top d-none">
                             <div class="container-fluid">
@@ -190,6 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
             rendition = book.renderTo(viewer, {
                 width: '100%',
                 height: '100%',
+                flow: 'scrolled-doc',
                 spread: 'none'
             });
             
@@ -328,8 +339,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Toggle table of contents sidebar
         tocToggle.addEventListener('click', () => {
-            const offcanvas = new bootstrap.Offcanvas(tocSidebar);
-            offcanvas.show();
+            // Exit fullscreen first if we're in fullscreen mode
+            if (document.fullscreenElement) {
+                document.exitFullscreen().then(() => {
+                    setTimeout(() => {
+                        const offcanvas = new bootstrap.Offcanvas(tocSidebar);
+                        offcanvas.show();
+                    }, 300); // Short delay to allow fullscreen transition
+                }).catch(err => {
+                    console.error('Error exiting fullscreen:', err);
+                    // Try to show offcanvas anyway
+                    const offcanvas = new bootstrap.Offcanvas(tocSidebar);
+                    offcanvas.show();
+                });
+            } else {
+                const offcanvas = new bootstrap.Offcanvas(tocSidebar);
+                offcanvas.show();
+            }
         });
         
         // Fullscreen toggle
@@ -340,6 +366,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } else {
                 document.exitFullscreen();
+            }
+        });
+        
+        // Handle fullscreen changes
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                // We're in fullscreen mode
+                viewer.style.height = '90vh';
+            } else {
+                // Exited fullscreen mode
+                viewer.style.height = '80vh';
+            }
+            if (rendition) {
+                rendition.resize();
             }
         });
         
