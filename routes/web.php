@@ -39,6 +39,9 @@ $accessMap = [
     '/api/users' => ['admin'],
     '/api/users/export' => ['admin'],
     
+    // Book Management API routes - Admin only
+    '/api/books' => ['admin'],
+    
     // User-only routes
     '/user/dashboard' => ['user'],
     '/user/browse-books' => ['user'],
@@ -76,7 +79,7 @@ $router->map('POST', '/register', 'App\Controllers\AuthController#register', 're
 
 // Admin routes
 $router->map('GET', '/admin/dashboard', 'App\Controllers\AdminController#renderAdminDashboard', 'admin_dashboard');
-$router->map('GET', '/admin/book-management', 'App\Controllers\AdminController#renderBookManagement', 'book-management');
+$router->map('GET', '/admin/book-management', 'App\Controllers\BookController#index', 'book-management');
 $router->map('GET', '/admin/reading-sessions', 'App\Controllers\AdminController#renderReadingSessions', 'reading-session');
 $router->map('GET', '/admin/purchases', 'App\Controllers\AdminController#renderPurchases', 'purchases');
 $router->map('GET', '/admin/activity-logs', 'App\Controllers\AdminController#renderActivityLogs', 'activity-log');
@@ -96,6 +99,13 @@ $router->map('GET', '/api/users/[i:id]', 'App\Controllers\UserManagementControll
 $router->map('POST', '/api/users', 'App\Controllers\UserManagementController#createUser', 'api_create_user');
 $router->map('PUT', '/api/users/[i:id]', 'App\Controllers\UserManagementController#updateUser', 'api_update_user');
 $router->map('DELETE', '/api/users/[i:id]', 'App\Controllers\UserManagementController#deleteUser', 'api_delete_user');
+
+// Book Management API Routes
+$router->map('GET', '/api/books', 'App\Controllers\BookController#getBooks', 'api_get_books');
+$router->map('GET', '/api/books/[i:id]', 'App\Controllers\BookController#getBook', 'api_get_book');
+$router->map('POST', '/api/books', 'App\Controllers\BookController#createBook', 'api_create_book');
+$router->map('PUT', '/api/books/[i:id]', 'App\Controllers\BookController#updateBook', 'api_update_book');
+$router->map('DELETE', '/api/books/[i:id]', 'App\Controllers\BookController#deleteBook', 'api_delete_book');
 
 // User routes
 $router->map('GET', '/user/dashboard', 'App\Controllers\UserController#renderUserDashboard', 'user_dashboard');
