@@ -58,9 +58,9 @@ include $headerPath;
                         </div>
                         <div class="card-footer bg-white border-top-0">
                             <div class="d-grid gap-2 d-md-flex justify-content-between">
-                                <a href="/user/book-details?id=<?php echo $book['b_id']; ?>" class="btn btn-outline-secondary">
+                                <button type="button" class="btn btn-outline-secondary view-book-details" data-book-id="<?php echo $book['b_id']; ?>">
                                     <i class="bi bi-info-circle"></i> Details
-                                </a>
+                                </button>
                                 <form method="post" action="/user/purchase/add" class="d-inline">
                                     <input type="hidden" name="book_id" value="<?php echo $book['b_id']; ?>">
                                     <button type="submit" class="btn btn-primary">
@@ -74,6 +74,51 @@ include $headerPath;
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+</div>
+
+<!-- Book Details Modal (Copied from browse-books.php) -->
+<div class="modal fade" id="bookDetailModal" tabindex="-1" aria-labelledby="bookDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bookDetailModalLabel">Book Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <img id="modalCoverImage" src="" alt="Book Cover" class="img-fluid border rounded" style="max-height: 280px;">
+                    </div>
+                    <div class="col-md-8">
+                        <h3 id="modalTitle" class="fw-bold"></h3>
+                        <h5 id="modalAuthor" class="text-secondary mb-3"></h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Genre:</strong> <span id="modalGenre"></span></p>
+                                <p><strong>Publisher:</strong> <span id="modalPublisher"></span></p>
+                                <p><strong>Publication Date:</strong> <span id="modalPublicationDate"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>ISBN:</strong> <span id="modalIsbn"></span></p>
+                                <p><strong>Pages:</strong> <span id="modalPages"></span></p>
+                                <p><strong>Price:</strong> <span id="modalPrice" class="fw-bold"></span></p>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h5>Description</h5>
+                    <div id="modalDescription" class="border rounded p-3 bg-light" style="min-height: 100px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="buyBookBtnModal"><i class="bi bi-cart-plus me-2"></i>Buy Now</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -126,6 +171,108 @@ include $headerPath;
             });
         });
         
+        // --- Additions for Book Detail Modal ---
+        const bookDetailModal = new bootstrap.Modal(document.getElementById('bookDetailModal'));
+        
+        document.querySelectorAll('.view-book-details').forEach(button => {
+            button.addEventListener('click', function() {
+                const bookId = this.getAttribute('data-book-id');
+                fetchBookDetailsAndShowModal(bookId);
+            });
+        });
+
+        function fetchBookDetailsAndShowModal(bookId) {
+            document.getElementById('modalTitle').textContent = 'Loading...';
+            document.getElementById('modalCoverImage').src = ''; // Reset image
+            document.getElementById('modalAuthor').textContent = '';
+            document.getElementById('modalGenre').textContent = '';
+            document.getElementById('modalPublisher').textContent = '';
+            document.getElementById('modalPublicationDate').textContent = '';
+            document.getElementById('modalIsbn').textContent = '';
+            document.getElementById('modalPages').textContent = '';
+            document.getElementById('modalPrice').textContent = '';
+            document.getElementById('modalDescription').innerHTML = '';
+
+
+            fetch(`/api/books/${bookId}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.data) {
+                    const book = data.data;
+                    document.getElementById('modalCoverImage').src = book.cover_url || '/assets/images/book-cover/default-cover.svg';
+                    document.getElementById('modalTitle').textContent = book.b_title || 'N/A';
+                    document.getElementById('modalAuthor').textContent = book.b_author ? `by ${book.b_author}` : 'N/A';
+                    document.getElementById('modalGenre').textContent = book.genre || 'N/A';
+                    document.getElementById('modalPublisher').textContent = book.b_publisher || 'N/A';
+                    document.getElementById('modalPublicationDate').textContent = book.b_publication_date ? formatDate(book.b_publication_date) : 'N/A';
+                    document.getElementById('modalIsbn').textContent = book.b_isbn || 'N/A';
+                    document.getElementById('modalPages').textContent = book.b_pages || 'N/A';
+                    document.getElementById('modalPrice').textContent = book.b_price ? `$${parseFloat(book.b_price).toFixed(2)}` : 'Free';
+                    document.getElementById('modalDescription').innerHTML = book.b_description ? book.b_description.replace(/\\n/g, '<br>') : 'No description available.';
+                    
+                    document.getElementById('buyBookBtnModal').setAttribute('data-book-id', bookId); // Changed ID to buyBookBtnModal
+                    bookDetailModal.show();
+                } else {
+                    showToast(data.message || 'Failed to load book details.', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching book details:', error);
+                showToast('Error fetching book details. Please try again.', 'danger');
+                document.getElementById('modalTitle').textContent = 'Error';
+            });
+        }
+
+        // Event listener for the modal's Buy button
+        const buyBookBtnModal = document.getElementById('buyBookBtnModal');
+        if (buyBookBtnModal) {
+            buyBookBtnModal.addEventListener('click', function() {
+                const bookId = this.getAttribute('data-book-id');
+                console.log('Modal Buy button clicked for book ID:', bookId);
+                // This can be a direct purchase or redirect to a purchase page/cart
+                // For now, we'll try to submit the existing purchase form if available for that book
+                // Or, more simply, redirect to a purchase initiation URL or trigger another AJAX
+                
+                // Attempt to find the purchase form for this book on the page and submit it
+                // This is a bit of a workaround as the buy button is now in a generic modal
+                // A more robust solution would be an AJAX purchase or a dedicated purchase page
+                let purchaseFormFound = false;
+                document.querySelectorAll('form[action="/user/purchase/add"]').forEach(form => {
+                    const formBookIdInput = form.querySelector('input[name="book_id"]');
+                    if (formBookIdInput && formBookIdInput.value == bookId) {
+                        form.submit();
+                        purchaseFormFound = true;
+                    }
+                });
+
+                if (!purchaseFormFound) {
+                     // Fallback if direct form submission isn't feasible/found
+                    showToast(`"Buy" clicked for book ID: ${bookId}. Purchase form not found on page. Implement direct purchase.`, 'info');
+                }
+                bookDetailModal.hide();
+            });
+        }
+
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString(undefined, options);
+        }
+        // --- End of Additions ---
+
         // Toast notification function
         function showToast(message, type = 'info') {
             // Create toast container if it doesn't exist

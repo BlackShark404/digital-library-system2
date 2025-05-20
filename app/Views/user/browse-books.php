@@ -15,7 +15,7 @@ include $headerPath;
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="GET" action="/user/browse-books" class="row g-3">
-                        <div class="col-md-5">
+                        <div class="col-md-4">
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                                 <input type="text" class="form-control" placeholder="Search titles or authors" name="search" value="<?php echo htmlspecialchars($search); ?>">
@@ -154,9 +154,7 @@ include $headerPath;
                                 <p><strong>Price:</strong> <span id="modalPrice" class="fw-bold"></span></p>
                             </div>
                         </div>
-                         <div id="modalFileSection" class="mt-3" style="display: none;"> <!-- Hidden by default -->
-                            <p><strong>Book File:</strong> <a id="modalFileLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-pdf"></i> View PDF</a></p>
-                        </div>
+                        
                     </div>
                 </div>
                 <div class="mt-3">
@@ -297,16 +295,6 @@ include $headerPath;
                         
                         // Update Buy button with book ID for potential future use
                         document.getElementById('buyBookBtn').setAttribute('data-book-id', bookId);
-
-                        // Handle file link (similar to admin view book modal)
-                        const modalFileSection = document.getElementById('modalFileSection');
-                        const modalFileLink = document.getElementById('modalFileLink');
-                        if (book.file_url) { // Check if file_url is part of the response
-                            modalFileLink.href = book.file_url;
-                            modalFileSection.style.display = 'block';
-                        } else {
-                            modalFileSection.style.display = 'none';
-                        }
 
                         bookDetailModal.show();
                     } else {
