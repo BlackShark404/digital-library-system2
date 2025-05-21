@@ -488,4 +488,62 @@ class ReadingSessionModel extends BaseModel
         
         return $this->query($sql, ['user_id' => $userId]);
     }
+    
+    /**
+     * Get recent reading activity for a user
+     * 
+     * @param int $userId User ID
+     * @param int $limit Maximum number of activities to return
+     * @return array Recent reading sessions with book details
+     */
+    public function getRecentReadingActivity($userId, $limit = 5)
+    {
+        $sql = "
+            SELECT 
+                rs.rs_id,
+                rs.ua_id,
+                rs.b_id,
+                rs.rs_started_at,
+                rs.rs_expires_at,
+                b.b_title,
+                b.b_author,
+                b.b_cover_path,
+                b.b_pages,
+                rp.current_page,
+                rp.last_updated,
+                rp.is_completed,
+                CASE 
+                    WHEN rs.rs_expires_at < NOW() THEN TRUE
+                    ELSE FALSE
+                END as is_expired,
+                CASE
+                    WHEN up.up_id IS NOT NULL THEN TRUE
+                    ELSE FALSE
+                END as is_purchased,
+                CASE
+                    WHEN rp.current_page = 1 THEN 'Started reading'
+                    WHEN rp.is_completed = TRUE THEN 'Completed'
+                    ELSE CONCAT('Read to page ', rp.current_page)
+                END as activity_text,
+                EXTRACT(EPOCH FROM (NOW() - rp.last_updated))/60 as minutes_ago
+            FROM 
+                {$this->table} rs
+            JOIN 
+                books b ON rs.b_id = b.b_id
+            JOIN 
+                {$this->progressTable} rp ON rs.rs_id = rp.rs_id
+            LEFT JOIN
+                user_purchase up ON (rs.ua_id = up.ua_id AND rs.b_id = up.b_id)
+            WHERE 
+                rs.ua_id = :user_id
+            ORDER BY 
+                rp.last_updated DESC
+            LIMIT :limit
+        ";
+        
+        return $this->query($sql, [
+            'user_id' => $userId,
+            'limit' => $limit
+        ]);
+    }
 } 

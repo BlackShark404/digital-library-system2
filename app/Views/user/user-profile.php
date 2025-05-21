@@ -59,7 +59,7 @@ include $headerPath;
                         Reading Statistics
                     </h5>
                     
-                    <div class="row row-cols-2 g-3">
+                    <div class="row g-3 mt-1">
                         <div class="col">
                             <div class="bg-light rounded-3 p-3 h-100">
                                 <div class="d-flex align-items-center">
@@ -67,8 +67,8 @@ include $headerPath;
                                         <i class="bi bi-book"></i>
                                     </div>
                                     <div>
-                                        <h2 class="mb-0 fs-4 fw-bold">24</h2>
-                                        <span class="small text-muted">Books Read</span>
+                                        <h2 class="mb-0 fs-4 fw-bold"><?= $reading_stats['books_started'] ?></h2>
+                                        <span class="small text-muted">Books Started</span>
                                     </div>
                                 </div>
                             </div>
@@ -78,25 +78,11 @@ include $headerPath;
                             <div class="bg-light rounded-3 p-3 h-100">
                                 <div class="d-flex align-items-center">
                                     <div class="icon-box me-3 bg-success bg-opacity-10 text-success rounded-circle p-2">
-                                        <i class="bi bi-clock"></i>
+                                        <i class="bi bi-check-circle"></i>
                                     </div>
                                     <div>
-                                        <h2 class="mb-0 fs-4 fw-bold">156</h2>
-                                        <span class="small text-muted">Reading Hours</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col">
-                            <div class="bg-light rounded-3 p-3 h-100">
-                                <div class="d-flex align-items-center">
-                                    <div class="icon-box me-3 bg-warning bg-opacity-10 text-warning rounded-circle p-2">
-                                        <i class="bi bi-bookmark-heart"></i>
-                                    </div>
-                                    <div>
-                                        <h2 class="mb-0 fs-4 fw-bold">12</h2>
-                                        <span class="small text-muted">Wishlist</span>
+                                        <h2 class="mb-0 fs-4 fw-bold"><?= $reading_stats['books_completed'] ?></h2>
+                                        <span class="small text-muted">Books Completed</span>
                                     </div>
                                 </div>
                             </div>
@@ -109,7 +95,7 @@ include $headerPath;
                                         <i class="bi bi-bag"></i>
                                     </div>
                                     <div>
-                                        <h2 class="mb-0 fs-4 fw-bold">17</h2>
+                                        <h2 class="mb-0 fs-4 fw-bold"><?= $reading_stats['books_purchased'] ?></h2>
                                         <span class="small text-muted">Purchases</span>
                                     </div>
                                 </div>
@@ -199,6 +185,83 @@ include $headerPath;
                 </div>
             </div>
             
+            <!-- Reading Statistics Card -->
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bar-chart me-2 text-primary"></i>Reading Statistics
+                    </h5>
+                    <span class="text-muted small">All-time stats</span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="stat-card p-3 border rounded h-100">
+                                <h6 class="text-muted mb-3">Reading Overview</h6>
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-box me-3 p-2 rounded-circle bg-primary bg-opacity-10">
+                                        <i class="bi bi-book text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-0"><?= $reading_stats['books_started'] ?></h4>
+                                        <span class="small text-muted">Books Started</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="icon-box me-3 p-2 rounded-circle bg-success bg-opacity-10">
+                                        <i class="bi bi-check-circle text-success"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-0"><?= $reading_stats['books_completed'] ?></h4>
+                                        <span class="small text-muted">Books Completed</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-box me-3 p-2 rounded-circle bg-info bg-opacity-10">
+                                        <i class="bi bi-cart-check text-info"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-0"><?= $reading_stats['books_purchased'] ?></h4>
+                                        <span class="small text-muted">Books Purchased</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="stat-card p-3 border rounded h-100">
+                                <h6 class="text-muted mb-3">Reading Performance</h6>
+                                <div class="completion-rate mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small text-muted">Completion Rate</span>
+                                        <span class="badge bg-success"><?= $reading_stats['completion_rate'] ?>%</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= $reading_stats['completion_rate'] ?>%"
+                                            aria-valuenow="<?= $reading_stats['completion_rate'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <p class="text-muted small mt-2 mb-0">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Percentage of started books you've completed
+                                    </p>
+                                </div>
+                                
+                                <div class="reading-sessions">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small text-muted">Total Reading Sessions</span>
+                                        <span class="badge bg-primary"><?= $reading_stats['total_sessions'] ?></span>
+                                    </div>
+                                    <p class="text-muted small mb-0">
+                                        <i class="bi bi-lightning me-1"></i>
+                                        You've had <?= $reading_stats['total_sessions'] ?> reading sessions in total
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Reading Activity Card -->
             <div class="card shadow-sm border-0 rounded-3 mb-4">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center border-0">
@@ -210,133 +273,53 @@ include $headerPath;
                     </a>
                 </div>
                 <div class="card-body p-4">
-                    <!-- Reading Item 1 -->
-                    <div class="reading-activity-item mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="book-cover me-3 rounded shadow-sm" style="width: 60px; height: 90px; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center;">
-                                <i class="bi bi-book text-primary" style="font-size: 1.5rem;"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <h6 class="mb-0 fw-bold">The Great Gatsby</h6>
-                                    <span class="badge bg-light text-dark">3 days ago</span>
+                    <?php if (empty($recent_activity)): ?>
+                    <div class="text-center py-4">
+                        <div class="mb-3">
+                            <i class="bi bi-book text-muted" style="font-size: 3rem;"></i>
+                        </div>
+                        <h6 class="text-muted">No reading activity yet</h6>
+                        <p class="small text-muted mb-3">Your recent reading sessions will appear here</p>
+                        <a href="/user/browse-books" class="btn btn-sm btn-primary">
+                            <i class="bi bi-book me-1"></i>Browse Books
+                        </a>
+                    </div>
+                    <?php else: ?>
+                        <?php foreach ($recent_activity as $activity): ?>
+                        <!-- Reading Item -->
+                        <div class="reading-activity-item mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="book-cover me-3 rounded shadow-sm" style="width: 60px; height: 90px; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                                    <?php if (!empty($activity['b_cover_path'])): ?>
+                                        <img src="/assets/images/book-cover/<?= $activity['b_cover_path'] ?>" 
+                                            style="width: 100%; height: 100%; object-fit: cover;" alt="<?= htmlspecialchars($activity['b_title']) ?> Cover">
+                                    <?php else: ?>
+                                        <i class="bi bi-book text-primary" style="font-size: 1.5rem;"></i>
+                                    <?php endif; ?>
                                 </div>
-                                <p class="text-muted small mb-2">Read for 45 minutes · Page 78 of 180</p>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: 43%;" 
-                                        aria-valuenow="43" aria-valuemin="0" aria-valuemax="100"></div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 class="mb-0 fw-bold"><?= htmlspecialchars($activity['b_title']) ?></h6>
+                                        <span class="badge bg-light text-dark"><?= $activity['time_ago'] ?></span>
+                                    </div>
+                                    <p class="text-muted small mb-2">
+                                        <?= $activity['activity_text'] ?> · Page <?= $activity['current_page'] ?> of <?= $activity['b_pages'] ?>
+                                    </p>
+                                    <div class="progress" style="height: 6px;">
+                                        <?php 
+                                        $progressPercent = min(100, round(($activity['current_page'] / $activity['b_pages']) * 100));
+                                        ?>
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= $progressPercent ?>%;" 
+                                            aria-valuenow="<?= $progressPercent ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Reading Item 2 -->
-                    <div class="reading-activity-item mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="book-cover me-3 rounded shadow-sm" style="width: 60px; height: 90px; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center;">
-                                <i class="bi bi-book text-primary" style="font-size: 1.5rem;"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <h6 class="mb-0 fw-bold">To Kill a Mockingbird</h6>
-                                    <span class="badge bg-light text-dark">1 week ago</span>
-                                </div>
-                                <p class="text-muted small mb-2">Read for 30 minutes · Page 156 of 281</p>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: 55%;" 
-                                        aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Reading Item 3 -->
-                    <div class="reading-activity-item">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="book-cover me-3 rounded shadow-sm" style="width: 60px; height: 90px; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center;">
-                                <i class="bi bi-book text-primary" style="font-size: 1.5rem;"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <h6 class="mb-0 fw-bold">1984</h6>
-                                    <span class="badge bg-light text-dark">2 weeks ago</span>
-                                </div>
-                                <p class="text-muted small mb-2">Read for 60 minutes · Page 203 of 328</p>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: 62%;" 
-                                        aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
                 <div class="card-footer bg-white border-top-0 text-center">
                     <a href="reading_session.php" class="btn btn-link text-success">View all reading sessions <i class="bi bi-arrow-right"></i></a>
-                </div>
-            </div>
-            
-            <!-- Reading Goals Card -->
-            <div class="card shadow-sm border-0 rounded-3">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center border-0">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-trophy me-2 text-warning"></i>Reading Goals
-                    </h5>
-                    <button class="btn btn-sm btn-outline-warning rounded-pill">
-                        <i class="bi bi-plus me-1"></i>Add Goal
-                    </button>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row g-4">
-                        <!-- Monthly Goal -->
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 bg-light">
-                                <div class="card-body">
-                                    <h6 class="card-title d-flex align-items-center mb-3">
-                                        <i class="bi bi-calendar-month me-2 text-primary"></i>Monthly Goal
-                                    </h6>
-                                    <div class="text-center mb-3">
-                                        <div class="d-inline-block position-relative">
-                                            <svg width="120" height="120" viewBox="0 0 120 120">
-                                                <circle cx="60" cy="60" r="54" fill="none" stroke="#e9ecef" stroke-width="12"/>
-                                                <circle cx="60" cy="60" r="54" fill="none" stroke="#0d6efd" stroke-width="12"
-                                                    stroke-dasharray="339.3" stroke-dashoffset="152.7" transform="rotate(-90 60 60)"/>
-                                            </svg>
-                                            <div class="position-absolute top-50 start-50 translate-middle text-center">
-                                                <h3 class="mb-0 fw-bold">4/6</h3>
-                                                <small class="text-muted">Books</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p class="text-center mb-0">2 more books to reach your monthly goal!</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Yearly Goal -->
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 bg-light">
-                                <div class="card-body">
-                                    <h6 class="card-title d-flex align-items-center mb-3">
-                                        <i class="bi bi-calendar-check me-2 text-success"></i>Yearly Goal
-                                    </h6>
-                                    <div class="text-center mb-3">
-                                        <div class="d-inline-block position-relative">
-                                            <svg width="120" height="120" viewBox="0 0 120 120">
-                                                <circle cx="60" cy="60" r="54" fill="none" stroke="#e9ecef" stroke-width="12"/>
-                                                <circle cx="60" cy="60" r="54" fill="none" stroke="#198754" stroke-width="12"
-                                                    stroke-dasharray="339.3" stroke-dashoffset="237.5" transform="rotate(-90 60 60)"/>
-                                            </svg>
-                                            <div class="position-absolute top-50 start-50 translate-middle text-center">
-                                                <h3 class="mb-0 fw-bold">17/40</h3>
-                                                <small class="text-muted">Books</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p class="text-center mb-0">You're 43% of the way to your yearly goal!</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

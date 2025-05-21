@@ -117,7 +117,49 @@ class UserController extends BaseController{
     }
 
     public function renderUserProfile() {
-        $this->render('/user/user-profile');
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Get the reading session model to fetch recent activity
+        $readingSessionModel = new \App\Models\ReadingSessionModel();
+        
+        // Get user's recent reading activity
+        $recentActivity = $readingSessionModel->getRecentReadingActivity($userId, 5);
+        
+        // Get user's reading statistics
+        $readingStats = $readingSessionModel->getUserReadingStats($userId);
+        
+        // Format the time for display
+        foreach ($recentActivity as &$activity) {
+            if (isset($activity['minutes_ago'])) {
+                $minutes = (int)$activity['minutes_ago'];
+                
+                if ($minutes < 60) {
+                    $activity['time_ago'] = $minutes == 1 ? '1 minute ago' : "$minutes minutes ago";
+                } else if ($minutes < 1440) { // Less than 24 hours
+                    $hours = floor($minutes / 60);
+                    $activity['time_ago'] = $hours == 1 ? '1 hour ago' : "$hours hours ago";
+                } else if ($minutes < 10080) { // Less than 7 days
+                    $days = floor($minutes / 1440);
+                    $activity['time_ago'] = $days == 1 ? '1 day ago' : "$days days ago";
+                } else {
+                    $weeks = floor($minutes / 10080);
+                    $activity['time_ago'] = $weeks == 1 ? '1 week ago' : "$weeks weeks ago";
+                }
+            } else {
+                $activity['time_ago'] = 'Recently';
+            }
+        }
+        
+        $this->render('/user/user-profile', [
+            'recent_activity' => $recentActivity,
+            'reading_stats' => $readingStats
+        ]);
     }
     
     /**
