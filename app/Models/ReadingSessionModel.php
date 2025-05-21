@@ -810,4 +810,104 @@ class ReadingSessionModel extends BaseModel
         
         return $this->queryOne($sql, ['purchase_id' => $purchaseId]);
     }
+    
+    /**
+     * Count total reading sessions in the system
+     *
+     * @return int Total number of reading sessions
+     */
+    public function countTotalSessions()
+    {
+        $sql = "SELECT COUNT(*) as total FROM {$this->table}";
+        $result = $this->queryOne($sql);
+        return $result ? (int)$result['total'] : 0;
+    }
+    
+    /**
+     * Get recent reading sessions for admin dashboard
+     *
+     * @param int $limit Maximum number of sessions to return
+     * @return array Recent reading sessions with user and book details
+     */
+    public function getRecentReadingSessions($limit = 5)
+    {
+        $sql = "
+            SELECT 
+                rs.rs_id,
+                rs.ua_id,
+                rs.b_id,
+                rs.rs_started_at,
+                rs.rs_expires_at,
+                ua.ua_first_name,
+                ua.ua_last_name,
+                ua.ua_email,
+                ua.ua_profile_url,
+                b.b_title,
+                b.b_author,
+                b.b_cover_path,
+                rp.current_page,
+                b.b_pages,
+                CASE 
+                    WHEN rs.rs_expires_at < NOW() THEN TRUE
+                    ELSE FALSE
+                END as is_expired,
+                CASE
+                    WHEN up.up_id IS NOT NULL THEN TRUE
+                    ELSE FALSE
+                END as is_purchased
+            FROM 
+                {$this->table} rs
+            JOIN 
+                books b ON rs.b_id = b.b_id
+            JOIN
+                user_account ua ON rs.ua_id = ua.ua_id
+            LEFT JOIN 
+                {$this->progressTable} rp ON rs.rs_id = rp.rs_id
+            LEFT JOIN
+                user_purchase up ON (rs.ua_id = up.ua_id AND rs.b_id = up.b_id)
+            ORDER BY 
+                rs.rs_started_at DESC
+            LIMIT 
+                :limit
+        ";
+        
+        return $this->query($sql, ['limit' => $limit]);
+    }
+    
+    /**
+     * Get recent purchases for admin dashboard
+     *
+     * @param int $limit Maximum number of purchases to return
+     * @return array Recent purchases with user and book details
+     */
+    public function getRecentPurchases($limit = 5)
+    {
+        $sql = "
+            SELECT 
+                up.up_id,
+                up.ua_id,
+                up.b_id,
+                up.up_purchased_at,
+                ua.ua_first_name,
+                ua.ua_last_name,
+                ua.ua_email,
+                ua.ua_profile_url,
+                b.b_title,
+                b.b_author,
+                b.b_cover_path,
+                b.b_price
+            FROM 
+                user_purchase up
+            JOIN 
+                books b ON up.b_id = b.b_id
+            JOIN
+                user_account ua ON up.ua_id = ua.ua_id
+            ORDER BY 
+                up.up_purchased_at DESC
+            LIMIT 
+                :limit
+        ";
+        
+        return $this->query($sql, ['limit' => $limit]);
+    }
 } 

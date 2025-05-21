@@ -22,7 +22,36 @@ class AdminController extends BaseController {
     }
 
     public function renderAdminDashboard() {
-        $this->render('admin/dashboard');
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        // Gather system statistics
+        $stats = [
+            'total_users' => $this->userModel->getUserCountByRole()['user'] ?? 0,
+            'total_books' => $this->bookModel->countTotalBooks(),
+            'total_sessions' => $this->readingSessionModel->countTotalSessions(),
+            'total_purchases' => $this->readingSessionModel->countTotalPurchases(),
+        ];
+        
+        // Get recent reading sessions
+        $recentSessions = $this->readingSessionModel->getRecentReadingSessions(5);
+        
+        // Get recent purchases
+        $recentPurchases = $this->readingSessionModel->getRecentPurchases(5);
+        
+        // Get recent activity logs
+        $recentActivity = $this->activityLogModel->getRecentActivityLogs(10);
+        
+        // Render view with data
+        $this->render('admin/dashboard', [
+            'stats' => $stats,
+            'recent_sessions' => $recentSessions,
+            'recent_purchases' => $recentPurchases,
+            'recent_activity' => $recentActivity
+        ]);
     }
 
     public function renderUserManagement() {

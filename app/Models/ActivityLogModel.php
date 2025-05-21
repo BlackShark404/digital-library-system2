@@ -358,4 +358,64 @@ class ActivityLogModel extends BaseModel
         $sql = "SELECT at_id FROM activity_type WHERE at_code = :code";
         return $this->queryScalar($sql, ['code' => $code]);
     }
+    
+    /**
+     * Get recent activity logs for admin dashboard
+     *
+     * @param int $limit Maximum number of logs to return
+     * @return array Recent activity logs with user and action details
+     */
+    public function getRecentActivityLogs($limit = 10)
+    {
+        $sql = "
+            SELECT 
+                al.al_id as id,
+                al.ua_id as user_id,
+                ua.ua_first_name as first_name,
+                ua.ua_last_name as last_name,
+                ua.ua_email as email,
+                ua.ua_profile_url as profile_url,
+                at.at_name as action,
+                at.at_code as action_code,
+                al.al_description as description,
+                al.al_timestamp as timestamp,
+                EXTRACT(EPOCH FROM (NOW() - al.al_timestamp))/60 as minutes_ago
+            FROM 
+                activity_log al
+            LEFT JOIN 
+                user_account ua ON al.ua_id = ua.ua_id
+            JOIN 
+                activity_type at ON al.at_id = at.at_id
+            ORDER BY 
+                al.al_timestamp DESC
+            LIMIT 
+                :limit
+        ";
+        
+        $logs = $this->query($sql, ['limit' => $limit]);
+        
+        // Format the time for display
+        foreach ($logs as &$log) {
+            if (isset($log['minutes_ago'])) {
+                $minutes = (int)$log['minutes_ago'];
+                
+                if ($minutes < 60) {
+                    $log['time_ago'] = $minutes == 1 ? '1 minute ago' : "$minutes minutes ago";
+                } else if ($minutes < 1440) { // Less than 24 hours
+                    $hours = floor($minutes / 60);
+                    $log['time_ago'] = $hours == 1 ? '1 hour ago' : "$hours hours ago";
+                } else if ($minutes < 10080) { // Less than 7 days
+                    $days = floor($minutes / 1440);
+                    $log['time_ago'] = $days == 1 ? '1 day ago' : "$days days ago";
+                } else {
+                    $weeks = floor($minutes / 10080);
+                    $log['time_ago'] = $weeks == 1 ? '1 week ago' : "$weeks weeks ago";
+                }
+            } else {
+                $log['time_ago'] = 'Recently';
+            }
+        }
+        
+        return $logs;
+    }
 } 
