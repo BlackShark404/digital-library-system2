@@ -516,4 +516,28 @@ class ReadingSessionController extends BaseController
         return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
+    
+    /**
+     * Get reading session details by ID (for admin view)
+     * 
+     * @param int $sessionId Session ID
+     */
+    public function getReadingSessionById($sessionId)
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->jsonError('Access denied', 403);
+            return;
+        }
+        
+        // Get session with details
+        $session = $this->readingSessionModel->getReadingSessionWithDetails($sessionId);
+        
+        if (!$session) {
+            $this->jsonError('Reading session not found', 404);
+            return;
+        }
+        
+        $this->jsonSuccess($session);
+    }
 } 

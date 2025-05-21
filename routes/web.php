@@ -38,6 +38,7 @@ $accessMap = [
     // Reading Sessions API routes - Admin only
     '/api/reading-sessions' => ['admin'],
     '/api/reading-sessions/export' => ['admin'],
+    '/api/reading-sessions/[i:id]' => ['admin'],
     
     // User Management API routes - Admin only
     '/api/users' => ['admin'],
@@ -102,6 +103,7 @@ $router->map('GET', '/admin/admin-profile', 'App\Controllers\AdminController#ren
 // Reading Sessions API Routes - Admin
 $router->map('GET', '/api/reading-sessions', 'App\Controllers\ReadingSessionController#getAllReadingSessions', 'api_get_reading_sessions');
 $router->map('GET', '/api/reading-sessions/export', 'App\Controllers\ReadingSessionController#exportReadingSessions', 'api_export_reading_sessions');
+$router->map('GET', '/api/reading-sessions/[i:id]', 'App\Controllers\ReadingSessionController#getReadingSessionById', 'api_get_reading_session');
 
 // Activity Log Routes
 $router->map('GET', '/api/activity-logs', 'App\Controllers\ActivityLogController#getActivityLogs', 'api_get_activity_logs');

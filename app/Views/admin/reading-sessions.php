@@ -133,9 +133,9 @@
                                     <td><span class="badge bg-<?= $statusClass ?>"><?= $statusText ?></span></td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="/reading-session/read-book/<?= $session['rs_id'] ?>" class="btn btn-outline-primary" target="_blank">
-                                                <i class="bi bi-book"></i> View
-                                            </a>
+                                            <button type="button" class="btn btn-outline-primary view-session-btn" data-id="<?= $session['rs_id'] ?>">
+                                                <i class="bi bi-info-circle"></i> View
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -154,16 +154,106 @@
     </div>
 </div>
 
+<!-- Session Details Modal -->
+<div class="modal fade" id="sessionDetailsModal" tabindex="-1" aria-labelledby="sessionDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sessionDetailsModalLabel">Reading Session Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="session-loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading session details...</p>
+                </div>
+                <div id="session-details" class="d-none">
+                    <div class="row mb-4">
+                        <div class="col-md-4 text-center">
+                            <img id="session-book-cover" src="" alt="Book Cover" class="img-fluid rounded mb-2" style="max-height: 200px;">
+                        </div>
+                        <div class="col-md-8">
+                            <h4 id="session-book-title" class="mb-1"></h4>
+                            <p id="session-book-author" class="text-muted"></p>
+                            
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="badge" id="session-status-badge"></span>
+                                <span class="text-muted" id="session-expiry"></span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Reading Progress:</span>
+                                    <span id="session-progress-text"></span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div id="session-progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">User Information</h6>
+                                    <div class="mb-2">
+                                        <strong>Name:</strong> <span id="session-user-name"></span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Email:</strong> <span id="session-user-email"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">Session Information</h6>
+                                    <div class="mb-2">
+                                        <strong>Started:</strong> <span id="session-start-date"></span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Expires:</strong> <span id="session-expiry-date"></span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Session ID:</strong> <span id="session-id"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="session-error" class="alert alert-danger d-none">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Error loading session details.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize DataTable
-    const table = new DataTable('#sessions-table', {
+    const table = $('#sessions-table').DataTable({
         responsive: true,
         pageLength: 15,
         language: {
             search: "",
             searchPlaceholder: "Search in table..."
         }
+    });
+    
+    // Use event delegation for view buttons
+    $('#sessions-table tbody').on('click', '.view-session-btn', function() {
+        const sessionId = $(this).data('id');
+        showSessionDetails(sessionId);
     });
     
     // Handle filter form submission
@@ -269,9 +359,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>`,
                             `<span class="badge bg-${statusClass}">${statusText}</span>`,
                             `<div class="btn-group btn-group-sm">
-                                <a href="/reading-session/read-book/${session.rs_id}" class="btn btn-outline-primary" target="_blank">
-                                    <i class="bi bi-book"></i> View
-                                </a>
+                                <button type="button" class="btn btn-outline-primary view-session-btn" data-id="${session.rs_id}">
+                                    <i class="bi bi-info-circle"></i> View
+                                </button>
                             </div>`
                         ]).draw();
                     });
@@ -302,6 +392,119 @@ document.addEventListener('DOMContentLoaded', function() {
         // Trigger submit to reload all data
         document.getElementById('filter-form').dispatchEvent(new Event('submit'));
     });
+    
+    function showSessionDetails(sessionId) {
+        console.log('Opening modal for session ID:', sessionId);
+        
+        // Show loading state
+        $('#session-loading').removeClass('d-none');
+        $('#session-details').addClass('d-none');
+        $('#session-error').addClass('d-none');
+        
+        // Show modal
+        $('#sessionDetailsModal').modal('show');
+        
+        // Fetch session details
+        fetch('/api/reading-sessions/' + sessionId)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Session data:', data);
+                if (data.success && data.data) {
+                    // Hide loading, show details
+                    $('#session-loading').addClass('d-none');
+                    $('#session-details').removeClass('d-none');
+                    
+                    const session = data.data;
+                    
+                    // Fill in session details
+                    $('#session-id').text(session.rs_id);
+                    $('#session-book-title').text(session.b_title);
+                    $('#session-book-author').text(session.b_author);
+                    
+                    // Book cover
+                    const coverPath = session.b_cover_path 
+                        ? '/assets/images/book-cover/' + session.b_cover_path 
+                        : '/assets/images/book-cover/default-cover.svg';
+                    $('#session-book-cover').attr('src', coverPath);
+                    
+                    // User details
+                    $('#session-user-name').text(`${session.ua_first_name} ${session.ua_last_name}`);
+                    $('#session-user-email').text(session.ua_email);
+                    
+                    // Dates
+                    const startDate = new Date(session.rs_started_at);
+                    const expiryDate = new Date(session.rs_expires_at);
+                    $('#session-start-date').text(startDate.toLocaleString());
+                    
+                    // Status and expiry
+                    let statusClass, statusText;
+                    if (session.is_purchased) {
+                        statusClass = 'bg-primary';
+                        statusText = 'Purchased';
+                        $('#session-expiry-date').text('Unlimited Access');
+                        $('#session-expiry').text('');
+                    } else if (session.is_expired) {
+                        statusClass = 'bg-danger';
+                        statusText = 'Expired';
+                        $('#session-expiry-date').text(expiryDate.toLocaleString() + ' (Expired)');
+                        $('#session-expiry').text('Expired on ' + expiryDate.toLocaleDateString());
+                    } else {
+                        statusClass = 'bg-success';
+                        statusText = 'Active';
+                        $('#session-expiry-date').text(expiryDate.toLocaleString());
+                        
+                        // Calculate remaining time
+                        const now = new Date();
+                        const diffTime = Math.abs(expiryDate - now);
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        
+                        let remainingText = '';
+                        if (diffDays > 0) {
+                            remainingText = `${diffDays} days`;
+                            if (diffHours > 0) remainingText += ` and ${diffHours} hours`;
+                            remainingText += ' remaining';
+                        } else {
+                            remainingText = `${diffHours} hours remaining`;
+                        }
+                        
+                        $('#session-expiry').text(remainingText);
+                    }
+                    
+                    const statusBadge = $('#session-status-badge');
+                    statusBadge.attr('class', `badge ${statusClass}`);
+                    statusBadge.text(statusText);
+                    
+                    // Progress
+                    let progress = 0;
+                    let progressText = 'Not started';
+                    if (session.current_page && session.b_pages && session.b_pages > 0) {
+                        progress = Math.min(100, Math.round((session.current_page / session.b_pages) * 100));
+                        progressText = `${session.current_page}/${session.b_pages} pages (${progress}%)`;
+                    }
+                    
+                    const progressBar = $('#session-progress-bar');
+                    progressBar.css('width', `${progress}%`);
+                    progressBar.attr('aria-valuenow', progress);
+                    progressBar.attr('class', `progress-bar bg-${statusClass.replace('bg-', '')}`);
+                    
+                    $('#session-progress-text').text(progressText);
+                    
+                } else {
+                    throw new Error('Failed to load session data');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                $('#session-loading').addClass('d-none');
+                $('#session-error').removeClass('d-none');
+            });
+    }
 });
 </script>
 

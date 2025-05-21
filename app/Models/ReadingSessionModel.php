@@ -639,4 +639,59 @@ class ReadingSessionModel extends BaseModel
         
         return $this->query($sql, $params);
     }
+    
+    /**
+     * Get a reading session with detailed user and book information
+     * 
+     * @param int $sessionId Reading session ID
+     * @return array|null Reading session with detailed information
+     */
+    public function getReadingSessionWithDetails($sessionId)
+    {
+        $sql = "
+            SELECT 
+                rs.rs_id,
+                rs.ua_id,
+                rs.b_id,
+                rs.rs_started_at,
+                rs.rs_expires_at,
+                ua.ua_first_name,
+                ua.ua_last_name,
+                ua.ua_email,
+                b.b_title,
+                b.b_author,
+                b.b_publisher,
+                b.b_cover_path,
+                b.b_pages,
+                b.b_isbn,
+                g.g_name as genre,
+                rp.current_page,
+                rp.is_completed,
+                rp.last_updated,
+                CASE 
+                    WHEN rs.rs_expires_at < NOW() THEN TRUE
+                    ELSE FALSE
+                END as is_expired,
+                CASE
+                    WHEN up.up_id IS NOT NULL THEN TRUE
+                    ELSE FALSE
+                END as is_purchased
+            FROM 
+                {$this->table} rs
+            JOIN 
+                books b ON rs.b_id = b.b_id
+            JOIN
+                user_account ua ON rs.ua_id = ua.ua_id
+            LEFT JOIN
+                genre g ON b.b_genre_id = g.g_id
+            LEFT JOIN 
+                {$this->progressTable} rp ON rs.rs_id = rp.rs_id
+            LEFT JOIN
+                user_purchase up ON (rs.ua_id = up.ua_id AND rs.b_id = up.b_id)
+            WHERE 
+                rs.rs_id = :session_id
+        ";
+        
+        return $this->queryOne($sql, ['session_id' => $sessionId]);
+    }
 } 
