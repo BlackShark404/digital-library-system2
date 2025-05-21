@@ -5,9 +5,6 @@ include $headerPath;
 <div class="container">
     <h1 class="mb-4"><i class="bi bi-book me-2"></i>Book Management</h1>
 
-    <!-- Alert Container -->
-    <div id="alertContainer"></div>
-
     <!-- Book Actions -->
     <div class="mb-4">
         <button id="addBookBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookFormModal">
@@ -111,7 +108,13 @@ include $headerPath;
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="pages" class="form-label">Pages</label>
-                            <input type="number" class="form-control" id="pages" name="pages" min="1">
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="pages" name="pages" min="1">
+                                <span class="input-group-text" id="pageCountInfo" style="display: none;">
+                                    <i class="bi bi-info-circle"></i>
+                                </span>
+                            </div>
+                            <small id="pagesHelp" class="form-text text-muted">Page count will be automatically extracted from PDF if left empty.</small>
                         </div>
                     </div>
                     
@@ -241,6 +244,16 @@ include $headerPath;
         // Initialize file upload previews
         initFileUploadHandlers();
         
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Initialize tooltip for page count info
+        $('#pageCountInfo').attr('data-bs-toggle', 'tooltip')
+                           .attr('data-bs-placement', 'top');
+        
         // Handle modal events
         $('#bookFormModal').on('hidden.bs.modal', function() {
             resetBookForm();
@@ -305,7 +318,16 @@ include $headerPath;
                         }
                     }
                 ],
-                ajaxUrl: '/api/books'
+                ajaxUrl: '/api/books',
+                toastOptions: {
+                    position: 'bottom-right',
+                    autoClose: 4000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                    enableIcons: true
+                }
             });
             
             // Add event listeners for action buttons
@@ -345,6 +367,31 @@ include $headerPath;
                 }
             });
             
+            // Handle manual changes to page count
+            $('#pages').on('input', function() {
+                // If user manually enters a page count, update the help text
+                if ($(this).val() && $('#book_file_data').val()) {
+                    $('#pagesHelp').text('Manual page count will override extracted count.');
+                    
+                    // Show info icon if not visible
+                    if (!$('#pageCountInfo').is(':visible')) {
+                        $('#pageCountInfo').show()
+                                          .attr('data-bs-original-title', 'Manual override of extracted page count')
+                                          .tooltip('dispose')
+                                          .tooltip();
+                    }
+                } else if (!$(this).val()) {
+                    // If field is emptied and there's a PDF uploaded
+                    if ($('#book_file_data').val()) {
+                        $('#pagesHelp').text('Page count will be extracted from PDF when saved.');
+                        $('#pageCountInfo').hide();
+                    } else {
+                        $('#pagesHelp').text('Page count will be automatically extracted from PDF if left empty.');
+                        $('#pageCountInfo').hide();
+                    }
+                }
+            });
+            
             // Book file upload
             $('#bookFileUpload').on('change', function(e) {
                 const file = e.target.files[0];
@@ -358,10 +405,23 @@ include $headerPath;
                             return;
                         }
                         
+                        // Show loading indicator
+                        $('#currentFileInfo').html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Processing PDF...');
+                        
                         const reader = new FileReader();
                         reader.onload = function(e) {
                             $('#book_file_data').val(e.target.result);
                             $('#currentFileInfo').text(`Selected file: ${file.name} (${formatFileSize(file.size)})`);
+                            
+                            // Clear manual page count if it's empty or zero
+                            const currentPages = $('#pages').val();
+                            if (!currentPages || parseInt(currentPages) === 0) {
+                                // Clear the tooltip/info if it exists
+                                $('#pageCountInfo').hide().attr('data-bs-original-title', '');
+                                
+                                // Add processing indicator to pages field
+                                $('#pagesHelp').html('<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Page count will be extracted when saved');
+                            }
                         };
                         reader.readAsDataURL(file);
                     } else {
@@ -406,6 +466,17 @@ include $headerPath;
                         $('#pages').val(book.b_pages);
                         $('#price').val(book.b_price);
                         $('#description').val(book.b_description);
+                        
+                        // If the book has a page count and it was automatically extracted from PDF
+                        if (book.b_pages && book.b_file_path && book.b_file_path.endsWith('.pdf')) {
+                            // Show the info icon with tooltip
+                            $('#pageCountInfo').show()
+                                               .attr('data-bs-original-title', 'Page count extracted from PDF')
+                                               .tooltip('dispose')
+                                               .tooltip();
+                        } else {
+                            $('#pageCountInfo').hide();
+                        }
                         
                         // Show existing cover image
                         $('#coverPreview').attr('src', book.cover_url);
@@ -540,18 +611,22 @@ include $headerPath;
                 data: JSON.stringify(formData),
                 success: function(response) {
                     if (response.success) {
+                        // Check if page count was extracted
+                        if (response.data.pageCount) {
+                            // If we're still in the modal (user can see the response), show the extracted page count
+                            const pageCount = response.data.pageCount;
+                            // Use toast notification instead of alert
+                            dataTable.showSuccessToast('Book Saved', `Book ${bookId ? 'updated' : 'added'} successfully. Extracted page count: ${pageCount}`);
+                        } else {
+                            // Regular success message
+                            dataTable.showSuccessToast('Book Saved', `Book ${bookId ? 'updated' : 'added'} successfully`);
+                        }
+                        
                         // Close modal
                         $('#bookFormModal').modal('hide');
                         
-                        // Show success message
-                        showSuccessAlert(`Book ${bookId ? 'updated' : 'added'} successfully`);
-                        
-                        // Refresh table
-                        if (dataTable.ajax && typeof dataTable.ajax.reload === 'function') {
-                            dataTable.ajax.reload();
-                        } else {
-                            location.reload(); // Fallback
-                        }
+                        // Refresh table using DataTablesManager
+                        dataTable.refresh();
                     } else {
                         showErrorAlert(response.message || 'Error saving book');
                     }
@@ -562,6 +637,9 @@ include $headerPath;
                 complete: function() {
                     // Reset button state
                     $('#saveBookBtn').prop('disabled', false).text('Save Book');
+                    
+                    // Reset the page help text
+                    $('#pagesHelp').text('Page count will be automatically extracted from PDF if left empty.');
                 }
             });
         }
@@ -575,10 +653,10 @@ include $headerPath;
                     if (response.success) {
                         $('#deleteBookModal').modal('hide');
                         
-                        // Show success message
+                        // Show success message with toast
                         dataTable.showSuccessToast('Book Deleted', response.message);
                         
-                        // Refresh the DataTable
+                        // Refresh the DataTable using DataTablesManager
                         dataTable.refresh();
                     } else {
                         showErrorAlert(response.message);
@@ -600,26 +678,20 @@ include $headerPath;
             $('#book_file_data').val('');
             $('#currentFileInfo').text('');
             $('#pages').attr('placeholder', 'Enter number of pages');
+            $('#pageCountInfo').hide().attr('data-bs-original-title', '');
+            $('#pagesHelp').text('Page count will be automatically extracted from PDF if left empty.');
         }
         
         // Helper for showing error alerts
         function showErrorAlert(message) {
-            $('#alertContainer').html(`
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `);
+            // Display toast notification instead of alert
+            dataTable.showErrorToast('Error', message);
         }
         
         // Helper for showing success alerts
         function showSuccessAlert(message) {
-            $('#alertContainer').html(`
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="bi bi-check-circle-fill me-2"></i>${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `);
+            // Display toast notification instead of alert
+            dataTable.showSuccessToast('Success', message);
         }
         
         // Helper for formatting file size

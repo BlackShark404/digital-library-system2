@@ -125,9 +125,14 @@ class BookController extends BaseController
         // Handle book file
         if (!empty($jsonData['book_file_data'])) {
             $fileData = $jsonData['book_file_data'];
-            $bookFilename = $this->processBase64File($fileData, 'books');
-            if ($bookFilename) {
-                $bookData['file_path'] = $bookFilename;
+            $bookFileResult = $this->processBase64File($fileData, 'books');
+            if ($bookFileResult) {
+                $bookData['file_path'] = $bookFileResult['filename'];
+                
+                // Use extracted page count if provided pages are empty
+                if (empty($bookData['pages']) && !empty($bookFileResult['pageCount'])) {
+                    $bookData['pages'] = $bookFileResult['pageCount'];
+                }
             }
         }
         
@@ -137,8 +142,16 @@ class BookController extends BaseController
             $this->jsonError('Failed to create book', 500);
         }
         
-        // Return success with the new book ID
-        $this->jsonSuccess(['id' => $bookId], 'Book created successfully');
+        // Return success with the new book ID and page count for frontend update
+        $response = [
+            'id' => $bookId
+        ];
+        
+        if (isset($bookFileResult['pageCount'])) {
+            $response['pageCount'] = $bookFileResult['pageCount'];
+        }
+        
+        $this->jsonSuccess($response, 'Book created successfully');
     }
     
     /**
@@ -195,6 +208,10 @@ class BookController extends BaseController
             }
         }
         
+        // For tracking if page count was updated
+        $pageCountUpdated = false;
+        $extractedPageCount = null;
+        
         // Handle book file
         if (!empty($jsonData['book_file_data'])) {
             // Delete old book file if it exists and a new one is provided
@@ -205,9 +222,16 @@ class BookController extends BaseController
                 }
             }
             $fileData = $jsonData['book_file_data'];
-            $bookFilename = $this->processBase64File($fileData, 'books');
-            if ($bookFilename) {
-                $bookData['file_path'] = $bookFilename;
+            $bookFileResult = $this->processBase64File($fileData, 'books');
+            if ($bookFileResult) {
+                $bookData['file_path'] = $bookFileResult['filename'];
+                
+                // Use extracted page count if provided pages are empty or unchanged
+                if ((empty($bookData['pages']) || $bookData['pages'] == $existingBook['b_pages']) && !empty($bookFileResult['pageCount'])) {
+                    $bookData['pages'] = $bookFileResult['pageCount'];
+                    $pageCountUpdated = true;
+                    $extractedPageCount = $bookFileResult['pageCount'];
+                }
             } else {
                 // Optionally handle error
             }
@@ -219,7 +243,12 @@ class BookController extends BaseController
             $this->jsonError('Failed to update book', 500);
         }
         
-        $this->jsonSuccess([], 'Book updated successfully');
+        $response = [];
+        if ($pageCountUpdated && $extractedPageCount !== null) {
+            $response['pageCount'] = $extractedPageCount;
+        }
+        
+        $this->jsonSuccess($response, 'Book updated successfully');
     }
     
     /**
@@ -294,7 +323,7 @@ class BookController extends BaseController
      * 
      * @param string $base64Data Base64 encoded file data
      * @param string $directory Target directory to save the file
-     * @return string|false Filename on success, false on failure
+     * @return array|false Associative array with filename and page count on success, false on failure
      */
     private function processBase64File($base64Data, $directory)
     {
@@ -327,10 +356,35 @@ class BookController extends BaseController
                 return false;
             }
             
-            return $filename;
+            // Extract page count from PDF
+            $pageCount = $this->getPdfPageCount($uploadPath);
+            
+            return [
+                'filename' => $filename,
+                'pageCount' => $pageCount
+            ];
         }
         
         error_log("Invalid base64 file data format");
         return false;
+    }
+    
+    /**
+     * Extract the page count from a PDF file
+     * 
+     * @param string $filePath Path to the PDF file
+     * @return int|null Number of pages or null if extraction fails
+     */
+    private function getPdfPageCount($filePath)
+    {
+        try {
+            // Use FPDI to get page count
+            $pdf = new \setasign\Fpdi\Fpdi();
+            $pageCount = $pdf->setSourceFile($filePath);
+            return $pageCount;
+        } catch (\Exception $e) {
+            error_log("Error extracting PDF page count: " . $e->getMessage());
+            return null;
+        }
     }
 } 
