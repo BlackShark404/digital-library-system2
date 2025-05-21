@@ -240,21 +240,49 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize DataTable
-    const table = $('#sessions-table').DataTable({
-        responsive: true,
-        pageLength: 15,
-        language: {
-            search: "",
-            searchPlaceholder: "Search in table..."
+    // Check if jQuery is defined
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery is not loaded. Using vanilla JavaScript instead.');
+        
+        // Initialize DataTable using vanilla JS
+        const table = document.getElementById('sessions-table');
+        if (table && typeof DataTable !== 'undefined') {
+            new DataTable(table, {
+                responsive: true,
+                pageLength: 15,
+                language: {
+                    search: "",
+                    searchPlaceholder: "Search in table..."
+                }
+            });
+        } else {
+            console.error('DataTable is not defined or table element not found');
         }
-    });
-    
-    // Use event delegation for view buttons
-    $('#sessions-table tbody').on('click', '.view-session-btn', function() {
-        const sessionId = $(this).data('id');
-        showSessionDetails(sessionId);
-    });
+        
+        // Add event listeners for view buttons
+        document.querySelectorAll('.view-session-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const sessionId = this.getAttribute('data-id');
+                showSessionDetails(sessionId);
+            });
+        });
+    } else {
+        // Initialize DataTable using jQuery
+        const dataTable = jQuery('#sessions-table').DataTable({
+            responsive: true,
+            pageLength: 15,
+            language: {
+                search: "",
+                searchPlaceholder: "Search in table..."
+            }
+        });
+        
+        // Use jQuery event delegation for view buttons
+        jQuery('#sessions-table tbody').on('click', '.view-session-btn', function() {
+            const sessionId = jQuery(this).data('id');
+            showSessionDetails(sessionId);
+        });
+    }
     
     // Handle filter form submission
     document.getElementById('filter-form').addEventListener('submit', function(e) {
@@ -276,106 +304,30 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.data) {
-                    // Clear the table
-                    table.clear();
-                    
-                    // Add new data
-                    data.data.forEach(session => {
-                        // Determine status
-                        let statusClass, statusText;
-                        if (session.is_purchased) {
-                            statusClass = 'primary';
-                            statusText = 'Purchased';
-                        } else if (session.is_expired) {
-                            statusClass = 'danger';
-                            statusText = 'Expired';
-                        } else {
-                            statusClass = 'success';
-                            statusText = 'Active';
-                        }
+                    // Table needs to be refreshed with new data
+                    if (typeof jQuery !== 'undefined' && jQuery.fn.DataTable) {
+                        const table = jQuery('#sessions-table').DataTable();
+                        table.clear();
                         
-                        // Calculate progress
-                        let progress = 0;
-                        let progressText = 'Not started';
-                        if (session.current_page && session.b_pages && session.b_pages > 0) {
-                            progress = Math.min(100, Math.round((session.current_page / session.b_pages) * 100));
-                            progressText = `${session.current_page}/${session.b_pages} (${progress}%)`;
-                        }
-                        
-                        // Format cover path
-                        const coverPath = session.b_cover_path 
-                            ? '/assets/images/book-cover/' + session.b_cover_path 
-                            : '/assets/images/book-cover/default-cover.svg';
-                        
-                        // Format dates
-                        const startedAt = new Date(session.rs_started_at);
-                        const expiresAt = new Date(session.rs_expires_at);
-                        const formattedStartDate = startedAt.toLocaleString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: 'numeric',
-                            minute: 'numeric'
+                        // Add new data
+                        data.data.forEach(session => {
+                            addRowToTable(table, session);
                         });
                         
-                        const formattedExpireDate = session.is_purchased 
-                            ? `<span class="badge bg-primary">Unlimited</span>`
-                            : expiresAt.toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: 'numeric',
-                                minute: 'numeric'
-                            });
-                        
-                        // Add row to table
-                        table.row.add([
-                            session.rs_id,
-                            `<div class="d-flex align-items-center">
-                                <div>
-                                    <div class="fw-bold">${session.ua_first_name} ${session.ua_last_name}</div>
-                                    <div class="small text-muted">${session.ua_email}</div>
-                                </div>
-                            </div>`,
-                            `<div class="d-flex align-items-center">
-                                <img src="${coverPath}" alt="Book Cover" class="me-2" style="width: 40px; height: 60px; object-fit: cover; border-radius: 2px;">
-                                <div>
-                                    <div class="fw-bold">${session.b_title}</div>
-                                    <div class="small text-muted">${session.b_author}</div>
-                                </div>
-                            </div>`,
-                            formattedStartDate,
-                            formattedExpireDate,
-                            `<div class="d-flex align-items-center">
-                                <div class="flex-grow-1 me-2" style="min-width: 100px;">
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-${statusClass}" role="progressbar" 
-                                            style="width: ${progress}%;" 
-                                            aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
-                                        </div>
-                                    </div>
-                                </div>
-                                <span class="small">${progressText}</span>
-                            </div>`,
-                            `<span class="badge bg-${statusClass}">${statusText}</span>`,
-                            `<div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-outline-primary view-session-btn" data-id="${session.rs_id}">
-                                    <i class="bi bi-info-circle"></i> View
-                                </button>
-                            </div>`
-                        ]).draw();
-                    });
-                    
-                    // If no data found
-                    if (data.data.length === 0) {
-                        const noDataRow = `
-                            <tr>
-                                <td colspan="8" class="text-center py-4">
-                                    <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i> No reading sessions found with the selected filters</p>
-                                </td>
-                            </tr>
-                        `;
-                        document.querySelector('#sessions-table tbody').innerHTML = noDataRow;
+                        if (data.data.length === 0) {
+                            const noDataRow = `
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i> No reading sessions found with the selected filters</p>
+                                    </td>
+                                </tr>
+                            `;
+                            document.querySelector('#sessions-table tbody').innerHTML = noDataRow;
+                        }
+                    } else {
+                        // Refresh the page as fallback
+                        console.error('DataTable is not available. Refreshing page instead.');
+                        window.location.reload();
                     }
                 }
             })
@@ -383,6 +335,92 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error fetching data:', error);
             });
     });
+    
+    function addRowToTable(table, session) {
+        // Determine status
+        let statusClass, statusText;
+        if (session.is_purchased) {
+            statusClass = 'primary';
+            statusText = 'Purchased';
+        } else if (session.is_expired) {
+            statusClass = 'danger';
+            statusText = 'Expired';
+        } else {
+            statusClass = 'success';
+            statusText = 'Active';
+        }
+        
+        // Calculate progress
+        let progress = 0;
+        let progressText = 'Not started';
+        if (session.current_page && session.b_pages && session.b_pages > 0) {
+            progress = Math.min(100, Math.round((session.current_page / session.b_pages) * 100));
+            progressText = `${session.current_page}/${session.b_pages} (${progress}%)`;
+        }
+        
+        // Format cover path
+        const coverPath = session.b_cover_path 
+            ? '/assets/images/book-cover/' + session.b_cover_path 
+            : '/assets/images/book-cover/default-cover.svg';
+        
+        // Format dates
+        const startedAt = new Date(session.rs_started_at);
+        const expiresAt = new Date(session.rs_expires_at);
+        const formattedStartDate = startedAt.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric'
+        });
+        
+        const formattedExpireDate = session.is_purchased 
+            ? `<span class="badge bg-primary">Unlimited</span>`
+            : expiresAt.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric'
+            });
+        
+        // Add row to table
+        table.row.add([
+            session.rs_id,
+            `<div class="d-flex align-items-center">
+                <div>
+                    <div class="fw-bold">${session.ua_first_name} ${session.ua_last_name}</div>
+                    <div class="small text-muted">${session.ua_email}</div>
+                </div>
+            </div>`,
+            `<div class="d-flex align-items-center">
+                <img src="${coverPath}" alt="Book Cover" class="me-2" style="width: 40px; height: 60px; object-fit: cover; border-radius: 2px;">
+                <div>
+                    <div class="fw-bold">${session.b_title}</div>
+                    <div class="small text-muted">${session.b_author}</div>
+                </div>
+            </div>`,
+            formattedStartDate,
+            formattedExpireDate,
+            `<div class="d-flex align-items-center">
+                <div class="flex-grow-1 me-2" style="min-width: 100px;">
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-${statusClass}" role="progressbar" 
+                            style="width: ${progress}%;" 
+                            aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+                <span class="small">${progressText}</span>
+            </div>`,
+            `<span class="badge bg-${statusClass}">${statusText}</span>`,
+            `<div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-primary view-session-btn" data-id="${session.rs_id}">
+                    <i class="bi bi-info-circle"></i> View
+                </button>
+            </div>`
+        ]).draw();
+    }
     
     // Handle reset button
     document.getElementById('reset-filter').addEventListener('click', function() {
@@ -397,15 +435,23 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Opening modal for session ID:', sessionId);
         
         // Show loading state
-        $('#session-loading').removeClass('d-none');
-        $('#session-details').addClass('d-none');
-        $('#session-error').addClass('d-none');
+        document.getElementById('session-loading').classList.remove('d-none');
+        document.getElementById('session-details').classList.add('d-none');
+        document.getElementById('session-error').classList.add('d-none');
         
-        // Show modal
-        $('#sessionDetailsModal').modal('show');
+        // Show modal - try jQuery first, fallback to Bootstrap JS
+        if (typeof jQuery !== 'undefined') {
+            jQuery('#sessionDetailsModal').modal('show');
+        } else if (typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(document.getElementById('sessionDetailsModal'));
+            modal.show();
+        } else {
+            document.getElementById('sessionDetailsModal').classList.add('show');
+            document.getElementById('sessionDetailsModal').style.display = 'block';
+        }
         
-        // Fetch session details
-        fetch('/api/reading-sessions/' + sessionId)
+        // Fetch session details - Fix URL structure to match router expectations
+        fetch(`/api/reading-sessions/${sessionId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -416,94 +462,96 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Session data:', data);
                 if (data.success && data.data) {
                     // Hide loading, show details
-                    $('#session-loading').addClass('d-none');
-                    $('#session-details').removeClass('d-none');
+                    document.getElementById('session-loading').classList.add('d-none');
+                    document.getElementById('session-details').classList.remove('d-none');
                     
                     const session = data.data;
-                    
-                    // Fill in session details
-                    $('#session-id').text(session.rs_id);
-                    $('#session-book-title').text(session.b_title);
-                    $('#session-book-author').text(session.b_author);
-                    
-                    // Book cover
-                    const coverPath = session.b_cover_path 
-                        ? '/assets/images/book-cover/' + session.b_cover_path 
-                        : '/assets/images/book-cover/default-cover.svg';
-                    $('#session-book-cover').attr('src', coverPath);
-                    
-                    // User details
-                    $('#session-user-name').text(`${session.ua_first_name} ${session.ua_last_name}`);
-                    $('#session-user-email').text(session.ua_email);
-                    
-                    // Dates
-                    const startDate = new Date(session.rs_started_at);
-                    const expiryDate = new Date(session.rs_expires_at);
-                    $('#session-start-date').text(startDate.toLocaleString());
-                    
-                    // Status and expiry
-                    let statusClass, statusText;
-                    if (session.is_purchased) {
-                        statusClass = 'bg-primary';
-                        statusText = 'Purchased';
-                        $('#session-expiry-date').text('Unlimited Access');
-                        $('#session-expiry').text('');
-                    } else if (session.is_expired) {
-                        statusClass = 'bg-danger';
-                        statusText = 'Expired';
-                        $('#session-expiry-date').text(expiryDate.toLocaleString() + ' (Expired)');
-                        $('#session-expiry').text('Expired on ' + expiryDate.toLocaleDateString());
-                    } else {
-                        statusClass = 'bg-success';
-                        statusText = 'Active';
-                        $('#session-expiry-date').text(expiryDate.toLocaleString());
-                        
-                        // Calculate remaining time
-                        const now = new Date();
-                        const diffTime = Math.abs(expiryDate - now);
-                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                        const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                        
-                        let remainingText = '';
-                        if (diffDays > 0) {
-                            remainingText = `${diffDays} days`;
-                            if (diffHours > 0) remainingText += ` and ${diffHours} hours`;
-                            remainingText += ' remaining';
-                        } else {
-                            remainingText = `${diffHours} hours remaining`;
-                        }
-                        
-                        $('#session-expiry').text(remainingText);
-                    }
-                    
-                    const statusBadge = $('#session-status-badge');
-                    statusBadge.attr('class', `badge ${statusClass}`);
-                    statusBadge.text(statusText);
-                    
-                    // Progress
-                    let progress = 0;
-                    let progressText = 'Not started';
-                    if (session.current_page && session.b_pages && session.b_pages > 0) {
-                        progress = Math.min(100, Math.round((session.current_page / session.b_pages) * 100));
-                        progressText = `${session.current_page}/${session.b_pages} pages (${progress}%)`;
-                    }
-                    
-                    const progressBar = $('#session-progress-bar');
-                    progressBar.css('width', `${progress}%`);
-                    progressBar.attr('aria-valuenow', progress);
-                    progressBar.attr('class', `progress-bar bg-${statusClass.replace('bg-', '')}`);
-                    
-                    $('#session-progress-text').text(progressText);
-                    
+                    updateModalContent(session);
                 } else {
                     throw new Error('Failed to load session data');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                $('#session-loading').addClass('d-none');
-                $('#session-error').removeClass('d-none');
+                document.getElementById('session-loading').classList.add('d-none');
+                document.getElementById('session-error').classList.remove('d-none');
             });
+    }
+    
+    function updateModalContent(session) {
+        // Fill in session details
+        document.getElementById('session-id').textContent = session.rs_id;
+        document.getElementById('session-book-title').textContent = session.b_title;
+        document.getElementById('session-book-author').textContent = session.b_author;
+        
+        // Book cover
+        const coverPath = session.b_cover_path 
+            ? '/assets/images/book-cover/' + session.b_cover_path 
+            : '/assets/images/book-cover/default-cover.svg';
+        document.getElementById('session-book-cover').src = coverPath;
+        
+        // User details
+        document.getElementById('session-user-name').textContent = `${session.ua_first_name} ${session.ua_last_name}`;
+        document.getElementById('session-user-email').textContent = session.ua_email;
+        
+        // Dates
+        const startDate = new Date(session.rs_started_at);
+        const expiryDate = new Date(session.rs_expires_at);
+        document.getElementById('session-start-date').textContent = startDate.toLocaleString();
+        
+        // Status and expiry
+        let statusClass, statusText;
+        if (session.is_purchased) {
+            statusClass = 'bg-primary';
+            statusText = 'Purchased';
+            document.getElementById('session-expiry-date').textContent = 'Unlimited Access';
+            document.getElementById('session-expiry').textContent = '';
+        } else if (session.is_expired) {
+            statusClass = 'bg-danger';
+            statusText = 'Expired';
+            document.getElementById('session-expiry-date').textContent = expiryDate.toLocaleString() + ' (Expired)';
+            document.getElementById('session-expiry').textContent = 'Expired on ' + expiryDate.toLocaleDateString();
+        } else {
+            statusClass = 'bg-success';
+            statusText = 'Active';
+            document.getElementById('session-expiry-date').textContent = expiryDate.toLocaleString();
+            
+            // Calculate remaining time
+            const now = new Date();
+            const diffTime = Math.abs(expiryDate - now);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            
+            let remainingText = '';
+            if (diffDays > 0) {
+                remainingText = `${diffDays} days`;
+                if (diffHours > 0) remainingText += ` and ${diffHours} hours`;
+                remainingText += ' remaining';
+            } else {
+                remainingText = `${diffHours} hours remaining`;
+            }
+            
+            document.getElementById('session-expiry').textContent = remainingText;
+        }
+        
+        const statusBadge = document.getElementById('session-status-badge');
+        statusBadge.className = `badge ${statusClass}`;
+        statusBadge.textContent = statusText;
+        
+        // Progress
+        let progress = 0;
+        let progressText = 'Not started';
+        if (session.current_page && session.b_pages && session.b_pages > 0) {
+            progress = Math.min(100, Math.round((session.current_page / session.b_pages) * 100));
+            progressText = `${session.current_page}/${session.b_pages} pages (${progress}%)`;
+        }
+        
+        const progressBar = document.getElementById('session-progress-bar');
+        progressBar.style.width = `${progress}%`;
+        progressBar.setAttribute('aria-valuenow', progress);
+        progressBar.className = `progress-bar bg-${statusClass.replace('bg-', '')}`;
+        
+        document.getElementById('session-progress-text').textContent = progressText;
     }
 });
 </script>

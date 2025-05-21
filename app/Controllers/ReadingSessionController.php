@@ -520,10 +520,35 @@ class ReadingSessionController extends BaseController
     /**
      * Get reading session details by ID (for admin view)
      * 
-     * @param int $sessionId Session ID
+     * @param int $id Session ID from route parameter
+     * @return void
      */
-    public function getReadingSessionById($sessionId)
+    public function getReadingSessionById($id = null)
     {
+        // Debug parameter handling
+        error_log("Getting session ID: " . ($id ?? 'null'));
+        
+        // If no ID provided, try to get from GET parameters
+        if ($id === null) {
+            // Get the URL path
+            $path = $_SERVER['REQUEST_URI'];
+            $parts = explode('/', $path);
+            $id = end($parts);
+            error_log("Extracted ID from URL: " . $id);
+            
+            // Additional fallback to GET parameter
+            if (!is_numeric($id)) {
+                $id = $_GET['id'] ?? null;
+                error_log("Using GET parameter ID: " . ($id ?? 'null'));
+            }
+        }
+        
+        // If still no valid ID, return error
+        if (!$id || !is_numeric($id)) {
+            $this->jsonError('Invalid session ID', 400);
+            return;
+        }
+        
         // Check if user is admin
         if (!$this->isAdmin()) {
             $this->jsonError('Access denied', 403);
@@ -531,7 +556,7 @@ class ReadingSessionController extends BaseController
         }
         
         // Get session with details
-        $session = $this->readingSessionModel->getReadingSessionWithDetails($sessionId);
+        $session = $this->readingSessionModel->getReadingSessionWithDetails($id);
         
         if (!$session) {
             $this->jsonError('Reading session not found', 404);
