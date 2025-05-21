@@ -74,15 +74,24 @@ include $headerPath;
                     <?php foreach ($sessions as $session): ?>
                         <?php 
                             $isExpired = $session['is_expired'];
-                            $statusClass = $isExpired ? 'danger' : 'success';
-                            $statusText = $isExpired ? 'Expired' : 'Active';
+                            $isPurchased = isset($session['is_purchased']) && $session['is_purchased'];
+                            
+                            // Set status based on purchase and expiration
+                            if ($isPurchased) {
+                                $statusClass = 'primary';
+                                $statusText = 'Owned';
+                            } else {
+                                $statusClass = $isExpired ? 'danger' : 'success';
+                                $statusText = $isExpired ? 'Expired' : 'Active';
+                            }
+                            
                             $coverPath = $session['b_cover_path'] 
                                 ? '/assets/images/book-cover/' . $session['b_cover_path'] 
                                 : '/assets/images/book-cover/default-cover.svg';
                             
-                            // Calculate time remaining
+                            // Calculate time remaining for non-purchased, active sessions
                             $timeRemaining = '';
-                            if (!$isExpired) {
+                            if (!$isExpired && !$isPurchased) {
                                 $now = new DateTime();
                                 $expiry = new DateTime($session['rs_expires_at']);
                                 $interval = $now->diff($expiry);
@@ -98,7 +107,7 @@ include $headerPath;
                                     <div class="position-absolute top-0 end-0 m-2">
                                         <span class="badge bg-<?= $statusClass ?> rounded-pill">
                                             <?= $statusText ?>
-                                            <?= !$isExpired ? " ($timeRemaining left)" : "" ?>
+                                            <?= (!$isExpired && !$isPurchased) ? " ($timeRemaining left)" : "" ?>
                                         </span>
                                     </div>
                                 </div>
@@ -108,7 +117,9 @@ include $headerPath;
                                     
                                     <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
                                         <small class="text-muted">
-                                            <?php if ($isExpired): ?>
+                                            <?php if ($isPurchased): ?>
+                                                <i class="bi bi-infinity me-1"></i> Unlimited access
+                                            <?php elseif ($isExpired): ?>
                                                 Expired: <?= date('M d, Y', strtotime($session['rs_expires_at'])) ?>
                                             <?php else: ?>
                                                 Expires: <?= date('M d, Y H:i', strtotime($session['rs_expires_at'])) ?>
@@ -135,9 +146,13 @@ include $headerPath;
                                     </div>
                                     
                                     <div class="d-grid">
-                                        <?php if ($isExpired): ?>
+                                        <?php if ($isPurchased): ?>
+                                            <a href="/reading-session/read-book/<?= $session['rs_id'] ?>" class="btn btn-primary">
+                                                <i class="bi bi-book me-1"></i> Continue Reading
+                                            </a>
+                                        <?php elseif ($isExpired): ?>
                                             <div class="btn-group">
-                                                <a href="/purchase/checkout?book_id=<?= $session['b_id'] ?>" class="btn btn-outline-primary">
+                                                <a href="/api/books/purchase/<?= $session['b_id'] ?>" class="btn btn-outline-primary purchase-book-btn" data-book-id="<?= $session['b_id'] ?>">
                                                     <i class="bi bi-cart-plus me-1"></i> Purchase
                                                 </a>
                                                 <button class="btn btn-outline-secondary" disabled>
@@ -202,3 +217,107 @@ include $headerPath;
 <?php
 include $footerPath;
 ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle purchase button clicks
+    const purchaseButtons = document.querySelectorAll('.purchase-book-btn');
+    
+    purchaseButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const bookId = this.getAttribute('data-book-id');
+            const originalText = this.innerHTML;
+            
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
+            
+            // Make purchase request
+            fetch(`/api/books/purchase/${bookId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Book purchased successfully! You now have unlimited access to this book.');
+                    
+                    // Reload the page after a short delay to show updated status
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    // Show error message
+                    showToast('error', data.message || 'Failed to purchase the book. Please try again.');
+                    
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Error purchasing book:', error);
+                showToast('error', 'An unexpected error occurred. Please try again.');
+                
+                // Reset button state
+                this.disabled = false;
+                this.innerHTML = originalText;
+            });
+        });
+    });
+    
+    // Toast notification function
+    function showToast(type, message) {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create a unique ID for the toast
+        const toastId = 'toast-' + Date.now();
+        
+        // Create the toast element
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.id = toastId;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        // Set the inner HTML of the toast
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Add the toast to the container
+        toastContainer.appendChild(toast);
+        
+        // Initialize the Bootstrap toast
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 3000
+        });
+        
+        // Show the toast
+        bsToast.show();
+        
+        // Remove the toast from the DOM when hidden
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+        });
+    }
+});
+</script>

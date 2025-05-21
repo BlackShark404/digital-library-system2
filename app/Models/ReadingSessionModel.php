@@ -143,9 +143,12 @@ class ReadingSessionModel extends BaseModel
             SELECT 
                 COUNT(*) as session_count
             FROM 
-                {$this->table}
+                {$this->table} rs
+            LEFT JOIN
+                user_purchase up ON (rs.ua_id = up.ua_id AND rs.b_id = up.b_id)
             WHERE 
-                b_id = :book_id AND rs_expires_at > NOW()
+                rs.b_id = :book_id AND rs.rs_expires_at > NOW()
+                AND up.up_id IS NULL -- Exclude users who purchased the book
         ";
         
         $result = $this->queryOne($sql, ['book_id' => $bookId]);
