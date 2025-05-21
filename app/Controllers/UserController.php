@@ -419,7 +419,9 @@ class UserController extends BaseController{
             return;
         }
         
-        $filePath = ROOT_DIR . '/public/assets/books/' . $book['b_file_path'];
+        // Use __DIR__ to navigate to the root directory
+        $rootDir = dirname(dirname(dirname(__FILE__)));
+        $filePath = $rootDir . '/public/assets/books/' . $book['b_file_path'];
         
         // Check if file exists
         if (!file_exists($filePath)) {
