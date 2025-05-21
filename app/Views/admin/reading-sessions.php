@@ -299,40 +299,50 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        console.log('Filtering with params:', queryParams.toString());
+        
         // Make AJAX request to get filtered data
         fetch('/api/reading-sessions?' + queryParams.toString())
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Received filtered data:', data);
                 if (data.success && data.data) {
                     // Table needs to be refreshed with new data
-                    if (typeof jQuery !== 'undefined' && jQuery.fn.DataTable) {
-                        const table = jQuery('#sessions-table').DataTable();
-                        table.clear();
-                        
-                        // Add new data
+                    const table = jQuery('#sessions-table').DataTable();
+                    
+                    // Clear the table first
+                    table.clear();
+                    
+                    // Add new data
+                    if (data.data.length > 0) {
                         data.data.forEach(session => {
                             addRowToTable(table, session);
                         });
                         
-                        if (data.data.length === 0) {
-                            const noDataRow = `
-                                <tr>
-                                    <td colspan="8" class="text-center py-4">
-                                        <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i> No reading sessions found with the selected filters</p>
-                                    </td>
-                                </tr>
-                            `;
-                            document.querySelector('#sessions-table tbody').innerHTML = noDataRow;
-                        }
+                        // Draw the table to update display
+                        table.draw();
                     } else {
-                        // Refresh the page as fallback
-                        console.error('DataTable is not available. Refreshing page instead.');
-                        window.location.reload();
+                        // If no data found, show message
+                        jQuery('#sessions-table tbody').html(`
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i> No reading sessions found with the selected filters</p>
+                                </td>
+                            </tr>
+                        `);
                     }
+                } else {
+                    console.error('API returned error or no data');
                 }
             })
             .catch(error => {
                 console.error('Error fetching data:', error);
+                alert('Error fetching data. Please try again.');
             });
     });
     
