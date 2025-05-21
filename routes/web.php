@@ -60,6 +60,7 @@ $accessMap = [
     '/reading-session/start-session' => ['user'],
     '/reading-session/update-progress' => ['user'],
     '/reading-session/check-availability' => ['user'],
+    '/api/books/purchase' => ['user'],
 
     // Shared (admin and user)
     '/logout' => ['admin', 'user'],
@@ -134,6 +135,9 @@ $router->map('GET', '/reading-session/check-availability/[i:bookId]', 'App\Contr
 $router->map('POST', '/user/wishlist/add', 'App\Controllers\UserController#addToWishlist', 'add_to_wishlist');
 $router->map('POST', '/user/wishlist/remove', 'App\Controllers\UserController#removeFromWishlist', 'remove_from_wishlist');
 $router->map('POST', '/user/wishlist/toggle', 'App\Controllers\UserController#toggleWishlist', 'toggle_wishlist');
+
+// Purchase route
+$router->map('POST', '/api/books/purchase/[i:id]', 'App\Controllers\BookController#purchaseBook', 'purchase_book');
 
 // Profile routes 
 $router->map('POST', '/user/user-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-user-profile-pic');

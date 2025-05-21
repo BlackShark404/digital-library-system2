@@ -121,6 +121,8 @@ include $headerPath;
     </div>
 </div>
 
+<script src="/assets/js/utility/toast-notifications.js"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Handle remove wishlist buttons

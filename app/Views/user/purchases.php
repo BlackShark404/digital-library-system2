@@ -66,165 +66,74 @@ include $headerPath;
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Sample purchase data - This would come from database in reality -->
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded me-3" style="width:60px; height:80px; display:flex; align-items:center; justify-content:center;">
-                                        <i class="bi bi-book" style="font-size:1.5rem;"></i>
+                        <?php
+                        if (!empty($purchased_books)) {
+                            foreach ($purchased_books as $index => $book) {
+                                // Generate a dummy order ID using the purchase ID and date
+                                $orderId = 'ORD-' . str_pad($book['up_id'], 5, '0', STR_PAD_LEFT);
+                                
+                                // Format the cover path
+                                $coverPath = !empty($book['b_cover_path']) 
+                                    ? '/assets/images/book-cover/' . $book['b_cover_path'] 
+                                    : '/assets/images/book-cover/default-cover.svg';
+                                
+                                // Format the date
+                                $purchaseDate = date('M d, Y', strtotime($book['up_purchased_at']));
+                        ?>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded me-3" style="width:60px; height:80px; overflow: hidden;">
+                                            <img src="<?php echo $coverPath; ?>" alt="<?php echo htmlspecialchars($book['b_title']); ?>" class="img-fluid" style="width:100%; height:100%; object-fit:cover;">
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0"><?php echo htmlspecialchars($book['b_title']); ?></h6>
+                                            <small class="text-muted"><?php echo htmlspecialchars($book['b_author']); ?></small>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h6 class="mb-0">The Great Gatsby</h6>
-                                        <small class="text-muted">F. Scott Fitzgerald</small>
+                                </td>
+                                <td><?php echo $purchaseDate; ?></td>
+                                <td>$<?php echo number_format((float)$book['b_price'], 2); ?></td>
+                                <td><span class="badge bg-secondary"><?php echo $orderId; ?></span></td>
+                                <td><span class="badge bg-success">Completed</span></td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="/reading-session/read-book/<?php echo $book['b_id']; ?>" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-book"></i> Read
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Download">
+                                            <i class="bi bi-download"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Receipt">
+                                            <i class="bi bi-receipt"></i>
+                                        </button>
                                     </div>
-                                </div>
-                            </td>
-                            <td>Mar 28, 2025</td>
-                            <td>$12.99</td>
-                            <td><span class="badge bg-secondary">ORD-23981</span></td>
-                            <td><span class="badge bg-success">Completed</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="reading_session.php?book_id=1" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-book"></i> Read
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Download">
-                                        <i class="bi bi-download"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Receipt">
-                                        <i class="bi bi-receipt"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded me-3" style="width:60px; height:80px; display:flex; align-items:center; justify-content:center;">
-                                        <i class="bi bi-book" style="font-size:1.5rem;"></i>
+                                </td>
+                            </tr>
+                        <?php
+                            }
+                        } else {
+                        ?>
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="py-5">
+                                        <i class="bi bi-bag-x" style="font-size: 3rem;"></i>
+                                        <h5 class="mt-3">No Purchases Yet</h5>
+                                        <p class="text-muted">You haven't purchased any books yet.</p>
+                                        <a href="/user/browse-books" class="btn btn-primary mt-2">
+                                            <i class="bi bi-book me-2"></i>Browse Books
+                                        </a>
                                     </div>
-                                    <div>
-                                        <h6 class="mb-0">To Kill a Mockingbird</h6>
-                                        <small class="text-muted">Harper Lee</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>Mar 15, 2025</td>
-                            <td>$9.99</td>
-                            <td><span class="badge bg-secondary">ORD-23754</span></td>
-                            <td><span class="badge bg-success">Completed</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="reading_session.php?book_id=2" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-book"></i> Read
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Download">
-                                        <i class="bi bi-download"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Receipt">
-                                        <i class="bi bi-receipt"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded me-3" style="width:60px; height:80px; display:flex; align-items:center; justify-content:center;">
-                                        <i class="bi bi-book" style="font-size:1.5rem;"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0">1984</h6>
-                                        <small class="text-muted">George Orwell</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>Feb 23, 2025</td>
-                            <td>$11.49</td>
-                            <td><span class="badge bg-secondary">ORD-23112</span></td>
-                            <td><span class="badge bg-success">Completed</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="reading_session.php?book_id=3" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-book"></i> Read
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Download">
-                                        <i class="bi bi-download"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Receipt">
-                                        <i class="bi bi-receipt"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded me-3" style="width:60px; height:80px; display:flex; align-items:center; justify-content:center;">
-                                        <i class="bi bi-book" style="font-size:1.5rem;"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0">The Hobbit</h6>
-                                        <small class="text-muted">J.R.R. Tolkien</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>Feb 12, 2025</td>
-                            <td>$14.99</td>
-                            <td><span class="badge bg-secondary">ORD-22987</span></td>
-                            <td><span class="badge bg-success">Completed</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="reading_session.php?book_id=4" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-book"></i> Read
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Download">
-                                        <i class="bi bi-download"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Receipt">
-                                        <i class="bi bi-receipt"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded me-3" style="width:60px; height:80px; display:flex; align-items:center; justify-content:center;">
-                                        <i class="bi bi-book" style="font-size:1.5rem;"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0">Pride and Prejudice</h6>
-                                        <small class="text-muted">Jane Austen</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>Jan 17, 2025</td>
-                            <td>$7.99</td>
-                            <td><span class="badge bg-secondary">ORD-22456</span></td>
-                            <td><span class="badge bg-success">Completed</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="reading_session.php?book_id=5" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-book"></i> Read
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Download">
-                                        <i class="bi bi-download"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Receipt">
-                                        <i class="bi bi-receipt"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                                </td>
+                            </tr>
+                        <?php
+                        }
+                        ?>
                     </tbody>
                 </table>
             </div>
         </div>
+        <?php if (!empty($purchased_books) && count($purchased_books) > 10): ?>
         <div class="card-footer bg-white">
             <nav>
                 <ul class="pagination justify-content-center mb-0">
@@ -240,6 +149,7 @@ include $headerPath;
                 </ul>
             </nav>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

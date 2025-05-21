@@ -164,7 +164,8 @@ include $headerPath;
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" id="buyBookBtn"><i class="bi bi-cart-plus me-2"></i>Buy Now</button>
+                <span id="purchaseStatus" class="badge bg-success me-2 d-none">Purchased</span>
+                <button type="button" class="btn btn-success" id="buyBookBtn" data-book-id=""><i class="bi bi-cart-plus me-2"></i>Buy Now</button>
             </div>
         </div>
     </div>
@@ -187,6 +188,8 @@ include $headerPath;
         </div>
     </div>
 </div>
+
+<script src="/assets/js/utility/toast-notifications.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -237,6 +240,137 @@ include $headerPath;
                 .catch(error => {
                     console.error('Error toggling wishlist:', error);
                 });
+            });
+        });
+
+        // View book details modal
+        const viewButtons = document.querySelectorAll('.view-book-details');
+        const buyBookBtn = document.getElementById('buyBookBtn');
+        const purchaseStatus = document.getElementById('purchaseStatus');
+        
+        viewButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const bookId = this.getAttribute('data-book-id');
+                
+                // Fetch book details
+                fetch(`/api/books/${bookId}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const book = data.data;
+                        
+                        // Populate modal
+                        document.getElementById('modalCoverImage').src = book.cover_url;
+                        document.getElementById('modalTitle').textContent = book.b_title;
+                        document.getElementById('modalAuthor').textContent = `by ${book.b_author}`;
+                        document.getElementById('modalGenre').textContent = book.genre || 'Uncategorized';
+                        document.getElementById('modalPublisher').textContent = book.b_publisher || 'N/A';
+                        document.getElementById('modalPublicationDate').textContent = book.b_publication_date || 'N/A';
+                        document.getElementById('modalIsbn').textContent = book.b_isbn || 'N/A';
+                        document.getElementById('modalPages').textContent = book.b_pages || 'N/A';
+                        
+                        // Format price
+                        const price = parseFloat(book.b_price);
+                        document.getElementById('modalPrice').textContent = price > 0 
+                            ? `$${price.toFixed(2)}` 
+                            : 'Free';
+                            
+                        document.getElementById('modalDescription').textContent = book.b_description || 'No description available.';
+                        
+                        // Set book ID for buy button
+                        buyBookBtn.setAttribute('data-book-id', book.b_id);
+                        
+                        // Check if book is already purchased
+                        fetch(`/reading-session/check-availability/${book.b_id}`, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(availData => {
+                            if (availData.success) {
+                                if (availData.data.is_purchased) {
+                                    // Book already purchased
+                                    buyBookBtn.classList.add('d-none');
+                                    purchaseStatus.classList.remove('d-none');
+                                } else {
+                                    // Book not purchased
+                                    buyBookBtn.classList.remove('d-none');
+                                    purchaseStatus.classList.add('d-none');
+                                    
+                                    // Disable buy button for free books
+                                    if (price <= 0) {
+                                        buyBookBtn.disabled = true;
+                                        buyBookBtn.textContent = 'Free Book';
+                                    } else {
+                                        buyBookBtn.disabled = false;
+                                        buyBookBtn.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Buy Now';
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Show modal
+                        new bootstrap.Modal(document.getElementById('bookDetailModal')).show();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching book details:', error);
+                });
+            });
+        });
+        
+        // Handle book purchase
+        buyBookBtn.addEventListener('click', function() {
+            const bookId = this.getAttribute('data-book-id');
+            
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
+            
+            // Make purchase request
+            fetch(`/api/books/purchase/${bookId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showToast('success', 'Success', 'Book purchased successfully! You can now read it anytime.');
+                    
+                    // Update UI to show purchased state
+                    buyBookBtn.classList.add('d-none');
+                    purchaseStatus.classList.remove('d-none');
+                    
+                    // Update the read button for this book to show it's purchased
+                    const readButton = document.querySelector(`.read-book-btn[data-book-id="${bookId}"]`);
+                    if (readButton) {
+                        readButton.classList.add('purchased');
+                    }
+                } else {
+                    // Show error message
+                    showToast('error', 'Error', data.message || 'Failed to purchase the book. Please try again.');
+                    
+                    // Reset button state
+                    buyBookBtn.disabled = false;
+                    buyBookBtn.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Buy Now';
+                }
+            })
+            .catch(error => {
+                console.error('Error purchasing book:', error);
+                showToast('error', 'Error', 'An unexpected error occurred. Please try again.');
+                
+                // Reset button state
+                buyBookBtn.disabled = false;
+                buyBookBtn.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Buy Now';
             });
         });
 
@@ -317,72 +451,6 @@ include $headerPath;
             window.location.href = '/user/browse-books';
         });
 
-        // Handle "View Details" button click to show modal
-        const bookDetailModal = new bootstrap.Modal(document.getElementById('bookDetailModal'));
-        document.querySelectorAll('.view-book-details').forEach(button => {
-            button.addEventListener('click', function() {
-                const bookId = this.getAttribute('data-book-id');
-                fetchBookDetailsAndShowModal(bookId);
-            });
-        });
-
-        function fetchBookDetailsAndShowModal(bookId) {
-            // Show a loading state in modal (optional)
-            document.getElementById('modalTitle').textContent = 'Loading...';
-            // ... reset other fields ...
-
-            fetch(`/api/books/${bookId}`, {
-                method: 'GET', // Explicitly stating GET, though it's default
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/json' // Though not strictly necessary for GET, good practice if server checks
-                }
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success && data.data) {
-                        const book = data.data;
-                        document.getElementById('modalCoverImage').src = book.cover_url || '../assets/images/book-cover/default-cover.svg';
-                        document.getElementById('modalTitle').textContent = book.b_title || 'N/A';
-                        document.getElementById('modalAuthor').textContent = book.b_author ? `by ${book.b_author}` : 'N/A';
-                        document.getElementById('modalGenre').textContent = book.genre || 'N/A'; // Assumes 'genre' field exists, adjust if it's 'g_name' or from a join
-                        document.getElementById('modalPublisher').textContent = book.b_publisher || 'N/A';
-                        document.getElementById('modalPublicationDate').textContent = book.b_publication_date ? formatDate(book.b_publication_date) : 'N/A';
-                        document.getElementById('modalIsbn').textContent = book.b_isbn || 'N/A';
-                        document.getElementById('modalPages').textContent = book.b_pages || 'N/A';
-                        document.getElementById('modalPrice').textContent = book.b_price ? `$${parseFloat(book.b_price).toFixed(2)}` : 'Free';
-                        document.getElementById('modalDescription').innerHTML = book.b_description ? book.b_description.replace(/\\n/g, '<br>') : 'No description available.';
-                        
-                        // Update Buy button with book ID for potential future use
-                        document.getElementById('buyBookBtn').setAttribute('data-book-id', bookId);
-
-                        bookDetailModal.show();
-                    } else {
-                        showToast(data.message || 'Failed to load book details.', 'danger');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching book details:', error);
-                    showToast('Error fetching book details. Please try again.', 'danger');
-                    document.getElementById('modalTitle').textContent = 'Error';
-                    // Potentially hide modal or show error message inside it
-                });
-        }
-        
-        // Add event listener for Buy button (no backend yet)
-        document.getElementById('buyBookBtn').addEventListener('click', function() {
-            const bookId = this.getAttribute('data-book-id');
-            // For now, just log or show an alert. Later, this will trigger purchase flow.
-            console.log('Buy button clicked for book ID:', bookId);
-            showToast(`"Buy" clicked for book ID: ${bookId}. Functionality to be implemented.`, 'info');
-            // bookDetailModal.hide(); // Optionally hide modal after clicking buy
-        });
-
         // Format Date (if not already present)
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
@@ -392,7 +460,7 @@ include $headerPath;
         }
 
         // Toast notification function
-        function showToast(message, type = 'info') {
+        function showToast(type = 'info', title = 'Info', message = '') {
             // Create toast container if it doesn't exist
             let toastContainer = document.querySelector('.toast-container');
             if (!toastContainer) {
@@ -412,7 +480,8 @@ include $headerPath;
             toastEl.innerHTML = `
                 <div class="d-flex">
                     <div class="toast-body">
-                        ${message}
+                        <strong>${title}</strong>
+                        <p>${message}</p>
                     </div>
                     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>

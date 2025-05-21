@@ -426,4 +426,63 @@ class ReadingSessionModel extends BaseModel
             'limit' => $limit
         ]);
     }
+    
+    /**
+     * Purchase a book for a user
+     * 
+     * @param int $userId User ID
+     * @param int $bookId Book ID
+     * @return bool True on success, false on failure
+     */
+    public function purchaseBook($userId, $bookId)
+    {
+        // Check if already purchased
+        if ($this->hasUserPurchasedBook($userId, $bookId)) {
+            return true; // Already purchased, consider it successful
+        }
+        
+        $sql = "
+            INSERT INTO user_purchase (ua_id, b_id)
+            VALUES (:user_id, :book_id)
+        ";
+        
+        return $this->execute($sql, [
+            'user_id' => $userId,
+            'book_id' => $bookId
+        ]);
+    }
+    
+    /**
+     * Get all books purchased by a user
+     * 
+     * @param int $userId User ID
+     * @return array Purchased books with their details
+     */
+    public function getUserPurchases($userId)
+    {
+        $sql = "
+            SELECT 
+                up.up_id,
+                up.ua_id,
+                up.b_id,
+                up.up_purchased_at,
+                b.b_title,
+                b.b_author,
+                b.b_cover_path,
+                b.b_file_path,
+                b.b_price,
+                b.b_isbn,
+                b.b_publisher
+            FROM 
+                user_purchase up
+            JOIN 
+                books b ON up.b_id = b.b_id
+            WHERE 
+                up.ua_id = :user_id
+            ORDER BY 
+                up.up_purchased_at DESC
+        ";
+        
+        return $this->query($sql, ['user_id' => $userId]);
+    }
 } 

@@ -387,4 +387,55 @@ class BookController extends BaseController
             return null;
         }
     }
+    
+    /**
+     * Purchase a book
+     * 
+     * @param int $id Book ID
+     */
+    public function purchaseBook($id)
+    {
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            $this->jsonError('You must be logged in to purchase books', 401);
+            return;
+        }
+        
+        // Check if the request is AJAX
+        if (!$this->isAjax()) {
+            $this->jsonError('Invalid request', 400);
+            return;
+        }
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Check if book exists
+        $book = $this->bookModel->getBookById($id);
+        if (!$book) {
+            $this->jsonError('Book not found', 404);
+            return;
+        }
+        
+        // Create instance of ReadingSessionModel to use purchaseBook method
+        $readingSessionModel = new \App\Models\ReadingSessionModel();
+        
+        // Check if already purchased
+        if ($readingSessionModel->hasUserPurchasedBook($userId, $id)) {
+            $this->jsonSuccess(['already_owned' => true], 'You already own this book');
+            return;
+        }
+        
+        // Process the purchase
+        $success = $readingSessionModel->purchaseBook($userId, $id);
+        
+        if ($success) {
+            // Log the purchase activity
+            $activityLogModel = new \App\Models\ActivityLogModel();
+            $activityLogModel->logActivity($userId, 'PURCHASE', 'Purchased book: ' . $book['b_title']);
+            
+            $this->jsonSuccess(['purchased' => true], 'Book purchased successfully');
+        } else {
+            $this->jsonError('Failed to process purchase', 500);
+        }
+    }
 } 

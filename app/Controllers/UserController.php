@@ -97,7 +97,23 @@ class UserController extends BaseController{
     }
 
     public function renderPurchases() {
-        $this->render('/user/purchases');
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Get the reading session model to access purchase data
+        $readingSessionModel = new \App\Models\ReadingSessionModel();
+        
+        // Get user's purchased books
+        $purchasedBooks = $readingSessionModel->getUserPurchases($userId);
+        
+        $this->render('/user/purchases', [
+            'purchased_books' => $purchasedBooks
+        ]);
     }
 
     public function renderUserProfile() {
