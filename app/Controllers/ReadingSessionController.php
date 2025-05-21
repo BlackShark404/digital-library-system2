@@ -565,4 +565,92 @@ class ReadingSessionController extends BaseController
         
         $this->jsonSuccess($session);
     }
+    
+    /**
+     * Get purchase details by ID
+     * 
+     * @param int $id Purchase ID
+     */
+    public function getPurchaseById($id)
+    {
+        // Check if request is AJAX
+        if (!$this->isAjax()) {
+            $this->jsonError('Invalid request', 400);
+            return;
+        }
+        
+        // Get purchase details
+        $purchase = $this->readingSessionModel->getPurchaseById($id);
+        
+        if (!$purchase) {
+            $this->jsonError('Purchase not found', 404);
+            return;
+        }
+        
+        $this->jsonSuccess(['data' => $purchase], 'Purchase details retrieved successfully');
+    }
+    
+    /**
+     * Export purchases to CSV
+     */
+    public function exportPurchases()
+    {
+        // Only admins can export purchases
+        if (!$this->isAdmin()) {
+            $this->redirect('/error/403');
+            return;
+        }
+        
+        // Get filter parameters
+        $search = $this->getRequestParam('search', '');
+        $dateFrom = $this->getRequestParam('date_from', '');
+        $dateTo = $this->getRequestParam('date_to', '');
+        
+        // Get purchases
+        $purchases = $this->readingSessionModel->getAllPurchases($search, $dateFrom, $dateTo);
+        
+        // Prepare CSV output
+        $output = fopen('php://temp', 'w');
+        
+        // Add CSV headers
+        fputcsv($output, [
+            'ID',
+            'User ID',
+            'User Name',
+            'User Email',
+            'Book ID',
+            'Book Title',
+            'Book Author',
+            'Price',
+            'Purchase Date'
+        ]);
+        
+        // Add purchase data
+        foreach ($purchases as $purchase) {
+            fputcsv($output, [
+                $purchase['up_id'],
+                $purchase['ua_id'],
+                $purchase['ua_first_name'] . ' ' . $purchase['ua_last_name'],
+                $purchase['ua_email'],
+                $purchase['b_id'],
+                $purchase['b_title'],
+                $purchase['b_author'],
+                $purchase['b_price'],
+                $purchase['up_purchased_at']
+            ]);
+        }
+        
+        // Get the CSV content
+        rewind($output);
+        $csvContent = stream_get_contents($output);
+        fclose($output);
+        
+        // Set headers for CSV download
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="purchases_export_' . date('Y-m-d') . '.csv"');
+        
+        // Output CSV
+        echo $csvContent;
+        exit;
+    }
 } 

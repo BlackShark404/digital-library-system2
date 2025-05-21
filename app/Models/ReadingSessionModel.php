@@ -706,4 +706,108 @@ class ReadingSessionModel extends BaseModel
         $result = $this->queryOne($sql);
         return $result ? (int)$result['total'] : 0;
     }
+    
+    /**
+     * Get all purchases with user and book details for admin view
+     * 
+     * @param string $search Optional search term for title, author, or user
+     * @param string $dateFrom Optional start date filter
+     * @param string $dateTo Optional end date filter
+     * @return array All purchases with user and book details
+     */
+    public function getAllPurchases($search = '', $dateFrom = '', $dateTo = '')
+    {
+        $params = [];
+        $conditions = [];
+        
+        // Base query
+        $sql = "
+            SELECT 
+                up.up_id,
+                up.ua_id,
+                up.b_id,
+                up.up_purchased_at,
+                ua.ua_first_name,
+                ua.ua_last_name,
+                ua.ua_email,
+                ua.ua_profile_url,
+                b.b_title,
+                b.b_author,
+                b.b_cover_path,
+                b.b_price
+            FROM 
+                user_purchase up
+            JOIN 
+                books b ON up.b_id = b.b_id
+            JOIN
+                user_account ua ON up.ua_id = ua.ua_id
+            WHERE 1=1
+        ";
+        
+        // Add search condition
+        if (!empty($search)) {
+            $conditions[] = "(b.b_title LIKE :search OR b.b_author LIKE :search OR 
+                             ua.ua_first_name LIKE :search OR ua.ua_last_name LIKE :search OR
+                             ua.ua_email LIKE :search)";
+            $params['search'] = "%{$search}%";
+        }
+        
+        // Add date range conditions
+        if (!empty($dateFrom)) {
+            $conditions[] = "up.up_purchased_at >= :date_from";
+            $params['date_from'] = $dateFrom . ' 00:00:00';
+        }
+        
+        if (!empty($dateTo)) {
+            $conditions[] = "up.up_purchased_at <= :date_to";
+            $params['date_to'] = $dateTo . ' 23:59:59';
+        }
+        
+        // Add conditions to query
+        if (!empty($conditions)) {
+            $sql .= " AND " . implode(" AND ", $conditions);
+        }
+        
+        // Add order by
+        $sql .= " ORDER BY up.up_purchased_at DESC";
+        
+        return $this->query($sql, $params);
+    }
+    
+    /**
+     * Get a purchase by ID with detailed user and book information
+     * 
+     * @param int $purchaseId Purchase ID
+     * @return array|null Purchase with user and book details or null if not found
+     */
+    public function getPurchaseById($purchaseId)
+    {
+        $sql = "
+            SELECT 
+                up.up_id,
+                up.ua_id,
+                up.b_id,
+                up.up_purchased_at,
+                ua.ua_first_name,
+                ua.ua_last_name,
+                ua.ua_email,
+                ua.ua_profile_url,
+                b.b_title,
+                b.b_author,
+                b.b_publisher,
+                b.b_cover_path,
+                b.b_price,
+                b.b_isbn
+            FROM 
+                user_purchase up
+            JOIN 
+                books b ON up.b_id = b.b_id
+            JOIN
+                user_account ua ON up.ua_id = ua.ua_id
+            WHERE 
+                up.up_id = :purchase_id
+        ";
+        
+        return $this->queryOne($sql, ['purchase_id' => $purchaseId]);
+    }
 } 

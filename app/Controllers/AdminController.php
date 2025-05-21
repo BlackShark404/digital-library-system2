@@ -47,7 +47,23 @@ class AdminController extends BaseController {
     }
 
     public function renderPurchases() {
-        $this->render('admin/purchases');
+        // Get filter parameters
+        $search = $this->getRequestParam('search', '');
+        $dateFrom = $this->getRequestParam('date_from', '');
+        $dateTo = $this->getRequestParam('date_to', '');
+        
+        // Get purchases data
+        $purchases = $this->readingSessionModel->getAllPurchases($search, $dateFrom, $dateTo);
+        
+        // Render view with data
+        $this->render('admin/purchases', [
+            'purchases' => $purchases,
+            'filters' => [
+                'search' => $search,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo
+            ]
+        ]);
     }
 
     public function renderActivityLogs() {

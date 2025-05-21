@@ -7,384 +7,345 @@ include $headerPath;
 
 <!-- Purchase Management Content -->
 <div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="bi bi-cart-check me-2"></i>Purchase Management</h1>
+        <a href="/api/purchases/export" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export CSV
+        </a>
+    </div>
     
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Filter Purchases</h5>
+            <form id="filter-form" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="search" name="search" placeholder="Book title, author, or user" value="<?= $filters['search'] ?? '' ?>">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_from" class="form-label">Date From</label>
+                    <input type="date" class="form-control" id="date_from" name="date_from" value="<?= $filters['date_from'] ?? '' ?>">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_to" class="form-label">Date To</label>
+                    <input type="date" class="form-control" id="date_to" name="date_to" value="<?= $filters['date_to'] ?? '' ?>">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="d-grid gap-2 w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search me-1"></i> Filter
+                        </button>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button type="button" id="reset-filter" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i> Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-   
     <!-- Purchase Table -->
-    <div class="card">
+    <div class="card border-0 shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table id="purchases-table" class="table table-hover w-100">
                     <thead class="table-light">
                         <tr>
-                            <th scope="col">ID</th>
-                            <th scope="col">User</th>
-                            <th scope="col">Book</th>
-                            <th scope="col">Amount</th>
-                            <th scope="col">Date</th>
-                            <th scope="col">Payment Method</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Actions</th>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Book</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Hardcoded sample data -->
-                        <tr>
-                            <td>#PUR-1082</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img src="<?= Session::get('profile_url') ?>" alt="profile" class="avatar-wrapper-compact avatar-compact">
-                                    <span>John Doe</span>
-                                </div>
-                            </td>
-                            <td>The Great Adventure</td>
-                            <td>$19.99</td>
-                            <td>2025-03-28</td>
-                            <td><i class="bi bi-credit-card me-1"></i> Credit Card</td>
-                            <td><span class="badge bg-success">Completed</span></td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        Actions
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-eye me-2"></i>View Details</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-receipt me-2"></i>Generate Invoice</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-arrow-counterclockwise me-2"></i>Process Refund</a></li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#PUR-1081</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <span class="avatar-sm bg-info text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">MS</span>
-                                    <span>Maria Smith</span>
-                                </div>
-                            </td>
-                            <td>Business Strategy 101</td>
-                            <td>$24.99</td>
-                            <td>2025-03-27</td>
-                            <td><i class="bi bi-paypal me-1"></i> PayPal</td>
-                            <td><span class="badge bg-success">Completed</span></td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        Actions
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-eye me-2"></i>View Details</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-receipt me-2"></i>Generate Invoice</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-arrow-counterclockwise me-2"></i>Process Refund</a></li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#PUR-1080</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <span class="avatar-sm bg-warning text-dark rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">RJ</span>
-                                    <span>Robert Johnson</span>
-                                </div>
-                            </td>
-                            <td>Creative Writing Course</td>
-                            <td>$49.99</td>
-                            <td>2025-03-26</td>
-                            <td><i class="bi bi-credit-card me-1"></i> Credit Card</td>
-                            <td><span class="badge bg-warning text-dark">Pending</span></td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        Actions
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-eye me-2"></i>View Details</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-check-circle me-2"></i>Mark as Complete</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-x-circle me-2"></i>Cancel Purchase</a></li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#PUR-1079</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <span class="avatar-sm bg-danger text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">EW</span>
-                                    <span>Emily Wilson</span>
-                                </div>
-                            </td>
-                            <td>Psychology Basics</td>
-                            <td>$29.99</td>
-                            <td>2025-03-25</td>
-                            <td><i class="bi bi-apple me-1"></i> Apple Pay</td>
-                            <td><span class="badge bg-danger">Refunded</span></td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        Actions
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-eye me-2"></i>View Details</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-receipt me-2"></i>View Refund Details</a></li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>#PUR-1078</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <span class="avatar-sm bg-success text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">DT</span>
-                                    <span>David Thompson</span>
-                                </div>
-                            </td>
-                            <td>Python Programming</td>
-                            <td>$34.99</td>
-                            <td>2025-03-25</td>
-                            <td><i class="bi bi-google me-1"></i> Google Pay</td>
-                            <td><span class="badge bg-secondary">Failed</span></td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        Actions
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-eye me-2"></i>View Details</a></li>
-                                        <li><a class="dropdown-item" href="#"><i class="bi bi-arrow-repeat me-2"></i>Retry Payment</a></li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
+                        <?php if (!empty($purchases)): ?>
+                            <?php foreach ($purchases as $purchase): ?>
+                                <tr>
+                                    <td data-order="<?= $purchase['up_id'] ?>">#PUR-<?= $purchase['up_id'] ?></td>
+                                    <td data-search="<?= htmlspecialchars($purchase['ua_first_name'] . ' ' . $purchase['ua_last_name'] . ' ' . $purchase['ua_email']) ?>">
+                                        <div class="d-flex align-items-center">
+                                            <?php if (!empty($purchase['ua_profile_url'])): ?>
+                                                <img src="<?= $purchase['ua_profile_url'] ?>" alt="profile" class="avatar-wrapper-compact avatar-compact me-2 rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
+                                            <?php else: ?>
+                                                <?php 
+                                                    $initials = strtoupper(substr($purchase['ua_first_name'], 0, 1) . substr($purchase['ua_last_name'], 0, 1));
+                                                    $colors = ['primary', 'success', 'danger', 'warning', 'info'];
+                                                    $colorIndex = crc32($purchase['ua_email']) % count($colors);
+                                                    $color = $colors[$colorIndex];
+                                                ?>
+                                                <span class="avatar-sm bg-<?= $color ?> text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;"><?= $initials ?></span>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="fw-bold"><?= $purchase['ua_first_name'] . ' ' . $purchase['ua_last_name'] ?></div>
+                                                <div class="small text-muted"><?= $purchase['ua_email'] ?></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td data-search="<?= htmlspecialchars($purchase['b_title'] . ' ' . $purchase['b_author']) ?>">
+                                        <div class="d-flex align-items-center">
+                                            <?php 
+                                                $coverPath = $purchase['b_cover_path'] 
+                                                    ? '/assets/images/book-cover/' . $purchase['b_cover_path'] 
+                                                    : '/assets/images/book-cover/default-cover.svg';
+                                            ?>
+                                            <img src="<?= $coverPath ?>" alt="Book Cover" class="me-2" style="width: 40px; height: 60px; object-fit: cover; border-radius: 2px;">
+                                            <div>
+                                                <div class="fw-bold"><?= $purchase['b_title'] ?></div>
+                                                <div class="small text-muted"><?= $purchase['b_author'] ?></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td data-order="<?= $purchase['b_price'] ?>">$<?= number_format($purchase['b_price'], 2) ?></td>
+                                    <td data-order="<?= strtotime($purchase['up_purchased_at']) ?>"><?= date('M d, Y H:i', strtotime($purchase['up_purchased_at'])) ?></td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-primary view-purchase-btn" data-id="<?= $purchase['up_id'] ?>">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i> No purchases found</p>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
-        <div class="card-footer">
-            <nav>
-                <ul class="pagination justify-content-center justify-content-md-end mb-0">
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" tabindex="-1"><i class="bi bi-chevron-left"></i></a>
-                    </li>
-                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item">
-                        <a class="page-link" href="#"><i class="bi bi-chevron-right"></i></a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
     </div>
 </div>
 
-<!-- Export Modal -->
-<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+<!-- Purchase Details Modal -->
+<div class="modal fade" id="purchaseDetailsModal" tabindex="-1" aria-labelledby="purchaseDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Export Purchases</h5>
+                <h5 class="modal-title" id="purchaseDetailsModalLabel">Purchase Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <label class="form-label">Date Range</label>
-                        <select class="form-select mb-2">
-                            <option value="all">All Time</option>
-                            <option value="today">Today</option>
-                            <option value="week">This Week</option>
-                            <option value="month">This Month</option>
-                            <option value="custom">Custom Range</option>
-                        </select>
-                        <div class="input-group" id="customExportDates" style="display: none;">
-                            <input type="date" class="form-control">
-                            <span class="input-group-text">to</span>
-                            <input type="date" class="form-control">
+                <div id="purchase-loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading purchase details...</p>
+                </div>
+                <div id="purchase-details" class="d-none">
+                    <div class="row mb-4">
+                        <div class="col-md-4 text-center">
+                            <img id="purchase-book-cover" src="" alt="Book Cover" class="img-fluid rounded mb-2" style="max-height: 200px;">
+                        </div>
+                        <div class="col-md-8">
+                            <h4 id="purchase-book-title" class="mb-1"></h4>
+                            <p id="purchase-book-author" class="text-muted"></p>
+                            
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="badge bg-success">Purchased</span>
+                                <span class="text-muted" id="purchase-date"></span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h5 class="text-primary" id="purchase-amount"></h5>
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Format</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="exportFormat" id="formatCSV" checked>
-                            <label class="form-check-label" for="formatCSV">
-                                CSV
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="exportFormat" id="formatExcel">
-                            <label class="form-check-label" for="formatExcel">
-                                Excel
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="exportFormat" id="formatPDF">
-                            <label class="form-check-label" for="formatPDF">
-                                PDF
-                            </label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Include Fields</label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="fieldID" checked>
-                                    <label class="form-check-label" for="fieldID">ID</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="fieldUser" checked>
-                                    <label class="form-check-label" for="fieldUser">User</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="fieldBook" checked>
-                                    <label class="form-check-label" for="fieldBook">Book</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="fieldAmount" checked>
-                                    <label class="form-check-label" for="fieldAmount">Amount</label>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">User Information</h6>
+                                    <div class="mb-2">
+                                        <strong>Name:</strong> <span id="purchase-user-name"></span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Email:</strong> <span id="purchase-user-email"></span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="fieldDate" checked>
-                                    <label class="form-check-label" for="fieldDate">Date</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="fieldMethod" checked>
-                                    <label class="form-check-label" for="fieldMethod">Payment Method</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="fieldStatus" checked>
-                                    <label class="form-check-label" for="fieldStatus">Status</label>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">Transaction Information</h6>
+                                    <div class="mb-2">
+                                        <strong>Transaction ID:</strong> <span id="purchase-id"></span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Date:</strong> <span id="purchase-full-date"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </form>
+                </div>
+                <div id="purchase-error" class="alert alert-danger d-none">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Error loading purchase details.
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Export</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Add Purchase Modal -->
-<div class="modal fade" id="addPurchaseModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Purchase</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <label class="form-label">User</label>
-                        <select class="form-select">
-                            <option value="">Select User</option>
-                            <option value="1">John Doe</option>
-                            <option value="2">Maria Smith</option>
-                            <option value="3">Robert Johnson</option>
-                            <option value="4">Emily Wilson</option>
-                            <option value="5">David Thompson</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Book</label>
-                        <select class="form-select">
-                            <option value="">Select Book</option>
-                            <option value="1">The Great Adventure</option>
-                            <option value="2">Business Strategy 101</option>
-                            <option value="3">Creative Writing Course</option>
-                            <option value="4">Psychology Basics</option>
-                            <option value="5">Python Programming</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Amount ($)</label>
-                        <input type="number" class="form-control" step="0.01" min="0">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Date</label>
-                        <input type="date" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Payment Method</label>
-                        <select class="form-select">
-                            <option value="">Select Payment Method</option>
-                            <option value="credit">Credit Card</option>
-                            <option value="paypal">PayPal</option>
-                            <option value="applepay">Apple Pay</option>
-                            <option value="googlepay">Google Pay</option>
-                            <option value="banktransfer">Bank Transfer</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Status</label>
-                        <select class="form-select">
-                            <option value="completed">Completed</option>
-                            <option value="pending">Pending</option>
-                            <option value="refunded">Refunded</option>
-                            <option value="failed">Failed</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea class="form-control" rows="3"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success">Add Purchase</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Custom JavaScript for the Purchase UI -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle date filter change
-        const dateFilter = document.getElementById('dateFilter');
-        const customDateContainer = document.getElementById('customDateContainer');
-
-        dateFilter.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customDateContainer.style.display = 'block';
-            } else {
-                customDateContainer.style.display = 'none';
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DataTable with a delay to ensure DOM is fully processed
+    setTimeout(function() {
+        if (typeof jQuery !== 'undefined' && typeof $.fn.DataTable !== 'undefined') {
+            try {
+                // Destroy existing DataTable instance if any
+                if ($.fn.DataTable.isDataTable('#purchases-table')) {
+                    $('#purchases-table').DataTable().destroy();
+                }
+                
+                // Initialize with simpler configuration
+                $('#purchases-table').DataTable({
+                    responsive: true,
+                    pageLength: 15,
+                    searching: false, // Disable DataTables built-in search since we have our own filter form
+                    language: {
+                        emptyTable: "No purchases found",
+                        info: "Showing _START_ to _END_ of _TOTAL_ purchases",
+                        infoEmpty: "Showing 0 to 0 of 0 purchases",
+                        paginate: {
+                            first: '<i class="bi bi-chevron-double-left"></i>',
+                            last: '<i class="bi bi-chevron-double-right"></i>',
+                            next: '<i class="bi bi-chevron-right"></i>',
+                            previous: '<i class="bi bi-chevron-left"></i>'
+                        }
+                    },
+                    dom: '<"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7"p>>',
+                    columnDefs: [
+                        { orderable: false, targets: 5 } // Disable sorting on the actions column
+                    ]
+                });
+            } catch (e) {
+                console.error("DataTable initialization error:", e);
             }
-        });
-
-        // Reset filters button
-        const resetFilters = document.getElementById('resetFilters');
-        resetFilters.addEventListener('click', function() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('statusFilter').selectedIndex = 0;
-            document.getElementById('dateFilter').selectedIndex = 0;
-            customDateContainer.style.display = 'none';
-        });
-
-        // Handle export modal custom date range
-        const exportSelect = document.querySelector('#exportModal select');
-        const customExportDates = document.getElementById('customExportDates');
-
-        exportSelect.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customExportDates.style.display = 'flex';
-            } else {
-                customExportDates.style.display = 'none';
+        }
+    }, 100); // Short delay helps ensure the DOM is ready
+    
+    // Handle filter form submission
+    document.getElementById('filter-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get form data
+        const formData = new FormData(this);
+        const queryParams = new URLSearchParams();
+        
+        // Add form fields to query params
+        for (const [key, value] of formData.entries()) {
+            if (value.trim() !== '') {
+                queryParams.append(key, value);
             }
+        }
+        
+        // Navigate to the filtered URL
+        window.location.href = '/admin/purchases?' + queryParams.toString();
+    });
+    
+    // Handle reset button
+    document.getElementById('reset-filter').addEventListener('click', function() {
+        // Reset form fields
+        document.getElementById('filter-form').reset();
+        
+        // Redirect to the base URL
+        window.location.href = '/admin/purchases';
+    });
+    
+    // Handle view purchase buttons
+    document.querySelectorAll('.view-purchase-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const purchaseId = this.getAttribute('data-id');
+            showPurchaseDetails(purchaseId);
         });
     });
+    
+    function showPurchaseDetails(purchaseId) {
+        console.log('Opening modal for purchase ID:', purchaseId);
+        
+        // Show loading state
+        document.getElementById('purchase-loading').classList.remove('d-none');
+        document.getElementById('purchase-details').classList.add('d-none');
+        document.getElementById('purchase-error').classList.add('d-none');
+        
+        // Show modal - try jQuery first, fallback to Bootstrap JS
+        if (typeof jQuery !== 'undefined') {
+            jQuery('#purchaseDetailsModal').modal('show');
+        } else if (typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(document.getElementById('purchaseDetailsModal'));
+            modal.show();
+        } else {
+            document.getElementById('purchaseDetailsModal').classList.add('show');
+            document.getElementById('purchaseDetailsModal').style.display = 'block';
+        }
+        
+        // Fetch purchase details
+        fetch(`/api/purchases/${purchaseId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Purchase data:', data);
+                if (data.success && data.data) {
+                    // Hide loading, show details
+                    document.getElementById('purchase-loading').classList.add('d-none');
+                    document.getElementById('purchase-details').classList.remove('d-none');
+                    
+                    const purchase = data.data;
+                    updateModalContent(purchase);
+                } else {
+                    throw new Error('Failed to load purchase data');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('purchase-loading').classList.add('d-none');
+                document.getElementById('purchase-error').classList.remove('d-none');
+            });
+    }
+    
+    function updateModalContent(purchase) {
+        // Fill in purchase details
+        document.getElementById('purchase-id').textContent = purchase.up_id;
+        document.getElementById('purchase-book-title').textContent = purchase.b_title;
+        document.getElementById('purchase-book-author').textContent = purchase.b_author;
+        document.getElementById('purchase-amount').textContent = '$' + parseFloat(purchase.b_price).toFixed(2);
+        
+        // Book cover
+        const coverPath = purchase.b_cover_path 
+            ? '/assets/images/book-cover/' + purchase.b_cover_path 
+            : '/assets/images/book-cover/default-cover.svg';
+        document.getElementById('purchase-book-cover').src = coverPath;
+        
+        // User details
+        document.getElementById('purchase-user-name').textContent = `${purchase.ua_first_name} ${purchase.ua_last_name}`;
+        document.getElementById('purchase-user-email').textContent = purchase.ua_email;
+        
+        // Date
+        const purchaseDate = new Date(purchase.up_purchased_at);
+        document.getElementById('purchase-full-date').textContent = purchaseDate.toLocaleString();
+        document.getElementById('purchase-date').textContent = purchaseDate.toLocaleDateString();
+    }
+});
 </script>
 
-<?php
-// Include footer
-include $footerPath;
-?>
+<?php include $footerPath; ?>

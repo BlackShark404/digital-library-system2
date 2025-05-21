@@ -150,6 +150,8 @@ $router->map('POST', '/user/wishlist/toggle', 'App\Controllers\UserController#to
 
 // Purchase route
 $router->map('POST', '/api/books/purchase/[i:id]', 'App\Controllers\BookController#purchaseBook', 'purchase_book');
+$router->map('GET', '/api/purchases/[i:id]', 'App\Controllers\ReadingSessionController#getPurchaseById', 'get_purchase_by_id');
+$router->map('GET', '/api/purchases/export', 'App\Controllers\ReadingSessionController#exportPurchases', 'export_purchases');
 
 // Profile routes 
 $router->map('POST', '/user/user-profile/update-profile-pic', 'App\Controllers\ProfileController#updateProfilePicture', 'update-user-profile-pic');
