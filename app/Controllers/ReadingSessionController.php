@@ -398,4 +398,122 @@ class ReadingSessionController extends BaseController
         
         $_SESSION['flash_messages'][$type] = $message;
     }
+    
+    /**
+     * Get all reading sessions for admin view
+     */
+    public function getAllReadingSessions()
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        // Get query parameters for filtering
+        $search = $this->getRequestParam('search', '');
+        $status = $this->getRequestParam('status', '');
+        $dateFrom = $this->getRequestParam('date_from', '');
+        $dateTo = $this->getRequestParam('date_to', '');
+        
+        // Get data from model
+        $sessions = $this->readingSessionModel->getAllReadingSessions($search, $status, $dateFrom, $dateTo);
+        
+        // Return JSON if it's an API request
+        if ($this->isAjaxRequest()) {
+            $this->jsonSuccess($sessions);
+            return;
+        }
+        
+        // Render view
+        $this->render('admin/reading-sessions', [
+            'sessions' => $sessions
+        ]);
+    }
+    
+    /**
+     * Export reading sessions as CSV for admin
+     */
+    public function exportReadingSessions()
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        // Get query parameters for filtering
+        $search = $this->getRequestParam('search', '');
+        $status = $this->getRequestParam('status', '');
+        $dateFrom = $this->getRequestParam('date_from', '');
+        $dateTo = $this->getRequestParam('date_to', '');
+        
+        // Get data from model
+        $sessions = $this->readingSessionModel->getAllReadingSessions($search, $status, $dateFrom, $dateTo);
+        
+        // Prepare CSV data
+        $csvData = [];
+        $csvData[] = ['Session ID', 'User', 'Email', 'Book Title', 'Author', 'Started At', 'Expires At', 'Current Page', 'Total Pages', 'Status'];
+        
+        foreach ($sessions as $session) {
+            $status = '';
+            if (isset($session['is_purchased']) && $session['is_purchased']) {
+                $status = 'Purchased';
+            } else if (isset($session['is_expired']) && $session['is_expired']) {
+                $status = 'Expired';
+            } else {
+                $status = 'Active';
+            }
+            
+            $csvData[] = [
+                $session['rs_id'],
+                $session['ua_first_name'] . ' ' . $session['ua_last_name'],
+                $session['ua_email'],
+                $session['b_title'],
+                $session['b_author'],
+                $session['rs_started_at'],
+                $session['rs_expires_at'],
+                $session['current_page'] ?? 0,
+                $session['b_pages'] ?? 0,
+                $status
+            ];
+        }
+        
+        // Set headers for download
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="reading-sessions-' . date('Y-m-d') . '.csv"');
+        
+        // Open output stream
+        $output = fopen('php://output', 'w');
+        
+        // Write data to CSV
+        foreach ($csvData as $row) {
+            fputcsv($output, $row);
+        }
+        
+        // Close output stream
+        fclose($output);
+        exit;
+    }
+    
+    /**
+     * Check if the current user is an admin
+     * 
+     * @return bool True if user is admin, false otherwise
+     */
+    protected function isAdmin()
+    {
+        return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
+    }
+    
+    /**
+     * Check if the request is an AJAX request
+     * 
+     * @return bool True if request is AJAX, false otherwise
+     */
+    protected function isAjaxRequest()
+    {
+        return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
 } 

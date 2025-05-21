@@ -25,7 +25,9 @@ class AdminController extends BaseController {
     }
 
     public function renderReadingSessions() {
-        $this->render('admin/reading-sessions');
+        // Delegate to the ReadingSessionController
+        $readingSessionController = new ReadingSessionController();
+        $readingSessionController->getAllReadingSessions();
     }
 
     public function renderPurchases() {

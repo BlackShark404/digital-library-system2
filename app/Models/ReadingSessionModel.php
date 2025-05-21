@@ -546,4 +546,97 @@ class ReadingSessionModel extends BaseModel
             'limit' => $limit
         ]);
     }
+    
+    /**
+     * Get all reading sessions with user and book details (for admin)
+     * 
+     * @param string $search Search term for title, author, or user
+     * @param string $status Filter by status (active, expired, purchased)
+     * @param string $dateFrom Filter by start date (from)
+     * @param string $dateTo Filter by start date (to)
+     * @return array Reading sessions
+     */
+    public function getAllReadingSessions($search = '', $status = '', $dateFrom = '', $dateTo = '')
+    {
+        $params = [];
+        $conditions = [];
+        
+        // Base query
+        $sql = "
+            SELECT 
+                rs.rs_id,
+                rs.ua_id,
+                rs.b_id,
+                rs.rs_started_at,
+                rs.rs_expires_at,
+                ua.ua_first_name,
+                ua.ua_last_name,
+                ua.ua_email,
+                b.b_title,
+                b.b_author,
+                b.b_cover_path,
+                b.b_pages,
+                rp.current_page,
+                rp.is_completed,
+                CASE 
+                    WHEN rs.rs_expires_at < NOW() THEN TRUE
+                    ELSE FALSE
+                END as is_expired,
+                CASE
+                    WHEN up.up_id IS NOT NULL THEN TRUE
+                    ELSE FALSE
+                END as is_purchased
+            FROM 
+                {$this->table} rs
+            JOIN 
+                books b ON rs.b_id = b.b_id
+            JOIN
+                user_account ua ON rs.ua_id = ua.ua_id
+            LEFT JOIN 
+                {$this->progressTable} rp ON rs.rs_id = rp.rs_id
+            LEFT JOIN
+                user_purchase up ON (rs.ua_id = up.ua_id AND rs.b_id = up.b_id)
+            WHERE 1=1
+        ";
+        
+        // Add search condition
+        if (!empty($search)) {
+            $conditions[] = "(b.b_title LIKE :search OR b.b_author LIKE :search OR 
+                             ua.ua_first_name LIKE :search OR ua.ua_last_name LIKE :search OR
+                             ua.ua_email LIKE :search)";
+            $params['search'] = "%{$search}%";
+        }
+        
+        // Add status condition
+        if (!empty($status)) {
+            if ($status === 'active') {
+                $conditions[] = "rs.rs_expires_at > NOW() AND up.up_id IS NULL";
+            } elseif ($status === 'expired') {
+                $conditions[] = "rs.rs_expires_at < NOW() AND up.up_id IS NULL";
+            } elseif ($status === 'purchased') {
+                $conditions[] = "up.up_id IS NOT NULL";
+            }
+        }
+        
+        // Add date range conditions
+        if (!empty($dateFrom)) {
+            $conditions[] = "rs.rs_started_at >= :date_from";
+            $params['date_from'] = $dateFrom . ' 00:00:00';
+        }
+        
+        if (!empty($dateTo)) {
+            $conditions[] = "rs.rs_started_at <= :date_to";
+            $params['date_to'] = $dateTo . ' 23:59:59';
+        }
+        
+        // Add conditions to query
+        if (!empty($conditions)) {
+            $sql .= " AND " . implode(" AND ", $conditions);
+        }
+        
+        // Add order by
+        $sql .= " ORDER BY rs.rs_started_at DESC";
+        
+        return $this->query($sql, $params);
+    }
 } 

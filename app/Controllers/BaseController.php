@@ -150,76 +150,97 @@ class BaseController
     }
 
     /**
- * Check if user has the specified permission
- * 
- * @param string $permission Permission to check
- * @return bool True if user has permission, false otherwise
- */
-protected function checkPermission(string $permission): bool {
-    // Get user role from session
-    $role = $_SESSION['user_role'] ?? '';
-    
-    // Basic permission check based on role
-    if ($permission === 'admin' && $role === 'admin') {
-        return true;
+     * Check if user has the specified permission
+     * 
+     * @param string $permission Permission to check
+     * @return bool True if user has permission, false otherwise
+     */
+    protected function checkPermission(string $permission): bool {
+        // Get user role from session
+        $role = $_SESSION['user_role'] ?? '';
+        
+        // Basic permission check based on role
+        if ($permission === 'admin' && $role === 'admin') {
+            return true;
+        }
+        
+        // Add more complex permission logic here as needed
+        
+        return false;
     }
-    
-    // Add more complex permission logic here as needed
-    
-    return false;
-}
 
-/**
- * Get parameter from request (GET, POST)
- * 
- * @param string $param Parameter name
- * @param mixed $default Default value if parameter not found
- * @return mixed Parameter value or default
- */
-protected function getRequestParam(string $param, $default = null) {
-    return $this->request($param, $default);
-}
+    /**
+     * Get parameter from request (GET, POST)
+     * 
+     * @param string $param Parameter name
+     * @param mixed $default Default value if parameter not found
+     * @return mixed Parameter value or default
+     */
+    protected function getRequestParam(string $param, $default = null) {
+        return $this->request($param, $default);
+    }
 
-/**
- * Render a view with data and custom layout paths
- * 
- * @param string $view View path
- * @param array $data Data to pass to view
- * @param array $layoutPaths Custom layout paths
- * @return void
- */
-protected function view(string $view, array $data = [], array $layoutPaths = []) {
-    // Start output buffering
-    ob_start();
-    
-    // Get view path
-    $viewPath = $this->getViewPath($view);
-    
-    // Set default layout paths if not provided
-    if (empty($layoutPaths['headerPath'])) {
-        $layoutPaths['headerPath'] = $this->getViewPath("includes/header");
+    /**
+     * Render a view with data and custom layout paths
+     * 
+     * @param string $view View path
+     * @param array $data Data to pass to view
+     * @param array $layoutPaths Custom layout paths
+     * @return void
+     */
+    protected function view(string $view, array $data = [], array $layoutPaths = []) {
+        // Start output buffering
+        ob_start();
+        
+        // Get view path
+        $viewPath = $this->getViewPath($view);
+        
+        // Set default layout paths if not provided
+        if (empty($layoutPaths['headerPath'])) {
+            $layoutPaths['headerPath'] = $this->getViewPath("includes/header");
+        }
+        
+        if (empty($layoutPaths['footerPath'])) {
+            $layoutPaths['footerPath'] = $this->getViewPath("includes/footer");
+        }
+        
+        if (empty($layoutPaths['sidebarPath'])) {
+            $sidebarRelativePath = $this->getSidebarPath();
+            $layoutPaths['sidebarPath'] = $this->getViewPath($sidebarRelativePath);
+        }
+        
+        // Merge layout paths with data
+        $data = array_merge($data, $layoutPaths);
+        
+        // Extract data to variables
+        extract($data);
+        
+        // Include the view file
+        include $viewPath;
+        
+        // Get and output content
+        $content = ob_get_clean();
+        echo $content;
     }
-    
-    if (empty($layoutPaths['footerPath'])) {
-        $layoutPaths['footerPath'] = $this->getViewPath("includes/footer");
+
+    /**
+     * Check if the current user is an admin
+     * 
+     * @return bool True if user is admin, false otherwise
+     */
+    protected function isAdmin()
+    {
+        return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
     }
-    
-    if (empty($layoutPaths['sidebarPath'])) {
-        $sidebarRelativePath = $this->getSidebarPath();
-        $layoutPaths['sidebarPath'] = $this->getViewPath($sidebarRelativePath);
+
+    /**
+     * Check if the request is an AJAX request
+     * 
+     * @return bool True if request is AJAX, false otherwise
+     */
+    protected function isAjaxRequest()
+    {
+        return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
-    
-    // Merge layout paths with data
-    $data = array_merge($data, $layoutPaths);
-    
-    // Extract data to variables
-    extract($data);
-    
-    // Include the view file
-    include $viewPath;
-    
-    // Get and output content
-    $content = ob_get_clean();
-    echo $content;
-}
 }
