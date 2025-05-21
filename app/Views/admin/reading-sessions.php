@@ -302,7 +302,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Filtering with params:', queryParams.toString());
         
         // Make AJAX request to get filtered data
-        fetch('/api/reading-sessions?' + queryParams.toString())
+        fetch('/api/reading-sessions?' + queryParams.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -461,7 +465,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Fetch session details - Fix URL structure to match router expectations
-        fetch(`/api/reading-sessions/${sessionId}`)
+        fetch(`/api/reading-sessions/${sessionId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
