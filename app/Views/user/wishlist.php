@@ -61,12 +61,9 @@ include $headerPath;
                                 <button type="button" class="btn btn-outline-secondary view-book-details" data-book-id="<?php echo $book['b_id']; ?>">
                                     <i class="bi bi-info-circle"></i> Details
                                 </button>
-                                <form method="post" action="/user/purchase/add" class="d-inline">
-                                    <input type="hidden" name="book_id" value="<?php echo $book['b_id']; ?>">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-cart-plus"></i> Purchase
-                                    </button>
-                                </form>
+                                <a href="/user/read?id=<?php echo $book['b_id']; ?>" class="btn btn-primary read-book-btn" data-book-id="<?php echo $book['b_id']; ?>">
+                                    <i class="bi bi-book"></i> Read
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -115,7 +112,8 @@ include $headerPath;
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" id="buyBookBtnModal"><i class="bi bi-cart-plus me-2"></i>Buy Now</button>
+                <span id="purchaseStatus" class="badge bg-success me-2 d-none">Purchased</span>
+                <button type="button" class="btn btn-success" id="buyBookBtnModal" data-book-id=""><i class="bi bi-cart-plus me-2"></i>Buy Now</button>
             </div>
         </div>
     </div>
@@ -152,7 +150,7 @@ include $headerPath;
                                 wishlistItem.remove();
                                 
                                 // Show toast notification
-                                showToast('Book removed from wishlist', 'info');
+                                showToast('info', 'Success', 'Book removed from wishlist');
                                 
                                 // If no items left, refresh page to show empty state
                                 const remainingItems = document.querySelectorAll('.wishlist-item');
@@ -162,12 +160,12 @@ include $headerPath;
                             }
                         } else {
                             // Show error notification
-                            showToast(data.message || 'Failed to remove from wishlist', 'danger');
+                            showToast('danger', 'Error', data.message || 'Failed to remove from wishlist');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        showToast('An error occurred', 'danger');
+                        showToast('danger', 'Error', 'An error occurred');
                     });
                 }
             });
@@ -194,7 +192,13 @@ include $headerPath;
             document.getElementById('modalPages').textContent = '';
             document.getElementById('modalPrice').textContent = '';
             document.getElementById('modalDescription').innerHTML = '';
+            
+            const buyBookBtnModal = document.getElementById('buyBookBtnModal');
+            const purchaseStatus = document.getElementById('purchaseStatus');
 
+            // Reset purchase status
+            buyBookBtnModal.classList.remove('d-none');
+            purchaseStatus.classList.add('d-none');
 
             fetch(`/api/books/${bookId}`, {
                 method: 'GET',
@@ -223,15 +227,47 @@ include $headerPath;
                     document.getElementById('modalPrice').textContent = book.b_price ? `$${parseFloat(book.b_price).toFixed(2)}` : 'Free';
                     document.getElementById('modalDescription').innerHTML = book.b_description ? book.b_description.replace(/\\n/g, '<br>') : 'No description available.';
                     
-                    document.getElementById('buyBookBtnModal').setAttribute('data-book-id', bookId); // Changed ID to buyBookBtnModal
+                    buyBookBtnModal.setAttribute('data-book-id', book.b_id);
+                    
+                    // Check if book is already purchased
+                    fetch(`/reading-session/check-availability/${book.b_id}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(availData => {
+                        if (availData.success) {
+                            if (availData.data.is_purchased) {
+                                // Book already purchased
+                                buyBookBtnModal.classList.add('d-none');
+                                purchaseStatus.classList.remove('d-none');
+                            } else {
+                                // Book not purchased
+                                buyBookBtnModal.classList.remove('d-none');
+                                purchaseStatus.classList.add('d-none');
+                                
+                                // Disable buy button for free books
+                                const price = parseFloat(book.b_price);
+                                if (price <= 0) {
+                                    buyBookBtnModal.disabled = true;
+                                    buyBookBtnModal.textContent = 'Free Book';
+                                } else {
+                                    buyBookBtnModal.disabled = false;
+                                    buyBookBtnModal.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Buy Now';
+                                }
+                            }
+                        }
+                    });
+                    
                     bookDetailModal.show();
                 } else {
-                    showToast(data.message || 'Failed to load book details.', 'danger');
+                    showToast('danger', 'Error', data.message || 'Failed to load book details.');
                 }
             })
             .catch(error => {
                 console.error('Error fetching book details:', error);
-                showToast('Error fetching book details. Please try again.', 'danger');
+                showToast('danger', 'Error', 'Error fetching book details. Please try again.');
                 document.getElementById('modalTitle').textContent = 'Error';
             });
         }
@@ -241,31 +277,89 @@ include $headerPath;
         if (buyBookBtnModal) {
             buyBookBtnModal.addEventListener('click', function() {
                 const bookId = this.getAttribute('data-book-id');
-                console.log('Modal Buy button clicked for book ID:', bookId);
-                // This can be a direct purchase or redirect to a purchase page/cart
-                // For now, we'll try to submit the existing purchase form if available for that book
-                // Or, more simply, redirect to a purchase initiation URL or trigger another AJAX
                 
-                // Attempt to find the purchase form for this book on the page and submit it
-                // This is a bit of a workaround as the buy button is now in a generic modal
-                // A more robust solution would be an AJAX purchase or a dedicated purchase page
-                let purchaseFormFound = false;
-                document.querySelectorAll('form[action="/user/purchase/add"]').forEach(form => {
-                    const formBookIdInput = form.querySelector('input[name="book_id"]');
-                    if (formBookIdInput && formBookIdInput.value == bookId) {
-                        form.submit();
-                        purchaseFormFound = true;
+                // Show loading state
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
+                
+                // Make purchase request
+                fetch(`/api/books/purchase/${bookId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        showToast('success', '', 'Book purchased successfully! You can now read it anytime.');
+                        
+                        // Update UI to show purchased state
+                        this.classList.add('d-none');
+                        document.getElementById('purchaseStatus').classList.remove('d-none');
+                        
+                        // Update any read buttons for this book to show it's purchased
+                        const readButton = document.querySelector(`.read-book-btn[data-book-id="${bookId}"]`);
+                        if (readButton) {
+                            readButton.classList.add('purchased');
+                        }
+                    } else {
+                        // Show error message
+                        showToast('danger', 'Error', data.message || 'Failed to purchase the book. Please try again.');
+                        
+                        // Reset button state
+                        this.disabled = false;
+                        this.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Buy Now';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error purchasing book:', error);
+                    showToast('danger', 'Error', 'An unexpected error occurred. Please try again.');
+                    
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Buy Now';
                 });
-
-                if (!purchaseFormFound) {
-                     // Fallback if direct form submission isn't feasible/found
-                    showToast(`"Buy" clicked for book ID: ${bookId}. Purchase form not found on page. Implement direct purchase.`, 'info');
-                }
-                bookDetailModal.hide();
             });
         }
 
+        // Handle reading session checks for read buttons
+        const readButtons = document.querySelectorAll('.read-book-btn');
+        readButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const bookId = this.getAttribute('data-book-id');
+                const href = this.getAttribute('href');
+                
+                // Check availability first
+                fetch(`/reading-session/check-availability/${bookId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (data.data.is_available) {
+                                // Available to read, redirect
+                                window.location.href = href;
+                            } else if (data.data.is_previous_session_expired) {
+                                // Previously read but expired - ask to purchase
+                                showToast('info', 'Info', 'Your 3-day reading period for this book has expired. Please purchase to continue reading.');
+                            } else {
+                                // Not available due to concurrent readers
+                                showToast('info', 'Info', `This book has reached the maximum number of concurrent readers (${data.data.active_sessions_count}/${data.data.max_sessions}). Please try again later or purchase the book.`);
+                            }
+                        } else {
+                            // Error checking availability
+                            showToast('danger', 'Error', 'Error checking book availability. Please try again.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking availability:', error);
+                        showToast('danger', 'Error', 'Error checking book availability. Please try again.');
+                    });
+            });
+        });
 
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
@@ -276,7 +370,7 @@ include $headerPath;
         // --- End of Additions ---
 
         // Toast notification function
-        function showToast(message, type = 'info') {
+        function showToast(type = 'info', title = '', message = '') {
             // Create toast container if it doesn't exist
             let toastContainer = document.querySelector('.toast-container');
             if (!toastContainer) {
@@ -296,7 +390,8 @@ include $headerPath;
             toastEl.innerHTML = `
                 <div class="d-flex">
                     <div class="toast-body">
-                        ${message}
+                        ${title ? '<strong>' + title + '</strong>' : ''}
+                        ${message ? '<p class="mb-0 mt-1">' + message + '</p>' : ''}
                     </div>
                     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
