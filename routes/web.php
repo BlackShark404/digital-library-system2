@@ -35,11 +35,6 @@ $accessMap = [
     '/api/activity-logs/stats' => ['admin'],
     '/api/activity-logs/view' => ['admin'],
     
-    // Reading Session API routes - Admin only
-    '/api/reading-sessions' => ['admin'],
-    '/api/reading-sessions/stats' => ['admin'],
-    '/api/reading-sessions/view' => ['admin'],
-    
     // User Management API routes - Admin only
     '/api/users' => ['admin'],
     '/api/users/export' => ['admin'],
@@ -104,12 +99,6 @@ $router->map('GET', '/admin/admin-profile', 'App\Controllers\AdminController#ren
 $router->map('GET', '/api/activity-logs', 'App\Controllers\ActivityLogController#getActivityLogs', 'api_get_activity_logs');
 $router->map('GET', '/api/activity-logs/[i:id]', 'App\Controllers\ActivityLogController#viewLog', 'api_view_activity_log');
 $router->map('GET', '/api/activity-logs/stats', 'App\Controllers\ActivityLogController#getActivityStats', 'api_get_activity_stats');
-
-// Reading Session API Routes
-$router->map('GET', '/api/reading-sessions', 'App\Controllers\ReadingSessionController#getReadingSessions', 'api_get_reading_sessions');
-$router->map('GET', '/api/reading-sessions/[i:id]', 'App\Controllers\ReadingSessionController#getReadingSession', 'api_get_reading_session');
-$router->map('PUT', '/api/reading-sessions/[i:id]', 'App\Controllers\ReadingSessionController#updateReadingSession', 'api_update_reading_session');
-$router->map('DELETE', '/api/reading-sessions/[i:id]', 'App\Controllers\ReadingSessionController#deleteReadingSession', 'api_delete_reading_session');
 
 // User Management Routes
 $router->map('GET', '/admin/user-management', 'App\Controllers\UserManagementController#index', 'user-management');
