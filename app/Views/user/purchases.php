@@ -101,10 +101,10 @@ include $headerPath;
                                         <a href="/reading-session/read-book/<?php echo $book['b_id']; ?>" class="btn btn-sm btn-primary">
                                             <i class="bi bi-book"></i> Read
                                         </a>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Download">
+                                        <a href="/user/download-book/<?php echo $book['b_id']; ?>" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Download PDF">
                                             <i class="bi bi-download"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Receipt">
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#receiptModal<?php echo $book['up_id']; ?>" title="View Receipt">
                                             <i class="bi bi-receipt"></i>
                                         </button>
                                     </div>
@@ -152,5 +152,178 @@ include $headerPath;
         <?php endif; ?>
     </div>
 </div>
+
+<?php if (!empty($purchased_books)): ?>
+    <!-- Receipt Modals -->
+    <?php foreach ($purchased_books as $book): 
+        // Generate a dummy order ID using the purchase ID and date
+        $orderId = 'ORD-' . str_pad($book['up_id'], 5, '0', STR_PAD_LEFT);
+        
+        // Format the date
+        $purchaseDate = date('M d, Y', strtotime($book['up_purchased_at']));
+        $purchaseDateTime = date('M d, Y h:i A', strtotime($book['up_purchased_at']));
+        
+        // Generate a transaction ID based on purchase ID and timestamp
+        $transactionId = 'TXN-' . str_pad($book['up_id'], 6, '0', STR_PAD_LEFT) . '-' . substr(hash('sha256', $book['up_purchased_at']), 0, 6);
+    ?>
+    <div class="modal fade" id="receiptModal<?php echo $book['up_id']; ?>" tabindex="-1" aria-labelledby="receiptModalLabel<?php echo $book['up_id']; ?>" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="receiptModalLabel<?php echo $book['up_id']; ?>">
+                        <i class="bi bi-receipt-cutoff me-2"></i>Purchase Receipt
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                        <h4 class="mt-2">Thank you for your purchase!</h4>
+                        <p class="text-muted">This is your official receipt</p>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-info-circle me-2"></i>Order Information</span>
+                                <span class="badge bg-success">Completed</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Order ID</small>
+                                        <span class="fw-bold"><?php echo $orderId; ?></span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Purchase Date</small>
+                                        <span><?php echo $purchaseDateTime; ?></span>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Transaction ID</small>
+                                        <span class="font-monospace"><?php echo $transactionId; ?></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <i class="bi bi-book me-2"></i>Product Details
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <?php
+                                // Format the cover path
+                                $coverPath = !empty($book['b_cover_path']) 
+                                    ? '/assets/images/book-cover/' . $book['b_cover_path'] 
+                                    : '/assets/images/book-cover/default-cover.svg';
+                                ?>
+                                <div class="bg-light rounded me-3" style="width:60px; height:80px; overflow: hidden;">
+                                    <img src="<?php echo $coverPath; ?>" alt="<?php echo htmlspecialchars($book['b_title']); ?>" class="img-fluid" style="width:100%; height:100%; object-fit:cover;">
+                                </div>
+                                <div>
+                                    <h6 class="mb-1"><?php echo htmlspecialchars($book['b_title']); ?></h6>
+                                    <p class="text-muted small mb-0">By <?php echo htmlspecialchars($book['b_author']); ?></p>
+                                    <?php if (!empty($book['b_isbn'])): ?>
+                                    <p class="text-muted small mb-0">ISBN: <?php echo htmlspecialchars($book['b_isbn']); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <i class="bi bi-currency-dollar me-2"></i>Payment Details
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Subtotal</span>
+                                <span>$<?php echo number_format((float)$book['b_price'], 2); ?></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Tax</span>
+                                <span>$0.00</span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">Total</span>
+                                <span class="fw-bold">$<?php echo number_format((float)$book['b_price'], 2); ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="window.print()">
+                        <i class="bi bi-printer me-1"></i>Print Receipt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+<?php endif; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Add click event to download buttons
+        const downloadLinks = document.querySelectorAll('a[href^="/user/download-book/"]');
+        downloadLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                // Show a toast notification 
+                if (typeof showToast === 'function') {
+                    showToast('Downloading your PDF...', 'success');
+                }
+            });
+        });
+
+        // Add event listeners for filter controls
+        document.getElementById('searchPurchases').addEventListener('input', filterPurchases);
+        document.getElementById('filterDate').addEventListener('change', filterPurchases);
+        document.getElementById('sortBy').addEventListener('change', sortPurchases);
+    });
+
+    // Simple client-side filtering function
+    function filterPurchases() {
+        const searchTerm = document.getElementById('searchPurchases').value.toLowerCase();
+        const dateFilter = document.getElementById('filterDate').value;
+        const rows = document.querySelectorAll('tbody tr');
+
+        rows.forEach(row => {
+            const titleElement = row.querySelector('h6');
+            if (!titleElement) return; // Skip empty rows
+            
+            const title = titleElement.textContent.toLowerCase();
+            let showRow = title.includes(searchTerm);
+            
+            // Additional date filtering could be implemented here
+            
+            row.style.display = showRow ? '' : 'none';
+        });
+    }
+
+    // Sort function placeholder
+    function sortPurchases() {
+        // This would typically reload the page with a sort parameter
+        // or sort the data client-side
+        console.log('Sorting by: ' + document.getElementById('sortBy').value);
+        // For now, we'll just reload the page when sorting changes
+        // location.href = '/user/purchases?sort=' + document.getElementById('sortBy').value;
+    }
+</script>
 
 <?php include $footerPath; ?>

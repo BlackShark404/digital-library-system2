@@ -56,6 +56,7 @@ $accessMap = [
     '/user/wishlist/remove' => ['user'],
     '/user/wishlist/toggle' => ['user'],
     '/user/read' => ['user'],
+    '/user/download-book' => ['user'],
     '/reading-session/read-book' => ['user'],
     '/reading-session/start-session' => ['user'],
     '/reading-session/update-progress' => ['user'],
@@ -123,6 +124,7 @@ $router->map('GET', '/user/reading-sessions', 'App\Controllers\ReadingSessionCon
 $router->map('GET', '/user/wishlist', 'App\Controllers\UserController#renderWishlist', 'user_wishlist');
 $router->map('GET', '/user/purchases', 'App\Controllers\UserController#renderPurchases', 'user_purchases');
 $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#renderUserProfile', 'user_profile');
+$router->map('GET', '/user/download-book/[i:bookId]', 'App\Controllers\UserController#downloadBook', 'download_book');
 
 // Reading Session Routes
 $router->map('GET', '/reading-session/read-book/[i:sessionId]', 'App\Controllers\ReadingSessionController#readBook', 'read_book');

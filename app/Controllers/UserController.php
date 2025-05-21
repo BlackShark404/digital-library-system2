@@ -386,4 +386,59 @@ class UserController extends BaseController{
                 break;
         }
     }
+
+    /**
+     * Download the PDF of a purchased book
+     */
+    public function downloadBook($bookId) {
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Get the reading session model to verify the purchase
+        $readingSessionModel = new \App\Models\ReadingSessionModel();
+        
+        // Check if the user has purchased this book
+        if (!$readingSessionModel->hasUserPurchasedBook($userId, $bookId)) {
+            // If not purchased, redirect to purchases page
+            $this->redirect('/user/purchases');
+            return;
+        }
+        
+        // Get book details
+        $bookModel = new \App\Models\BookModel();
+        $book = $bookModel->getBookById($bookId);
+        
+        if (!$book || !isset($book['b_file_path']) || empty($book['b_file_path'])) {
+            // Book not found or has no file
+            $this->redirect('/user/purchases');
+            return;
+        }
+        
+        $filePath = ROOT_DIR . '/public/assets/books/' . $book['b_file_path'];
+        
+        // Check if file exists
+        if (!file_exists($filePath)) {
+            $this->redirect('/user/purchases');
+            return;
+        }
+        
+        // Set headers for file download
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $book['b_title'] . '.pdf"');
+        header('Content-Length: ' . filesize($filePath));
+        
+        // Disable output buffering
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // Output file
+        readfile($filePath);
+        exit;
+    }
 }

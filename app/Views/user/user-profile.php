@@ -52,57 +52,7 @@ include $headerPath;
                 
                 <hr class="my-0">
                 
-                <!-- Reading Stats -->
-                <div class="card-body p-4">
-                    <h5 class="card-title d-flex align-items-center mb-3">
-                        <i class="bi bi-bar-chart-line me-2 text-primary"></i>
-                        Reading Statistics
-                    </h5>
-                    
-                    <div class="row g-3 mt-1">
-                        <div class="col">
-                            <div class="bg-light rounded-3 p-3 h-100">
-                                <div class="d-flex align-items-center">
-                                    <div class="icon-box me-3 bg-primary bg-opacity-10 text-primary rounded-circle p-2">
-                                        <i class="bi bi-book"></i>
-                                    </div>
-                                    <div>
-                                        <h2 class="mb-0 fs-4 fw-bold"><?= $reading_stats['books_started'] ?></h2>
-                                        <span class="small text-muted">Books Started</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col">
-                            <div class="bg-light rounded-3 p-3 h-100">
-                                <div class="d-flex align-items-center">
-                                    <div class="icon-box me-3 bg-success bg-opacity-10 text-success rounded-circle p-2">
-                                        <i class="bi bi-check-circle"></i>
-                                    </div>
-                                    <div>
-                                        <h2 class="mb-0 fs-4 fw-bold"><?= $reading_stats['books_completed'] ?></h2>
-                                        <span class="small text-muted">Books Completed</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col">
-                            <div class="bg-light rounded-3 p-3 h-100">
-                                <div class="d-flex align-items-center">
-                                    <div class="icon-box me-3 bg-info bg-opacity-10 text-info rounded-circle p-2">
-                                        <i class="bi bi-bag"></i>
-                                    </div>
-                                    <div>
-                                        <h2 class="mb-0 fs-4 fw-bold"><?= $reading_stats['books_purchased'] ?></h2>
-                                        <span class="small text-muted">Purchases</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
             
             <!-- Account Settings Card -->
