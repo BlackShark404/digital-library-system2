@@ -148,7 +148,7 @@ include $headerPath;
                                         <i class="bi bi-people text-primary"></i>
                                     </div>
                                     <div>
-                                        <h4 class="mb-0">324</h4>
+                                        <h4 class="mb-0"><?= number_format($stats['total_users']) ?></h4>
                                         <span class="small text-muted">Total Users</span>
                                     </div>
                                 </div>
@@ -157,7 +157,7 @@ include $headerPath;
                                         <i class="bi bi-book text-success"></i>
                                     </div>
                                     <div>
-                                        <h4 class="mb-0">1,250</h4>
+                                        <h4 class="mb-0"><?= number_format($stats['total_books']) ?></h4>
                                         <span class="small text-muted">Total Books</span>
                                     </div>
                                 </div>
@@ -166,8 +166,8 @@ include $headerPath;
                                         <i class="bi bi-bag text-info"></i>
                                     </div>
                                     <div>
-                                        <h4 class="mb-0">82</h4>
-                                        <span class="small text-muted">Total Orders</span>
+                                        <h4 class="mb-0"><?= number_format($stats['total_purchases']) ?></h4>
+                                        <span class="small text-muted">Total Purchases</span>
                                     </div>
                                 </div>
                             </div>
@@ -179,11 +179,11 @@ include $headerPath;
                                 <div class="completion-rate mb-4">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="small text-muted">System Health</span>
-                                        <span class="badge bg-success">90%</span>
+                                        <span class="badge bg-success"><?= $stats['system_health'] ?>%</span>
                                     </div>
                                     <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: 90%"
-                                            aria-valuenow="90" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= $stats['system_health'] ?>%"
+                                            aria-valuenow="<?= $stats['system_health'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                     <p class="text-muted small mt-2 mb-0">
                                         <i class="bi bi-info-circle me-1"></i>
@@ -193,12 +193,12 @@ include $headerPath;
                                 
                                 <div class="admin-actions">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="small text-muted">Recent Actions</span>
-                                        <span class="badge bg-primary">15</span>
+                                        <span class="small text-muted">Activity Log Entries</span>
+                                        <span class="badge bg-primary"><?= number_format($stats['admin_actions']) ?></span>
                                     </div>
                                     <p class="text-muted small mb-0">
                                         <i class="bi bi-lightning me-1"></i>
-                                        You've performed 15 admin actions today
+                                        Total logged activities in the system
                                     </p>
                                 </div>
                             </div>

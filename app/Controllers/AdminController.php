@@ -2,8 +2,24 @@
 
 namespace App\Controllers;
 
+use App\Models\UserModel;
+use App\Models\BookModel;
+use App\Models\ReadingSessionModel;
+use App\Models\ActivityLogModel;
+
 class AdminController extends BaseController {
-    protected $adminModel;
+    protected $userModel;
+    protected $bookModel;
+    protected $readingSessionModel;
+    protected $activityLogModel;
+    
+    public function __construct() {
+        parent::__construct();
+        $this->userModel = new UserModel();
+        $this->bookModel = new BookModel();
+        $this->readingSessionModel = new ReadingSessionModel();
+        $this->activityLogModel = new ActivityLogModel();
+    }
 
     public function renderAdminDashboard() {
         $this->render('admin/dashboard');
@@ -41,6 +57,17 @@ class AdminController extends BaseController {
     }
 
     public function renderAdminProfile() {
-        $this->render('admin/admin-profile');
+        // Get admin statistics
+        $stats = [
+            'total_users' => $this->userModel->getUserCountByRole()['user'] ?? 0,
+            'total_books' => $this->bookModel->countTotalBooks(),
+            'total_purchases' => $this->readingSessionModel->countTotalPurchases(),
+            'system_health' => 90, // This could be calculated based on various factors
+            'admin_actions' => $this->activityLogModel->countData()
+        ];
+        
+        $this->render('admin/admin-profile', [
+            'stats' => $stats
+        ]);
     }
 }

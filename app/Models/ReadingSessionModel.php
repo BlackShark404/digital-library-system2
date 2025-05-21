@@ -694,4 +694,16 @@ class ReadingSessionModel extends BaseModel
         
         return $this->queryOne($sql, ['session_id' => $sessionId]);
     }
+    
+    /**
+     * Count total purchases in the system
+     *
+     * @return int Total number of purchases
+     */
+    public function countTotalPurchases()
+    {
+        $sql = "SELECT COUNT(*) as total FROM user_purchase";
+        $result = $this->queryOne($sql);
+        return $result ? (int)$result['total'] : 0;
+    }
 } 
