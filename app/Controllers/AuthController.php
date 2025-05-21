@@ -7,14 +7,17 @@ use DateTime;
 use Core\AvatarGenerator;
 use Core\Session;
 use Core\Cookie;
+use App\Models\ActivityLogModel;
 
 class AuthController extends BaseController
 {
     protected $userModel;
+    protected $activityLogModel;
 
     public function __construct() 
     {
         $this->userModel = $this->loadModel('UserModel');
+        $this->activityLogModel = new ActivityLogModel();
         
         // Clean up expired tokens on controller initialization
         $this->userModel->cleanupExpiredTokens();
@@ -48,24 +51,24 @@ class AuthController extends BaseController
         // Check if user exists
         if (!$user) {
             // Log failed login attempt
-            ActivityLogController::logActivity(null, 'LOGIN', "Failed login attempt for email: $email (User not found)");
+            $this->activityLogModel->logActivity(null, 'LOGIN', "Failed login attempt for email: $email (User not found)");
             return $this->jsonError('Invalid email or password');
         }
         
         // Check if account is soft deleted
         if ($user['ua_deleted_at'] !== null) {
-            ActivityLogController::logActivity(null, 'LOGIN', "Failed login attempt for deactivated account: $email");
+            $this->activityLogModel->logActivity(null, 'LOGIN', "Failed login attempt for deactivated account: $email");
             return $this->jsonError('This account has been deactivated');
         }
         
         // Check password and active status
         if (!$this->userModel->verifyPassword($password, $user['ua_hashed_password'])) {
-            ActivityLogController::logActivity($user['ua_id'], 'LOGIN', "Failed login attempt: incorrect password");
+            $this->activityLogModel->logActivity($user['ua_id'], 'LOGIN', "Failed login attempt: incorrect password");
             return $this->jsonError('Invalid email or password');
         }
         
         if (!$user['ua_is_active']) {
-            ActivityLogController::logActivity($user['ua_id'], 'LOGIN', "Failed login attempt: account inactive");
+            $this->activityLogModel->logActivity($user['ua_id'], 'LOGIN', "Failed login attempt: account inactive");
             return $this->jsonError('Account is inactive');
         }
 
@@ -103,7 +106,7 @@ class AuthController extends BaseController
         }
 
         // Log successful login
-        ActivityLogController::logActivity($user['ua_id'], 'LOGIN', "User logged in successfully");
+        $this->activityLogModel->logActivity($user['ua_id'], 'LOGIN', "User logged in successfully");
 
         return $this->jsonSuccess(
             ['redirect_url' => $redirectUrl],
@@ -143,7 +146,7 @@ class AuthController extends BaseController
 
         // Check if email already exists
         if ($this->userModel->emailExists($email)) {
-            ActivityLogController::logActivity(null, 'REGISTER', "Registration failed: email already exists ($email)");
+            $this->activityLogModel->logActivity(null, 'REGISTER', "Registration failed: email already exists ($email)");
             return $this->jsonError('Email already exists');
         }
 
@@ -161,14 +164,14 @@ class AuthController extends BaseController
 
         if ($result) {
             // Log successful registration
-            ActivityLogController::logActivity($result, 'REGISTER', "New user registered: $firstName $lastName ($email)");
+            $this->activityLogModel->logActivity($result, 'REGISTER', "New user registered: $firstName $lastName ($email)");
             
             return $this->jsonSuccess(
                 ['redirect_url' => '/login'],
                 'User registered successfully'
             );
         } else {
-            ActivityLogController::logActivity(null, 'REGISTER', "Registration failed for $email");
+            $this->activityLogModel->logActivity(null, 'REGISTER', "Registration failed for $email");
             return $this->jsonError('Registration failed');
         }
     }
@@ -184,7 +187,7 @@ class AuthController extends BaseController
         }
 
         // Log logout activity before destroying session
-        ActivityLogController::logActivity($userId, 'LOGOUT', "User logged out: $userEmail");
+        $this->activityLogModel->logActivity($userId, 'LOGOUT', "User logged out: $userEmail");
 
         // Remove session data
         Session::clear();
@@ -240,7 +243,7 @@ class AuthController extends BaseController
                 Cookie::set('remember_token', $newToken, 30);
                 
                 // Log automatic login via remember token
-                ActivityLogController::logActivity($user['ua_id'], 'LOGIN', "Automatic login via remember token");
+                $this->activityLogModel->logActivity($user['ua_id'], 'LOGIN', "Automatic login via remember token");
             } else {
                 // Token is invalid or expired, clear cookie
                 Cookie::delete('remember_token');
@@ -287,7 +290,7 @@ class AuthController extends BaseController
         // sendResetEmail($user['ua_email'], $resetToken);
         
         // Log password reset request
-        ActivityLogController::logActivity($user['ua_id'], 'PROFILE_UPDATE', "Password reset requested");
+        $this->activityLogModel->logActivity($user['ua_id'], 'PROFILE_UPDATE', "Password reset requested");
         
         Session::flash("success", "Password reset instructions sent to your email");
         return $this->jsonSuccess(null, 'Reset instructions sent');

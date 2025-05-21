@@ -3,15 +3,18 @@
 namespace App\Controllers;
 
 use Core\AvatarGenerator;
+use App\Models\ActivityLogModel;
 
 class UserManagementController extends BaseController
 {
     protected $userModel;
+    protected $activityLogModel;
 
     public function __construct() 
     {
         parent::__construct();
         $this->userModel = $this->loadModel('UserModel');
+        $this->activityLogModel = new ActivityLogModel();
     }
     
     /**
@@ -70,7 +73,7 @@ class UserManagementController extends BaseController
             
             $this->jsonSuccess($formattedUsers);
         } catch (\Exception $e) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error fetching user data: " . $e->getMessage());
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error fetching user data: " . $e->getMessage());
             $this->jsonError('Error fetching user data: ' . $e->getMessage(), 500);
         }
     }
@@ -84,7 +87,7 @@ class UserManagementController extends BaseController
             $user = $this->userModel->findById($id);
             
             if (!$user) {
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_VIEW', "Failed to view user: user with ID $id not found");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'USER_VIEW', "Failed to view user: user with ID $id not found");
                 $this->jsonError('User not found', 404);
             }
             
@@ -103,10 +106,10 @@ class UserManagementController extends BaseController
                     : 'Never'
             ];
             
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_VIEW', "Admin viewed user profile: " . $user['ua_first_name'] . ' ' . $user['ua_last_name'] . " (ID: $id)");
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'USER_VIEW', "Admin viewed user profile: " . $user['ua_first_name'] . ' ' . $user['ua_last_name'] . " (ID: $id)");
             $this->jsonSuccess($userData);
         } catch (\Exception $e) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error fetching user: " . $e->getMessage());
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error fetching user: " . $e->getMessage());
             $this->jsonError('Error fetching user: ' . $e->getMessage(), 500);
         }
     }
@@ -130,14 +133,14 @@ class UserManagementController extends BaseController
         $requiredFields = ['first_name', 'last_name', 'email', 'password', 'role_id', 'is_active'];
         foreach ($requiredFields as $field) {
             if (!isset($data[$field]) || empty($data[$field])) {
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: missing required field $field");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: missing required field $field");
                 $this->jsonError("Missing required field: $field", 400);
             }
         }
         
         // Check if email already exists
         if ($this->userModel->emailExists($data['email'])) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: email already exists (" . $data['email'] . ")");
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: email already exists (" . $data['email'] . ")");
             $this->jsonError('Email address already in use', 400);
         }
 
@@ -157,14 +160,14 @@ class UserManagementController extends BaseController
             
             if ($result) {
                 $roleName = $data['role_id'] == 2 ? 'admin' : 'user';
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Admin created new $roleName account: " . $data['first_name'] . ' ' . $data['last_name'] . " (" . $data['email'] . ")");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Admin created new $roleName account: " . $data['first_name'] . ' ' . $data['last_name'] . " (" . $data['email'] . ")");
                 $this->jsonSuccess([], 'User created successfully');
             } else {
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: database error");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'REGISTER', "Failed to create user: database error");
                 $this->jsonError('Failed to create user', 500);
             }
         } catch (\Exception $e) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error creating user: " . $e->getMessage());
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error creating user: " . $e->getMessage());
             $this->jsonError('Error creating user: ' . $e->getMessage(), 500);
         }
     }
@@ -187,7 +190,7 @@ class UserManagementController extends BaseController
         // Check if user exists
         $user = $this->userModel->findById($id);
         if (!$user) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: user with ID $id not found");
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: user with ID $id not found");
             $this->jsonError('User not found', 404);
         }
         
@@ -195,14 +198,14 @@ class UserManagementController extends BaseController
         $requiredFields = ['first_name', 'last_name', 'email', 'role_id', 'is_active'];
         foreach ($requiredFields as $field) {
             if (!isset($data[$field]) || $data[$field] === '') {
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: missing required field $field");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: missing required field $field");
                 $this->jsonError("Missing required field: $field", 400);
             }
         }
         
         // Check email uniqueness (if changed)
         if ($data['email'] !== $user['ua_email'] && $this->userModel->emailExists($data['email'])) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: email already exists (" . $data['email'] . ")");
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: email already exists (" . $data['email'] . ")");
             $this->jsonError('Email address already in use', 400);
         }
 
@@ -252,14 +255,14 @@ class UserManagementController extends BaseController
                 }
                 
                 $changesStr = implode(', ', $changes);
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Admin updated user (ID: $id): $changesStr");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Admin updated user (ID: $id): $changesStr");
                 $this->jsonSuccess([], 'User updated successfully');
             } else {
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: database error");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: database error");
                 $this->jsonError('Failed to update user', 500);
             }
         } catch (\Exception $e) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error updating user: " . $e->getMessage());
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error updating user: " . $e->getMessage());
             $this->jsonError('Error updating user: ' . $e->getMessage(), 500);
         }
     }
@@ -277,7 +280,7 @@ class UserManagementController extends BaseController
         // Check if user exists
         $user = $this->userModel->findById($id);
         if (!$user) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_DELETE', "Failed to delete user: user with ID $id not found");
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'USER_DELETE', "Failed to delete user: user with ID $id not found");
             $this->jsonError('User not found', 404);
         }
         
@@ -288,14 +291,14 @@ class UserManagementController extends BaseController
             
             if ($result) {
                 $deleteType = $permanent ? 'permanently deleted' : 'deactivated';
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_DELETE', "Admin $deleteType user: {$user['ua_first_name']} {$user['ua_last_name']} (ID: $id)");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'USER_DELETE', "Admin $deleteType user: {$user['ua_first_name']} {$user['ua_last_name']} (ID: $id)");
                 $this->jsonSuccess([], "User $deleteType successfully");
             } else {
-                ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'USER_DELETE', "Failed to delete user: database error");
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'USER_DELETE', "Failed to delete user: database error");
                 $this->jsonError('Failed to delete user', 500);
             }
         } catch (\Exception $e) {
-            ActivityLogController::logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error deleting user: " . $e->getMessage());
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error deleting user: " . $e->getMessage());
             $this->jsonError('Error deleting user: ' . $e->getMessage(), 500);
         }
     }
