@@ -16,7 +16,68 @@ class UserController extends BaseController{
     }
     
     public function renderUserDashboard() {
-        $this->render('/user/dashboard');
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            $this->redirect('/login');
+            return;
+        }
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Get models
+        $readingSessionModel = new \App\Models\ReadingSessionModel();
+        $bookModel = new \App\Models\BookModel();
+        
+        // Get user's reading statistics
+        $readingStats = $readingSessionModel->getUserReadingStats($userId);
+        
+        // Get user's recent reading activity
+        $recentActivity = $readingSessionModel->getRecentReadingActivity($userId, 5);
+        
+        // Format the time for display
+        foreach ($recentActivity as &$activity) {
+            if (isset($activity['minutes_ago'])) {
+                $minutes = (int)$activity['minutes_ago'];
+                
+                if ($minutes < 60) {
+                    $activity['time_ago'] = $minutes == 1 ? '1 minute ago' : "$minutes minutes ago";
+                } else if ($minutes < 1440) { // Less than 24 hours
+                    $hours = floor($minutes / 60);
+                    $activity['time_ago'] = $hours == 1 ? '1 hour ago' : "$hours hours ago";
+                } else if ($minutes < 10080) { // Less than 7 days
+                    $days = floor($minutes / 1440);
+                    $activity['time_ago'] = $days == 1 ? '1 day ago' : "$days days ago";
+                } else {
+                    $weeks = floor($minutes / 10080);
+                    $activity['time_ago'] = $weeks == 1 ? '1 week ago' : "$weeks weeks ago";
+                }
+            } else {
+                $activity['time_ago'] = 'Recently';
+            }
+        }
+        
+        // Get reading suggestions based on user's history
+        $readingSuggestions = $readingSessionModel->getReadingSuggestions($userId, 4);
+        
+        // Get user's purchases
+        $recentPurchases = $readingSessionModel->getUserPurchases($userId);
+        // Limit to 3 most recent purchases
+        $recentPurchases = array_slice($recentPurchases, 0, 3);
+        
+        // Mock data for reading history graph (in a real app, this would come from the database)
+        $readingHistory = [150, 210, 180, 240, 260, 290, 310, 270, 250, 300, 320, 280];
+        $booksRead = [2, 3, 2, 4, 4, 5, 6, 4, 3, 5, 6, 4];
+        $hoursSpent = [12, 18, 14, 22, 25, 30, 35, 28, 26, 32, 38, 30];
+        
+        $this->render('/user/dashboard', [
+            'reading_stats' => $readingStats,
+            'recent_activity' => $recentActivity,
+            'reading_suggestions' => $readingSuggestions,
+            'recent_purchases' => $recentPurchases,
+            'reading_history' => $readingHistory,
+            'books_read' => $booksRead,
+            'hours_spent' => $hoursSpent
+        ]);
     }
 
     public function renderBrowseBooks() {

@@ -1,337 +1,260 @@
 <?php
-
-use Core\Session;
-
 // Include header
-include_once $headerPath;
-
-// Check if user is logged in but is not an admin
-// if (!is_logged_in() || is_admin()) {
-//     // Redirect to login page
-//     header('Location: login.php');
-//     exit;
-// }
-
-// In a real application, you would fetch this data from your database
-// For demo purposes, I'm using dummy data
-$reading_history = [350, 420, 380, 510, 480, 620, 750, 780, 650, 820, 900, 950];
-$books_read = [4, 5, 3, 6, 4, 7, 8, 6, 5, 7, 9, 8];
-$hours_spent = [15, 18, 12, 24, 20, 28, 32, 30, 26, 35, 40, 38];
-$completion_rate = [75, 80, 65, 85, 75, 90, 95, 85, 80, 88, 92, 90];
-
-$current_books = [
-    ['id' => 1, 'title' => 'The Great Novel', 'author' => 'John Author', 'progress' => 65, 'last_read' => '2 hours ago'],
-    ['id' => 2, 'title' => 'Mystery of the Century', 'author' => 'Jane Writer', 'progress' => 32, 'last_read' => '1 day ago'],
-    ['id' => 3, 'title' => 'Future Technology', 'author' => 'Alan Scientist', 'progress' => 48, 'last_read' => '3 days ago']
-];
-
-$recommended_books = [
-    ['id' => 4, 'title' => 'History Uncovered', 'author' => 'Helen Historian', 'rating' => 4.5, 'genre' => 'History'],
-    ['id' => 5, 'title' => 'Poetry Collection', 'author' => 'Robert Poet', 'rating' => 4.4, 'genre' => 'Poetry'],
-    ['id' => 6, 'title' => 'Modern Architecture', 'author' => 'David Designer', 'rating' => 4.7, 'genre' => 'Art'],
-    ['id' => 7, 'title' => 'Cooking Masters', 'author' => 'Gordon Chef', 'rating' => 4.6, 'genre' => 'Cooking']
-];
-
-$reading_achievements = [
-    ['title' => 'Bookworm', 'description' => 'Read 10 books', 'progress' => 70, 'icon' => 'book'],
-    ['title' => 'Speed Reader', 'description' => 'Finish a book in under 3 days', 'progress' => 100, 'icon' => 'lightning'],
-    ['title' => 'Genre Explorer', 'description' => 'Read books from 5 different genres', 'progress' => 60, 'icon' => 'globe'],
-    ['title' => 'Night Owl', 'description' => 'Read for 10 hours during night time', 'progress' => 90, 'icon' => 'moon']
-];
-
-$reading_stats = [
-    'total_books' => 62,
-    'total_pages' => 18560,
-    'total_hours' => 312,
-    'favorite_genre' => 'Mystery',
-    'fastest_book' => 'Short Stories Collection',
-    'longest_book' => 'Epic Fantasy Saga',
-    'avg_rating' => 4.2
-];
+use Core\Session;
+include $headerPath;
 ?>
 
-<div class="container-fluid px-4">
-    <h1 class="mt-4 mb-4">Welcome <?= Session::get("first_name") . " " . Session::get("last_name") ?></h1>
-
-    <!-- Quick Stats -->
-    <div class="row">
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-primary text-white mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title mb-0">Books Read</h5>
-                            <h2 class="mt-2 mb-0"><?php echo $reading_stats['total_books']; ?></h2>
-                        </div>
-                        <i class="bi bi-book fs-1"></i>
-                    </div>
-                    <p class="mt-2 mb-0">
-                        <i class="bi bi-arrow-up"></i> <?php echo end($books_read); ?> this month
-                    </p>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="reading.php">View History</a>
-                    <div class="small text-white"><i class="bi bi-chevron-right"></i></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-success text-white mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title mb-0">Reading Time</h5>
-                            <h2 class="mt-2 mb-0"><?php echo $reading_stats['total_hours']; ?> hrs</h2>
-                        </div>
-                        <i class="bi bi-hourglass-split fs-1"></i>
-                    </div>
-                    <p class="mt-2 mb-0">
-                        <i class="bi bi-arrow-up"></i> <?php echo end($hours_spent); ?> hrs this month
-                    </p>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="reading.php">View Details</a>
-                    <div class="small text-white"><i class="bi bi-chevron-right"></i></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-warning text-white mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title mb-0">Pages Read</h5>
-                            <h2 class="mt-2 mb-0"><?php echo number_format($reading_stats['total_pages']); ?></h2>
-                        </div>
-                        <i class="bi bi-file-text fs-1"></i>
-                    </div>
-                    <p class="mt-2 mb-0">
-                        <i class="bi bi-arrow-up"></i> <?php echo end($reading_history); ?> this month
-                    </p>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="reading.php">View Statistics</a>
-                    <div class="small text-white"><i class="bi bi-chevron-right"></i></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-info text-white mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title mb-0">Completion Rate</h5>
-                            <h2 class="mt-2 mb-0"><?php echo end($completion_rate); ?>%</h2>
-                        </div>
-                        <i class="bi bi-check-circle fs-1"></i>
-                    </div>
-                    <p class="mt-2 mb-0">
-                        <i class="bi bi-arrow-up"></i> 5% from last month
-                    </p>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="reading.php">View Trends</a>
-                    <div class="small text-white"><i class="bi bi-chevron-right"></i></div>
-                </div>
-            </div>
-        </div>
+<div class="container py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+            </ol>
+        </nav>
     </div>
 
-    <!-- Charts Row -->
-    <div class="row">
-        <!-- Reading Activity Chart -->
-        <div class="col-xl-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="bi bi-graph-up me-1"></i>
-                    Reading Activity
+    <!-- Welcome Banner -->
+    <div class="card bg-gradient-primary text-white mb-4 shadow border-0 rounded-3">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h3 class="mb-2 fw-bold">Welcome back, <?= Session::get('first_name') ?>!</h3>
+                    <p class="mb-0 opacity-90">
+                        Track your reading progress, discover new books, and manage your library all in one place.
+                    </p>
                 </div>
-                <div class="card-body">
-                    <canvas id="readingActivityChart" width="100%" height="40"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Favorite Genres Chart -->
-        <div class="col-xl-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="bi bi-pie-chart me-1"></i>
-                    My Reading Preferences
-                </div>
-                <div class="card-body">
-                    <canvas id="genreDistributionChart" width="100%" height="50"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Current Reading Section -->
-    <div class="row">
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="bi bi-bookmark me-1"></i>
-                    Currently Reading
-                </div>
-                <div class="card-body">
-                    <?php foreach ($current_books as $book): ?>
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <h6 class="mb-0"><a href="book.php?id=<?php echo $book['id']; ?>"><?php echo htmlspecialchars($book['title']); ?></a></h6>
-                                <span class="badge bg-primary"><?php echo $book['progress']; ?>%</span>
-                            </div>
-                            <p class="text-muted small mb-2">by <?php echo htmlspecialchars($book['author']); ?> · Last read <?php echo $book['last_read']; ?></p>
-                            <div class="progress">
-                                <div class="progress-bar" role="progressbar" style="width: <?php echo $book['progress']; ?>%"
-                                    aria-valuenow="<?php echo $book['progress']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                    <div class="text-center mt-3">
-                        <a href="reading.php" class="btn btn-primary btn-sm">Continue Reading</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="bi bi-award me-1"></i>
-                    My Reading Achievements
-                </div>
-                <div class="card-body">
-                    <?php foreach ($reading_achievements as $achievement): ?>
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center mb-1">
-                                <div class="achievement-icon me-2">
-                                    <i class="bi bi-<?php echo $achievement['icon']; ?> fs-4 <?php echo $achievement['progress'] == 100 ? 'text-success' : 'text-secondary'; ?>"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-0"><?php echo htmlspecialchars($achievement['title']); ?></h6>
-                                    <p class="text-muted small mb-1"><?php echo htmlspecialchars($achievement['description']); ?></p>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar <?php echo $achievement['progress'] == 100 ? 'bg-success' : ''; ?>" role="progressbar"
-                                            style="width: <?php echo $achievement['progress']; ?>%"
-                                            aria-valuenow="<?php echo $achievement['progress']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                </div>
-                                <?php if ($achievement['progress'] == 100): ?>
-                                    <div class="ms-2">
-                                        <span class="badge bg-success rounded-pill" data-bs-toggle="tooltip" data-bs-title="Achievement Unlocked">
-                                            <i class="bi bi-check-lg"></i>
-                                        </span>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                    <div class="text-center mt-3">
-                        <a href="achievements.php" class="btn btn-outline-primary btn-sm">View All Achievements</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Book Recommendations -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="bi bi-stars me-1"></i>
-                    Recommended For You
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <?php foreach ($recommended_books as $book): ?>
-                            <div class="col-md-6 col-lg-3 mb-3">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <h5 class="card-title"><a href="book.php?id=<?php echo $book['id']; ?>"><?php echo htmlspecialchars($book['title']); ?></a></h5>
-                                        <p class="card-text text-muted mb-2">by <?php echo htmlspecialchars($book['author']); ?></p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="badge bg-light text-dark"><?php echo htmlspecialchars($book['genre']); ?></span>
-                                            <div class="d-flex align-items-center">
-                                                <?php echo $book['rating']; ?>
-                                                <div class="ms-1">
-                                                    <?php
-                                                    $full_stars = floor($book['rating']);
-                                                    $half_star = $book['rating'] - $full_stars >= 0.5;
-
-                                                    for ($i = 0; $i < $full_stars; $i++) {
-                                                        echo '<i class="bi bi-star-fill text-warning"></i>';
-                                                    }
-
-                                                    if ($half_star) {
-                                                        echo '<i class="bi bi-star-half text-warning"></i>';
-                                                    }
-
-                                                    $empty_stars = 5 - $full_stars - ($half_star ? 1 : 0);
-                                                    for ($i = 0; $i < $empty_stars; $i++) {
-                                                        echo '<i class="bi bi-star text-warning"></i>';
-                                                    }
-                                                    ?>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card-footer d-flex justify-content-between bg-transparent">
-                                        <a href="book.php?id=<?php echo $book['id']; ?>" class="btn btn-outline-primary btn-sm">Details</a>
-                                        <button class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-heart"></i> Add to Wishlist
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="browse.php" class="btn btn-primary">Browse More Books</a>
-                    </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="/user/browse-books" class="btn btn-light btn-lg rounded-pill">
+                        <i class="bi bi-book me-1"></i> Browse Books
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Reading Statistics -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="bi bi-bar-chart me-1"></i>
-                    My Reading Statistics
+    <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-header bg-light py-3 border-0">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-graph-up me-2 text-success"></i>Reading Statistics
+            </h5>
+        </div>
+        <div class="card-body py-4">
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="icon-box rounded-circle bg-primary bg-opacity-10 p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                            <i class="bi bi-book text-primary fs-3 d-flex justify-content-center align-items-center h-100"></i>
+                        </div>
+                        <h2 class="display-5 fw-bold mb-0"><?= $reading_stats['books_started'] ?></h2>
+                        <p class="text-muted">Books Started</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <div class="stat-card p-3 border rounded">
-                                <h6 class="text-muted">Favorite Genre</h6>
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-collection me-2 text-primary fs-3"></i>
-                                    <h4 class="mb-0"><?php echo htmlspecialchars($reading_stats['favorite_genre']); ?></h4>
-                                </div>
-                            </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="icon-box rounded-circle bg-success bg-opacity-10 p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                            <i class="bi bi-check-circle text-success fs-3 d-flex justify-content-center align-items-center h-100"></i>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="stat-card p-3 border rounded">
-                                <h6 class="text-muted">Average Rating</h6>
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-star me-2 text-warning fs-3"></i>
-                                    <h4 class="mb-0"><?php echo $reading_stats['avg_rating']; ?>/5.0</h4>
-                                </div>
-                            </div>
+                        <h2 class="display-5 fw-bold mb-0"><?= $reading_stats['books_completed'] ?></h2>
+                        <p class="text-muted">Books Completed</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="icon-box rounded-circle bg-info bg-opacity-10 p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                            <i class="bi bi-cart-check text-info fs-3 d-flex justify-content-center align-items-center h-100"></i>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="stat-card p-3 border rounded">
-                                <h6 class="text-muted">Longest Book Read</h6>
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-book me-2 text-success fs-3"></i>
-                                    <h4 class="mb-0"><?php echo htmlspecialchars($reading_stats['longest_book']); ?></h4>
-                                </div>
-                            </div>
+                        <h2 class="display-5 fw-bold mb-0"><?= $reading_stats['books_purchased'] ?></h2>
+                        <p class="text-muted">Purchases</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="icon-box rounded-circle bg-warning bg-opacity-10 p-3 mx-auto mb-3" style="width: 70px; height: 70px;">
+                            <i class="bi bi-star-half text-warning fs-3 d-flex justify-content-center align-items-center h-100"></i>
                         </div>
+                        <h2 class="display-5 fw-bold mb-0"><?= $reading_stats['completion_rate'] ?>%</h2>
+                        <p class="text-muted">Completion Rate</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <a href="/user/browse-books" class="card h-100 shadow-sm hover-lift text-decoration-none border-0 rounded-3 card-hover-primary">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-box rounded-circle bg-primary bg-opacity-10 p-3 mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-book text-primary fs-3 d-flex justify-content-center align-items-center h-100"></i>
+                    </div>
+                    <h5 class="card-title mb-2">Browse Library</h5>
+                    <p class="card-text text-muted small">Explore our collection of books</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="/user/reading-sessions" class="card h-100 shadow-sm hover-lift text-decoration-none border-0 rounded-3 card-hover-success">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-box rounded-circle bg-success bg-opacity-10 p-3 mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-book-half text-success fs-3 d-flex justify-content-center align-items-center h-100"></i>
+                    </div>
+                    <h5 class="card-title mb-2">Reading Sessions</h5>
+                    <p class="card-text text-muted small">Continue where you left off</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="/user/purchases" class="card h-100 shadow-sm hover-lift text-decoration-none border-0 rounded-3 card-hover-info">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-box rounded-circle bg-info bg-opacity-10 p-3 mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-bag text-info fs-3 d-flex justify-content-center align-items-center h-100"></i>
+                    </div>
+                    <h5 class="card-title mb-2">My Purchases</h5>
+                    <p class="card-text text-muted small">View your purchased books</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="/user/wishlist" class="card h-100 shadow-sm hover-lift text-decoration-none border-0 rounded-3 card-hover-danger">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-box rounded-circle bg-danger bg-opacity-10 p-3 mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-heart text-danger fs-3 d-flex justify-content-center align-items-center h-100"></i>
+                    </div>
+                    <h5 class="card-title mb-2">Wishlist</h5>
+                    <p class="card-text text-muted small">Books you want to read</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Recent Activity -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 rounded-3 h-100">
+                <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-activity me-2 text-primary"></i>Recent Activity
+                    </h5>
+                    <a href="/user/reading-sessions" class="btn btn-sm btn-outline-primary rounded-pill">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <?php if (empty($recent_activity)): ?>
+                            <div class="text-center py-5">
+                                <i class="bi bi-journal-x text-muted" style="font-size: 3.5rem;"></i>
+                                <h5 class="mt-3 mb-1">No reading activity yet</h5>
+                                <p class="text-muted">Start reading to track your progress</p>
+                                <a href="/user/browse-books" class="btn btn-primary mt-2">
+                                    <i class="bi bi-book me-1"></i>Find Books to Read
+                                </a>
+                            </div>
+                        <?php else: ?>
+                            <?php foreach ($recent_activity as $activity): ?>
+                                <div class="list-group-item py-3 px-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3" style="width: 60px; height: 80px;">
+                                            <?php if (!empty($activity['b_cover_path'])): ?>
+                                                <img src="/assets/images/book-cover/<?= $activity['b_cover_path'] ?>" 
+                                                    class="img-fluid rounded shadow-sm" alt="<?= htmlspecialchars($activity['b_title']) ?>"
+                                                    style="width: 100%; height: 100%; object-fit: cover;">
+                                            <?php else: ?>
+                                                <div class="bg-light rounded d-flex align-items-center justify-content-center h-100">
+                                                    <i class="bi bi-book text-primary"></i>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0 text-truncate" style="max-width: 250px;"><?= htmlspecialchars($activity['b_title']) ?></h6>
+                                            </div>
+                                            <p class="text-muted small mb-1"><?= $activity['activity_text'] ?></p>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="bi bi-clock me-1"></i><?= $activity['time_ago'] ?>
+                                                </span>
+                                                <a href="/reading-session/read-book/<?= $activity['b_id'] ?>" class="btn btn-sm btn-outline-primary ms-2 rounded-pill">
+                                                    Continue Reading
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Purchases -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 rounded-3 h-100">
+                <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bag me-2 text-info"></i>Recent Purchases
+                    </h5>
+                    <a href="/user/purchases" class="btn btn-sm btn-outline-primary rounded-pill">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <?php if (empty($recent_purchases)): ?>
+                            <div class="text-center py-5">
+                                <i class="bi bi-bag-x text-muted" style="font-size: 3.5rem;"></i>
+                                <h5 class="mt-3 mb-1">No purchases yet</h5>
+                                <p class="text-muted">Your purchased books will appear here</p>
+                                <a href="/user/browse-books" class="btn btn-primary mt-2">
+                                    <i class="bi bi-book me-1"></i>Browse Books
+                                </a>
+                            </div>
+                        <?php else: ?>
+                            <?php foreach ($recent_purchases as $purchase): ?>
+                                <div class="list-group-item py-3 px-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3" style="width: 60px; height: 80px;">
+                                            <?php 
+                                            $coverPath = !empty($purchase['b_cover_path']) 
+                                                ? '/assets/images/book-cover/' . $purchase['b_cover_path'] 
+                                                : '/assets/images/book-cover/default-cover.svg';
+                                            ?>
+                                            <img src="<?= $coverPath ?>" class="img-fluid rounded shadow-sm" 
+                                                alt="<?= htmlspecialchars($purchase['b_title']) ?>"
+                                                style="width: 100%; height: 100%; object-fit: cover;">
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 text-truncate" style="max-width: 250px;"><?= htmlspecialchars($purchase['b_title']) ?></h6>
+                                            <p class="text-muted small mb-1">By <?= htmlspecialchars($purchase['b_author']) ?></p>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge bg-success me-2">
+                                                    <i class="bi bi-currency-dollar"></i>
+                                                    <?= number_format((float)$purchase['b_price'], 2) ?>
+                                                </span>
+                                                <small class="text-muted me-2">
+                                                    <i class="bi bi-calendar-date me-1"></i>
+                                                    <?= date('M d, Y', strtotime($purchase['up_purchased_at'])) ?>
+                                                </small>
+                                                <div>
+                                                    <a href="/user/download-book/<?= $purchase['b_id'] ?>" class="btn btn-sm btn-outline-secondary rounded-pill">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                    <a href="/reading-session/read-book/<?= $purchase['b_id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                        <i class="bi bi-book"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -339,151 +262,38 @@ $reading_stats = [
     </div>
 </div>
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
-
-<script>
-    // Chart Data
-    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const readingData = <?php echo json_encode($reading_history); ?>;
-    const booksReadData = <?php echo json_encode($books_read); ?>;
-    const hoursSpentData = <?php echo json_encode($hours_spent); ?>;
-
-    // Genre data (dummy data for pie chart)
-    const genreLabels = ['Mystery', 'Science Fiction', 'Fantasy', 'Biography', 'History'];
-    const genreData = [35, 20, 25, 10, 10];
-
-    // Chart configurations and rendering
-    document.addEventListener('DOMContentLoaded', function() {
-        // Reading Activity Chart
-        const readingCtx = document.getElementById('readingActivityChart').getContext('2d');
-        const readingGradient = createGradient(readingCtx, ['rgba(54, 162, 235, 0.2)', 'rgba(54, 162, 235, 0.0)']);
-
-        new Chart(readingCtx, {
-            type: 'line',
-            data: {
-                labels: monthLabels,
-                datasets: [{
-                        label: 'Pages Read',
-                        data: readingData,
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        backgroundColor: readingGradient,
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Books Completed',
-                        data: booksReadData,
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        yAxisID: 'y1'
-                    },
-                    {
-                        label: 'Hours Spent',
-                        data: hoursSpentData,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        yAxisID: 'y2'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                scales: {
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        title: {
-                            display: true,
-                            text: 'Pages Read'
-                        }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: false,
-                        },
-                        title: {
-                            display: true,
-                            text: 'Books Completed'
-                        }
-                    },
-                    y2: {
-                        type: 'linear',
-                        display: false,
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: false,
-                        }
-                    }
-                }
-            }
-        });
-
-        // Genre Distribution Doughnut Chart
-        const genreCtx = document.getElementById('genreDistributionChart').getContext('2d');
-        new Chart(genreCtx, {
-            type: 'doughnut',
-            data: {
-                labels: genreLabels,
-                datasets: [{
-                    data: genreData,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Favorite Genres (%)'
-                    }
-                }
-            }
-        });
-    });
-
-    // Function to create smooth gradient
-    function createGradient(ctx, colors) {
-        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        colors.forEach((color, index) => {
-            gradient.addColorStop(index / (colors.length - 1), color);
-        });
-        return gradient;
-    }
-</script>
+<style>
+/* Custom styles for hover effects */
+.hover-lift {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+.card-hover-primary:hover {
+    border-bottom: 3px solid var(--bs-primary) !important;
+}
+.card-hover-success:hover {
+    border-bottom: 3px solid var(--bs-success) !important;
+}
+.card-hover-info:hover {
+    border-bottom: 3px solid var(--bs-info) !important;
+}
+.card-hover-danger:hover {
+    border-bottom: 3px solid var(--bs-danger) !important;
+}
+.bg-gradient-primary {
+    background: linear-gradient(45deg, var(--bs-primary), #5c7cfa);
+}
+/* Larger icon size in empty states */
+.list-group-item .btn-outline-primary,
+.list-group-item .btn-outline-secondary {
+    margin: 0 2px;
+}
+</style>
 
 <?php
 // Include footer
-include_once $footerPath;
+include $footerPath;
 ?>

@@ -25,7 +25,21 @@ class AdminController extends BaseController {
     }
 
     public function renderReadingSessions() {
-        $this->render('admin/reading-sessions');
+        $readingSessionModel = new \App\Models\ReadingSessionModel();
+        
+        // Get reading session statistics (these will be calculated in the view with actual data)
+        $sessionStats = [
+            'total_sessions' => 0,
+            'total_duration' => 0,
+            'total_pages' => 0,
+            'avg_duration' => 0,
+            'unique_users' => 0,
+            'unique_books' => 0
+        ];
+        
+        $this->render('admin/reading-sessions', [
+            'sessionStats' => $sessionStats
+        ]);
     }
 
     public function renderPurchases() {
