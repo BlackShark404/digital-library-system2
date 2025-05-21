@@ -55,6 +55,11 @@ $accessMap = [
     '/user/wishlist/add' => ['user'],
     '/user/wishlist/remove' => ['user'],
     '/user/wishlist/toggle' => ['user'],
+    '/user/read' => ['user'],
+    '/reading-session/read-book' => ['user'],
+    '/reading-session/start-session' => ['user'],
+    '/reading-session/update-progress' => ['user'],
+    '/reading-session/check-availability' => ['user'],
 
     // Shared (admin and user)
     '/logout' => ['admin', 'user'],
@@ -113,10 +118,17 @@ $router->map('DELETE', '/api/books/[i:id]', 'App\Controllers\BookController#dele
 // User routes
 $router->map('GET', '/user/dashboard', 'App\Controllers\UserController#renderUserDashboard', 'user_dashboard');
 $router->map('GET', '/user/browse-books', 'App\Controllers\UserController#renderBrowseBooks', 'user_browse_books');
-$router->map('GET', '/user/reading-sessions', 'App\Controllers\UserController#renderReadingSessions', 'user_reading_sessions');
+$router->map('GET', '/user/reading-sessions', 'App\Controllers\ReadingSessionController#index', 'user_reading_sessions');
 $router->map('GET', '/user/wishlist', 'App\Controllers\UserController#renderWishlist', 'user_wishlist');
 $router->map('GET', '/user/purchases', 'App\Controllers\UserController#renderPurchases', 'user_purchases');
 $router->map('GET', '/user/user-profile', 'App\Controllers\UserController#renderUserProfile', 'user_profile');
+
+// Reading Session Routes
+$router->map('GET', '/reading-session/read-book/[i:sessionId]', 'App\Controllers\ReadingSessionController#readBook', 'read_book');
+$router->map('POST', '/reading-session/start-session/[i:bookId]', 'App\Controllers\ReadingSessionController#startSession', 'start_reading_session');
+$router->map('POST', '/reading-session/update-progress', 'App\Controllers\ReadingSessionController#updateProgress', 'update_reading_progress');
+$router->map('GET', '/user/read', 'App\Controllers\ReadingSessionController#startNewSession', 'start_new_session_from_browser');
+$router->map('GET', '/reading-session/check-availability/[i:bookId]', 'App\Controllers\ReadingSessionController#checkAvailability', 'check_book_availability');
 
 // Wishlist routes
 $router->map('POST', '/user/wishlist/add', 'App\Controllers\UserController#addToWishlist', 'add_to_wishlist');

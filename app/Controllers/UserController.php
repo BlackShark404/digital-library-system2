@@ -79,10 +79,6 @@ class UserController extends BaseController{
         ]);
     }
 
-    public function renderReadingSessions() {
-        $this->render('/user/reading-sessions');
-    }
-
     public function renderWishlist() {
         // Get user ID from session
         $userId = $_SESSION['user_id'] ?? 0;

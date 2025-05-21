@@ -5,6 +5,9 @@ include $headerPath;
 <div class="container">
     <h1 class="mb-4"><i class="bi bi-book me-2"></i>Book Management</h1>
 
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
     <!-- Book Actions -->
     <div class="mb-4">
         <button id="addBookBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookFormModal">
@@ -119,7 +122,10 @@ include $headerPath;
                     
                     <div class="mb-3">
                         <label for="bookFileUpload" class="form-label">Book File (PDF)</label>
-                        <input type="file" class="form-control" id="bookFileUpload" accept="application/pdf">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <input type="file" class="form-control" id="bookFileUpload" accept="application/pdf">
+                            <span class="badge bg-light text-dark ms-2">Max: 100MB</span>
+                        </div>
                         <input type="hidden" id="book_file_data" name="book_file_data">
                         <div id="currentFileInfo" class="small text-muted mt-1"></div>
                     </div>
@@ -164,7 +170,7 @@ include $headerPath;
                         </div>
                         
                         <div id="viewFileSection" class="mt-3">
-                            <p><strong>Book File:</strong> <a id="viewFileLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-pdf"></i> View PDF</a></p>
+                            <p><strong>Book File:</strong> <a id="viewFileLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-pdf"></i> View PDF</a></p>
                         </div>
                     </div>
                 </div>
@@ -344,6 +350,14 @@ include $headerPath;
                 const file = e.target.files[0];
                 if (file) {
                     if (file.type === 'application/pdf') {
+                        // Check file size (max 100MB)
+                        if (file.size > 104857600) { // 100MB in bytes
+                            alert('File size exceeds the maximum limit of 100MB.');
+                            $(this).val('');
+                            $('#currentFileInfo').text('');
+                            return;
+                        }
+                        
                         const reader = new FileReader();
                         reader.onload = function(e) {
                             $('#book_file_data').val(e.target.result);
@@ -441,6 +455,7 @@ include $headerPath;
                         // Handle file link
                         if (book.file_url) {
                             $('#viewFileLink').attr('href', book.file_url);
+                            $('#viewFileLink').html('<i class="bi bi-file-pdf"></i> View PDF');
                             $('#viewFileSection').show();
                         } else {
                             $('#viewFileSection').hide();
@@ -496,50 +511,57 @@ include $headerPath;
                 publication_date: $('#publication_date').val(),
                 isbn: $('#isbn').val(),
                 genre_id: $('#genre_id').val(),
-                pages: $('#pages').val(),
+                pages: $('#pages').val() ? parseInt($('#pages').val()) : null,
                 price: $('#price').val(),
                 description: $('#description').val()
             };
             
-            // Add cover image data if changed
+            // Include image data if available
             if ($('#cover_image_data').val()) {
                 formData.cover_image_data = $('#cover_image_data').val();
             }
             
-            // Add book file data if changed
+            // Add book file data if available
             if ($('#book_file_data').val()) {
                 formData.book_file_data = $('#book_file_data').val();
             }
             
-            // Determine if it's create or update
-            const url = isEditMode ? `/api/books/${bookId}` : '/api/books';
-            const method = isEditMode ? 'PUT' : 'POST';
+            const endpoint = bookId ? `/api/books/${bookId}` : '/api/books';
+            const method = bookId ? 'PUT' : 'POST';
+            
+            // Show loading state
+            $('#saveBookBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
             
             // Send request
             $.ajax({
-                url: url,
+                url: endpoint,
                 method: method,
                 contentType: 'application/json',
                 data: JSON.stringify(formData),
                 success: function(response) {
                     if (response.success) {
+                        // Close modal
                         $('#bookFormModal').modal('hide');
                         
                         // Show success message
-                        dataTable.showSuccessToast(
-                            isEditMode ? 'Book Updated' : 'Book Added',
-                            response.message
-                        );
+                        showSuccessAlert(`Book ${bookId ? 'updated' : 'added'} successfully`);
                         
-                        // Refresh the DataTable
-                        dataTable.refresh();
+                        // Refresh table
+                        if (dataTable.ajax && typeof dataTable.ajax.reload === 'function') {
+                            dataTable.ajax.reload();
+                        } else {
+                            location.reload(); // Fallback
+                        }
                     } else {
-                        showErrorAlert(response.message);
+                        showErrorAlert(response.message || 'Error saving book');
                     }
                 },
-                error: function(xhr) {
-                    const errorMessage = xhr.responseJSON?.message || 'An error occurred';
-                    showErrorAlert(errorMessage);
+                error: function() {
+                    showErrorAlert('Error processing request');
+                },
+                complete: function() {
+                    // Reset button state
+                    $('#saveBookBtn').prop('disabled', false).text('Save Book');
                 }
             });
         }
@@ -573,18 +595,34 @@ include $headerPath;
         function resetBookForm() {
             $('#bookForm')[0].reset();
             $('#bookId').val('');
+            $('#coverPreview').attr('src', '/assets/images/book-cover/default-cover.svg');
             $('#cover_image_data').val('');
             $('#book_file_data').val('');
-                         $('#coverPreview').attr('src', '/assets/images/book-cover/default-cover.svg');
             $('#currentFileInfo').text('');
+            $('#pages').attr('placeholder', 'Enter number of pages');
         }
         
-        // Show Error Alert
+        // Helper for showing error alerts
         function showErrorAlert(message) {
-            dataTable.showErrorToast('Error', message);
+            $('#alertContainer').html(`
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `);
         }
         
-        // Format File Size
+        // Helper for showing success alerts
+        function showSuccessAlert(message) {
+            $('#alertContainer').html(`
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `);
+        }
+        
+        // Helper for formatting file size
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
@@ -593,10 +631,9 @@ include $headerPath;
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
         
-        // Format Date
+        // Helper for formatting dates
         function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString();
+            return new Date(dateString).toLocaleDateString();
         }
     });
 </script>

@@ -102,7 +102,7 @@ include $headerPath;
                                     </span>
                                     <div>
                                         <button type="button" class="btn btn-sm btn-outline-primary view-book-details" data-book-id="<?php echo $book['id']; ?>">Details</button>
-                                        <a href="/user/read?id=<?php echo $book['id']; ?>" class="btn btn-sm btn-primary">Read</a>
+                                        <a href="/user/read?id=<?php echo $book['id']; ?>" class="btn btn-sm btn-primary read-book-btn" data-book-id="<?php echo $book['id']; ?>">Read</a>
                                     </div>
                                 </div>
                             </div>
@@ -170,6 +170,24 @@ include $headerPath;
     </div>
 </div>
 
+<!-- Reading Session Loading Modal -->
+<div class="modal fade" id="readingSessionLoadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="mb-3">Checking availability...</h5>
+                <p class="text-muted">We're checking if this book is available for you to read.</p>
+                <div id="readSessionMessage" class="alert alert-info mt-3 d-none">
+                    <!-- Dynamic message will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Handle wishlist toggles
@@ -201,56 +219,103 @@ include $headerPath;
                             icon.classList.add('bi-heart-fill');
                             this.setAttribute('data-action', 'remove');
                             this.setAttribute('data-bs-title', 'Remove from wishlist');
-                            
-                            // Show toast notification
-                            showToast('Added to wishlist', 'success');
                         } else {
                             icon.classList.remove('bi-heart-fill');
                             icon.classList.add('bi-heart');
                             this.setAttribute('data-action', 'add');
                             this.setAttribute('data-bs-title', 'Add to wishlist');
-                            
-                            // Show toast notification
-                            showToast('Removed from wishlist', 'info');
                         }
-                    } else {
-                        // Show error notification
-                        showToast(data.message || 'Failed to update wishlist', 'danger');
+                        
+                        // Update tooltip
+                        let tooltip = bootstrap.Tooltip.getInstance(this);
+                        if (tooltip) {
+                            tooltip.dispose();
+                        }
+                        new bootstrap.Tooltip(this);
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    showToast('An error occurred', 'danger');
+                    console.error('Error toggling wishlist:', error);
                 });
             });
         });
 
-        // Handle Reset Filters button
-        const resetFiltersBtn = document.getElementById('resetFiltersBtnUser');
-        if (resetFiltersBtn) {
-            resetFiltersBtn.addEventListener('click', function() {
-                // Clear search input
-                const searchInput = document.querySelector('input[name="search"]');
-                if (searchInput) {
-                    searchInput.value = '';
-                }
+        // Reading session loading modal
+        const loadingModal = new bootstrap.Modal(document.getElementById('readingSessionLoadingModal'));
+        const messageContainer = document.getElementById('readSessionMessage');
 
-                // Reset genre select
-                const genreSelect = document.querySelector('select[name="genre"]');
-                if (genreSelect) {
-                    genreSelect.value = ''; // Assuming 'All Genres' has an empty value
-                }
-
-                // Reset sort select to default (e.g., title_asc)
-                const sortSelect = document.querySelector('select[name="sort"]');
-                if (sortSelect) {
-                    sortSelect.value = 'title_asc'; 
-                }
-
-                // Redirect to the base page to clear all filters
-                window.location.href = '/user/browse-books';
+        // Check book availability before accessing
+        const readButtons = document.querySelectorAll('.read-book-btn');
+        readButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const bookId = this.getAttribute('data-book-id');
+                const href = this.getAttribute('href');
+                
+                // Show loading modal
+                messageContainer.classList.add('d-none');
+                loadingModal.show();
+                
+                // Check availability
+                fetch(`/reading-session/check-availability/${bookId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (data.data.is_available) {
+                                // Available to read, redirect after a short delay
+                                messageContainer.textContent = "Book is available. Taking you to the reader...";
+                                messageContainer.className = "alert alert-success mt-3";
+                                messageContainer.classList.remove('d-none');
+                                
+                                setTimeout(() => {
+                                    loadingModal.hide();
+                                    window.location.href = href;
+                                }, 1000);
+                            } else if (data.data.is_previous_session_expired) {
+                                // Previously read but expired
+                                messageContainer.textContent = "Your 3-day reading period for this book has expired. Please purchase to continue reading.";
+                                messageContainer.className = "alert alert-warning mt-3";
+                                messageContainer.classList.remove('d-none');
+                                
+                                setTimeout(() => loadingModal.hide(), 3000);
+                            } else {
+                                // Not available due to concurrent readers
+                                messageContainer.textContent = `This book has reached the maximum number of concurrent readers (${data.data.active_sessions_count}/${data.data.max_sessions}). Please try again later or purchase the book.`;
+                                messageContainer.className = "alert alert-warning mt-3";
+                                messageContainer.classList.remove('d-none');
+                                
+                                setTimeout(() => loadingModal.hide(), 3000);
+                            }
+                        } else {
+                            // Error checking availability
+                            messageContainer.textContent = "Error checking book availability. Please try again.";
+                            messageContainer.className = "alert alert-danger mt-3";
+                            messageContainer.classList.remove('d-none');
+                            
+                            setTimeout(() => loadingModal.hide(), 3000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking availability:', error);
+                        
+                        messageContainer.textContent = "Error checking book availability. Please try again.";
+                        messageContainer.className = "alert alert-danger mt-3";
+                        messageContainer.classList.remove('d-none');
+                        
+                        setTimeout(() => loadingModal.hide(), 3000);
+                    });
             });
-        }
+        });
+        
+        // Initialize tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        
+        // Reset filters button
+        document.getElementById('resetFiltersBtnUser').addEventListener('click', function() {
+            window.location.href = '/user/browse-books';
+        });
 
         // Handle "View Details" button click to show modal
         const bookDetailModal = new bootstrap.Modal(document.getElementById('bookDetailModal'));

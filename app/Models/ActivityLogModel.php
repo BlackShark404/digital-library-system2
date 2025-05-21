@@ -231,9 +231,9 @@ class ActivityLogModel extends BaseModel
             ";
             
             $params = [
-                'ua_id' => $data['user_id'] ?? null,
-                'at_id' => $data['action_type_id'],
-                'description' => $data['description']
+                'ua_id' => $data['ua_id'] ?? null,
+                'at_id' => $data['at_id'] ?? null,
+                'description' => $data['al_description'] ?? ($data['description'] ?? '')
             ];
             
             $id = $this->queryScalar($sql, $params);
@@ -262,7 +262,7 @@ class ActivityLogModel extends BaseModel
             
             $params = [
                 'id' => $id,
-                'description' => $data['description']
+                'description' => $data['al_description'] ?? ($data['description'] ?? '')
             ];
             
             $this->execute($sql, $params);
@@ -313,5 +313,49 @@ class ActivityLogModel extends BaseModel
         ";
         
         return $this->query($sql);
+    }
+    
+    /**
+     * Log a user activity
+     * 
+     * @param int|null $userId User ID or null for system events
+     * @param string $actionCode Action code (must match activity_type.at_code)
+     * @param string $description Description of the activity
+     * @return bool Success or failure
+     */
+    public function logActivity($userId, $actionCode, $description)
+    {
+        try {
+            // Get activity type ID from code
+            $activityTypeId = $this->getActivityTypeIdByCode($actionCode);
+            
+            if (!$activityTypeId) {
+                error_log("Unknown activity type code: $actionCode");
+                return false;
+            }
+            
+            $data = [
+                'ua_id' => $userId,
+                'at_id' => $activityTypeId,
+                'al_description' => $description
+            ];
+            
+            return $this->createData($data);
+        } catch (\Exception $e) {
+            error_log("Error logging activity: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get activity type ID by code
+     * 
+     * @param string $code Activity type code
+     * @return int|null Activity type ID or null if not found
+     */
+    private function getActivityTypeIdByCode($code)
+    {
+        $sql = "SELECT at_id FROM activity_type WHERE at_code = :code";
+        return $this->queryScalar($sql, ['code' => $code]);
     }
 } 
