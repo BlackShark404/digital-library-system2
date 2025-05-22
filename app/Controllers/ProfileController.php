@@ -209,11 +209,14 @@ class ProfileController extends BaseController {
 
         // Prepare data for update
         $updateData = [
-            'ua_profile_url' => $newProfileUrl,
-            'ua_first_name' => $firstName,
-            'ua_last_name' => $lastName,
-            'ua_phone_number' => $phone // This will be empty string if not provided
+            'profile_url' => $newProfileUrl,
+            'firstName' => $firstName,
+            'lastName' => $lastName,
+            'phone' => $phone // Use the field name that matches the form field
         ];
+        
+        // Debug log
+        error_log("ProfileController updateData: " . json_encode($updateData));
 
         // Update the user profile
         $updated = $this->userModel->updateUser($user['ua_id'], $updateData);
@@ -228,9 +231,7 @@ class ProfileController extends BaseController {
         $_SESSION['first_name'] = $firstName;
         $_SESSION['last_name'] = $lastName;
         $_SESSION['full_name'] = $newName;
-        if (!empty($phone)) {
-            $_SESSION['phone_number'] = $phone;
-        }
+        $_SESSION['phone_number'] = $phone; // Always update phone number in session, even if empty
 
         // Log successful update
         $changes = [];

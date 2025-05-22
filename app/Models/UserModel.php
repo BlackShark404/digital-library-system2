@@ -152,16 +152,23 @@ class UserModel extends BaseModel
 
     public function updateUser($id, array $data)
     {
+        // Debug log for input data
+        error_log("updateUser input data: " . json_encode($data));
+        
         $userData = [];
         $mappings = [
             'ua_profile_url' => 'ua_profile_url',
+            'profile_url' => 'ua_profile_url',
             'first_name' => 'ua_first_name',
+            'lastName' => 'ua_first_name',
             'last_name' => 'ua_last_name',
+            'firstName' => 'ua_first_name',
             'email' => 'ua_email',
             'password' => 'ua_hashed_password',
             'role_id' => 'ua_role_id',
             'is_active' => 'ua_is_active',
-            'phone_number' => 'ua_phone_number'
+            'phone_number' => 'ua_phone_number',
+            'phone' => 'ua_phone_number'
         ];
         
         foreach ($mappings as $input => $dbField) {
@@ -199,6 +206,10 @@ class UserModel extends BaseModel
         
         $sql = "UPDATE {$this->table} SET {$formattedUpdate['updateClause']} WHERE {$this->primaryKey} = :id";
         // Do not add soft delete condition here, we should be able to update a soft-deleted record if needed (e.g. to restore it)
+        
+        // Debug log for SQL and parameters
+        error_log("UPDATE SQL: " . $sql);
+        error_log("UPDATE params: " . json_encode($params));
         
         return $this->execute($sql, $params);
     }
