@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return response.json();
             })
-            .then(response => {
+            .then(async response => {
                 console.log('Response received:', response);
                 
                 // The response has nested data objects
@@ -352,19 +352,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Format purchase ID
                 document.getElementById('purchase-id').textContent = `ORD-${String(purchaseData.up_id).padStart(5, '0')}`;
                 
-                // Format transaction ID
-                const hashPart = purchaseData.up_purchased_at ? purchaseData.up_purchased_at.substring(0, 8) : '';
-                document.getElementById('purchase-transaction-id').textContent = `TXN-${String(purchaseData.up_id).padStart(6, '0')}-${hashPart}`;
+                // Format transaction ID to match the user view format
+                // In user view: $transactionId = 'TXN-' . str_pad($book['up_id'], 6, '0', STR_PAD_LEFT) . '-' . substr(hash('sha256', $book['up_purchased_at']), 0, 6);
+                const paddedId = String(purchaseData.up_id).padStart(6, '0');
+                const purchaseDate = purchaseData.up_purchased_at || '';
+                
+                // Generate SHA-256 hash of purchase date (similar to PHP's hash function)
+                let hashPart = '';
+                if (purchaseDate) {
+                    // Use SubtleCrypto API to generate hash
+                    const encoder = new TextEncoder();
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(purchaseDate));
+                    // Convert buffer to hex string
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                    // Take first 6 characters
+                    hashPart = hashHex.substring(0, 6);
+                }
+                
+                document.getElementById('purchase-transaction-id').textContent = `TXN-${paddedId}-${hashPart}`;
                 
                 // Format dates
-                const purchaseDate = new Date(purchaseData.up_purchased_at);
+                const purchaseDateObj = new Date(purchaseDate);
                 // Check if purchase-date element exists before trying to update it
                 const purchaseDateElement = document.getElementById('purchase-date');
                 if (purchaseDateElement) {
-                    purchaseDateElement.textContent = purchaseDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+                    purchaseDateElement.textContent = purchaseDateObj.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
                 }
                 
-                document.getElementById('purchase-full-date').textContent = purchaseDate.toLocaleString('en-US', {
+                document.getElementById('purchase-full-date').textContent = purchaseDateObj.toLocaleString('en-US', {
                     month: 'short', 
                     day: 'numeric', 
                     year: 'numeric', 
