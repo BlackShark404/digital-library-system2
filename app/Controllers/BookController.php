@@ -3,15 +3,18 @@
 namespace App\Controllers;
 
 use App\Models\BookModel;
+use App\Models\ActivityLogModel;
 
 class BookController extends BaseController
 {
     protected $bookModel;
+    protected $activityLogModel;
     
     public function __construct()
     {
         parent::__construct();
         $this->bookModel = new BookModel();
+        $this->activityLogModel = new ActivityLogModel();
     }
     
     /**
@@ -162,6 +165,10 @@ class BookController extends BaseController
                 return;
             }
             
+            // Log the activity
+            $userId = $_SESSION['user_id'] ?? null;
+            $this->activityLogModel->logActivity($userId, 'BOOK_ADDED', "Added new book: {$bookData['title']} by {$bookData['author']}");
+            
             // Return success with the new book ID and page count for frontend update
             $response = [
                 'id' => $bookId
@@ -273,6 +280,10 @@ class BookController extends BaseController
                 return;
             }
             
+            // Log the activity
+            $userId = $_SESSION['user_id'] ?? null;
+            $this->activityLogModel->logActivity($userId, 'BOOK_UPDATED', "Updated book: {$bookData['title']} by {$bookData['author']} (ID: $id)");
+            
             $response = [];
             if ($pageCountUpdated && $extractedPageCount !== null) {
                 $response['pageCount'] = $extractedPageCount;
@@ -310,6 +321,10 @@ class BookController extends BaseController
                 $this->jsonError('Failed to delete book', 500);
                 return;
             }
+            
+            // Log the activity
+            $userId = $_SESSION['user_id'] ?? null;
+            $this->activityLogModel->logActivity($userId, 'BOOK_DELETED', "Deleted book: {$book['b_title']} by {$book['b_author']} (ID: $id)");
             
             $this->jsonSuccess([], 'Book deleted successfully');
         } catch (\Exception $e) {
@@ -476,8 +491,7 @@ class BookController extends BaseController
         
         if ($success) {
             // Log the purchase activity
-            $activityLogModel = new \App\Models\ActivityLogModel();
-            $activityLogModel->logActivity($userId, 'PURCHASE', 'Purchased book: ' . $book['b_title']);
+            $this->activityLogModel->logActivity($userId, 'PURCHASE', 'Purchased book: ' . $book['b_title']);
             
             $this->jsonSuccess(['purchased' => true], 'Book purchased successfully');
         } else {
@@ -531,6 +545,10 @@ class BookController extends BaseController
         $categoryId = $this->bookModel->addCategory($name);
         
         if ($categoryId) {
+            // Log the activity
+            $userId = $_SESSION['user_id'] ?? null;
+            $this->activityLogModel->logActivity($userId, 'BOOK_UPDATED', "Added new category: $name (ID: $categoryId)");
+            
             $this->jsonSuccess(['id' => $categoryId, 'name' => $name], 'Category added successfully');
         } else {
             $this->jsonError('Failed to add category', 500);
@@ -583,6 +601,10 @@ class BookController extends BaseController
         $success = $this->bookModel->updateCategory($id, $name);
         
         if ($success) {
+            // Log the activity
+            $userId = $_SESSION['user_id'] ?? null;
+            $this->activityLogModel->logActivity($userId, 'BOOK_UPDATED', "Updated category from '{$category['g_name']}' to '$name' (ID: $id)");
+            
             $this->jsonSuccess(['id' => $id, 'name' => $name], 'Category updated successfully');
         } else {
             $this->jsonError('Failed to update category', 500);
@@ -619,6 +641,10 @@ class BookController extends BaseController
         $success = $this->bookModel->deleteCategory($id);
         
         if ($success) {
+            // Log the activity
+            $userId = $_SESSION['user_id'] ?? null;
+            $this->activityLogModel->logActivity($userId, 'BOOK_UPDATED', "Deleted category: {$category['g_name']} (ID: $id)");
+            
             $this->jsonSuccess(['id' => $id], 'Category deleted successfully');
         } else {
             $this->jsonError('Failed to delete category', 500);
