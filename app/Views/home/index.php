@@ -443,7 +443,7 @@
                 </div>
             </div>
             <div class="text-center mt-4">
-                <a href="browse-books.php" class="btn btn-outline-primary">Browse All Books</a>
+                <a href="/login" class="btn btn-outline-primary">Browse All Books</a>
             </div>
         </div>
     </section>
@@ -557,7 +557,7 @@
                 <div class="col-lg-10">
                     <div class="row align-items-center mb-5">
                         <div class="col-md-6 order-md-2 mb-4 mb-md-0">
-                            <img src="/assets/images/create_acc.png" alt="Create Account" class="img-fluid rounded-3 shadow">
+                        <img src="/assets/images/landing-page/create-account.jpeg" alt="Create Account" class="img-fluid rounded-3 shadow" width="300" height="100">
                         </div>
                         <div class="col-md-6 order-md-1">
                             <div class="d-flex align-items-center mb-3">
@@ -613,7 +613,6 @@
                         <ul class="list-unstyled mb-4">
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Unlimited browsing</li>
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> 3-day book previews</li>
-                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Personalized recommendations</li>
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Reading history tracking</li>
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Wishlist management</li>
                         </ul>
@@ -632,7 +631,7 @@
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Desktop reading support</li>
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Add to your personal library</li>
                         </ul>
-                        <a href="browse-books.php" class="btn btn-outline-primary w-100">Browse Books</a>
+                        <a href="/login" class="btn btn-outline-primary w-100">Browse Books</a>
                     </div>
                 </div>
             </div>
@@ -692,7 +691,7 @@
                     <p class="lead mb-4">Join thousands of readers who've discovered their next favorite book on BookSync. Create your free account today and start exploring.</p>
                     <div class="d-flex justify-content-center gap-3">
                         <a href="/register" class="btn btn-light">Create Free Account</a>
-                        <a href="browse-books.php" class="btn btn-outline-light">Browse Books</a>
+                        <a href="/login" class="btn btn-outline-light">Browse Books</a>
                     </div>
                 </div>
             </div>
