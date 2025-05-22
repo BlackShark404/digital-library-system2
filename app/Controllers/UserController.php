@@ -394,7 +394,7 @@ class UserController extends BaseController{
                 'id' => $book['b_id'],
                 'title' => $book['b_title'],
                 'author' => $book['b_author'],
-                'genre' => $book['genre'] ?? 'Uncategorized',
+                'genre' => $book['genre_name'] ?? 'Uncategorized',
                 'description' => $book['b_description'] ?? '',
                 'cover_image' => $coverPath,
                 'price' => (float)$book['b_price'],

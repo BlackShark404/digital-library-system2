@@ -267,7 +267,7 @@ include $headerPath;
                         document.getElementById('modalCoverImage').src = book.cover_url;
                         document.getElementById('modalTitle').textContent = book.b_title;
                         document.getElementById('modalAuthor').textContent = `by ${book.b_author}`;
-                        document.getElementById('modalGenre').textContent = book.genre || 'Uncategorized';
+                        document.getElementById('modalGenre').textContent = book.genre_name || book.genre || 'Uncategorized';
                         document.getElementById('modalPublisher').textContent = book.b_publisher || 'N/A';
                         document.getElementById('modalPublicationDate').textContent = book.b_publication_date || 'N/A';
                         document.getElementById('modalIsbn').textContent = book.b_isbn || 'N/A';
