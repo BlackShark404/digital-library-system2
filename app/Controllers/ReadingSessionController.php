@@ -573,9 +573,9 @@ class ReadingSessionController extends BaseController
      */
     public function getPurchaseById($id)
     {
-        // Check if request is AJAX
-        if (!$this->isAjax()) {
-            $this->jsonError('Invalid request', 400);
+        // Check authentication instead of AJAX header
+        if (!isset($_SESSION['user_id']) || !$this->isAdmin()) {
+            $this->jsonError('Access denied', 403);
             return;
         }
         
@@ -587,7 +587,8 @@ class ReadingSessionController extends BaseController
             return;
         }
         
-        $this->jsonSuccess(['data' => $purchase], 'Purchase details retrieved successfully');
+        // Return purchase data directly without additional nesting
+        $this->jsonSuccess($purchase, 'Purchase details retrieved successfully');
     }
     
     /**
