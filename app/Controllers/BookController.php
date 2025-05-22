@@ -48,7 +48,7 @@ class BookController extends BaseController
                 'cover' => $coverPath,
                 'title' => $book['b_title'],
                 'author' => $book['b_author'],
-                'genre' => $book['genre'] ?? 'Uncategorized',
+                'genre' => $book['genre_name'] ?? 'Uncategorized',
                 'price' => '$' . number_format($book['b_price'], 2),
                 'raw_price' => $book['b_price']
             ];

@@ -645,7 +645,7 @@ include $headerPath;
                         // Populate view modal
                         $('#viewTitle').text(book.b_title);
                         $('#viewAuthor').text(book.b_author);
-                        $('#viewGenre').text(book.genre || 'Uncategorized');
+                        $('#viewGenre').text(book.genre_name || book.genre || 'Uncategorized');
                         $('#viewPublisher').text(book.b_publisher || 'N/A');
                         $('#viewPublicationDate').text(book.b_publication_date ? formatDate(book.b_publication_date) : 'N/A');
                         $('#viewIsbn').text(book.b_isbn || 'N/A');
