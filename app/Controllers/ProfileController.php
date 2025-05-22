@@ -313,12 +313,15 @@ class ProfileController extends BaseController {
             return;
         }
 
-        // Verify current password
-        if (!$this->userModel->verifyPassword($currentPassword, $user['password'])) {
+        // Verify current password - use ua_hashed_password which is the actual column name in the database
+        if (!$this->userModel->verifyPassword($currentPassword, $user['ua_hashed_password'])) {
             $this->activityLogModel->logActivity($userId, 'PROFILE_UPDATE', "Failed to change password: Incorrect current password");
             $this->jsonError('Current password is incorrect.', 401);
             return;
         }
+        
+        // Add debug logging
+        error_log("Password verification passed for user ID: $userId");
 
         // Update the password
         $updated = $this->userModel->updateUser($userId, ['password' => $newPassword]);
@@ -365,12 +368,15 @@ class ProfileController extends BaseController {
             return;
         }
 
-        // Verify password
-        if (!password_verify($password, $user['password'])) {
+        // Verify password - use ua_hashed_password which is the actual column name in the database
+        if (!password_verify($password, $user['ua_hashed_password'])) {
             $this->activityLogModel->logActivity($userId, 'USER_DELETE', "Failed to delete account: Incorrect password");
             $this->jsonError('Incorrect password. Account deletion canceled.', 401);
             return;
         }
+        
+        // Add debug logging
+        error_log("Password verification passed for account deletion. User ID: $userId");
 
         // Log account deletion before deleting
         $this->activityLogModel->logActivity($userId, 'USER_DELETE', "User deleted their account: {$user['ua_first_name']} {$user['ua_last_name']} ({$user['ua_email']})");

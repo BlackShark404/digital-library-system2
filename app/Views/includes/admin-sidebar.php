@@ -5,7 +5,7 @@
     <div class="avatar-wrapper">
         <img src=<?=Session::get('profile_url')?> alt="Admin" class="avatar">
         <div class="user-info">
-            <div class="user-name">Admin User</div>
+            <div class="user-name"><?=Session::get('full_name')?></div>
             <div class="user-role">Administrator</div>
         </div>
     </div>
