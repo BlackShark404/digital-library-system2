@@ -605,9 +605,7 @@ const togglePasswordButtons = document.querySelectorAll('.toggle-password');
         });
     }
     </script>
-
     
-
 <?php
 // Include footer
 include $footerPath;
