@@ -93,6 +93,14 @@ class BookController extends BaseController
     }
     
     /**
+     * Alias for createBook to maintain compatibility with route definition
+     */
+    public function addBook()
+    {
+        return $this->createBook();
+    }
+    
+    /**
      * Create a new book
      */
     public function createBook()
