@@ -242,4 +242,135 @@ class BookModel extends BaseModel
         $sql = "SELECT g_id, g_name FROM genre ORDER BY g_name";
         return $this->query($sql);
     }
+    
+    /**
+     * Get all categories with the count of books in each category
+     * 
+     * @return array List of categories with book count
+     */
+    public function getAllCategoriesWithBookCount()
+    {
+        $sql = "
+            SELECT 
+                g.g_id,
+                g.g_name,
+                COUNT(b.b_id) AS book_count
+            FROM 
+                genre g
+            LEFT JOIN 
+                books b ON g.g_id = b.b_genre_id AND b.b_deleted_at IS NULL
+            GROUP BY 
+                g.g_id,
+                g.g_name
+            ORDER BY 
+                g.g_name
+        ";
+        
+        return $this->query($sql);
+    }
+    
+    /**
+     * Check if a category name is already taken
+     * 
+     * @param string $name Category name
+     * @param int|null $excludeId Exclude this category ID from the check (for updates)
+     * @return bool True if name is taken, false otherwise
+     */
+    public function isCategoryNameTaken($name, $excludeId = null)
+    {
+        $sql = "SELECT g_id FROM genre WHERE g_name = :name";
+        $params = ['name' => $name];
+        
+        if ($excludeId) {
+            $sql .= " AND g_id != :exclude_id";
+            $params['exclude_id'] = $excludeId;
+        }
+        
+        $result = $this->queryOne($sql, $params);
+        return $result !== false;
+    }
+    
+    /**
+     * Get a category by ID
+     * 
+     * @param int $id Category ID
+     * @return array|bool Category data or false if not found
+     */
+    public function getCategoryById($id)
+    {
+        $sql = "SELECT g_id, g_name FROM genre WHERE g_id = :id";
+        return $this->queryOne($sql, ['id' => $id]);
+    }
+    
+    /**
+     * Add a new category
+     * 
+     * @param string $name Category name
+     * @return int|bool The new category ID or false on failure
+     */
+    public function addCategory($name)
+    {
+        try {
+            $this->beginTransaction();
+            
+            $sql = "INSERT INTO genre (g_name) VALUES (:name)";
+            $this->execute($sql, ['name' => $name]);
+            
+            $categoryId = $this->lastInsertId();
+            $this->commit();
+            
+            return $categoryId;
+        } catch (\Exception $e) {
+            $this->rollBack();
+            error_log("Error adding category: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Update a category
+     * 
+     * @param int $id Category ID
+     * @param string $name New category name
+     * @return bool Success status
+     */
+    public function updateCategory($id, $name)
+    {
+        try {
+            $sql = "UPDATE genre SET g_name = :name WHERE g_id = :id";
+            $this->execute($sql, ['id' => $id, 'name' => $name]);
+            return true;
+        } catch (\Exception $e) {
+            error_log("Error updating category: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Delete a category and remove the category from associated books
+     * 
+     * @param int $id Category ID
+     * @return bool Success status
+     */
+    public function deleteCategory($id)
+    {
+        try {
+            $this->beginTransaction();
+            
+            // First, set b_genre_id to NULL for all books with this category
+            $sql = "UPDATE books SET b_genre_id = NULL WHERE b_genre_id = :id";
+            $this->execute($sql, ['id' => $id]);
+            
+            // Then delete the category
+            $sql = "DELETE FROM genre WHERE g_id = :id";
+            $this->execute($sql, ['id' => $id]);
+            
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollBack();
+            error_log("Error deleting category: " . $e->getMessage());
+            return false;
+        }
+    }
 } 

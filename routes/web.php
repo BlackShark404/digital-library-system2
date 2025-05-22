@@ -121,11 +121,17 @@ $router->map('PUT', '/api/users/[i:id]', 'App\Controllers\UserManagementControll
 $router->map('DELETE', '/api/users/[i:id]', 'App\Controllers\UserManagementController#deleteUser', 'api_delete_user');
 
 // Book Management API Routes
-$router->map('GET', '/api/books', 'App\Controllers\BookController#getBooks', 'api_get_books');
-$router->map('GET', '/api/books/[i:id]', 'App\Controllers\BookController#getBook', 'api_get_book');
-$router->map('POST', '/api/books', 'App\Controllers\BookController#createBook', 'api_create_book');
-$router->map('PUT', '/api/books/[i:id]', 'App\Controllers\BookController#updateBook', 'api_update_book');
-$router->map('DELETE', '/api/books/[i:id]', 'App\Controllers\BookController#deleteBook', 'api_delete_book');
+$router->map('GET', '/api/books', 'App\Controllers\BookController#getAllBooks', 'get_all_books_api');
+$router->map('GET', '/api/books/[i:id]', 'App\Controllers\BookController#getBook', 'get_book_api');
+$router->map('POST', '/api/books', 'App\Controllers\BookController#addBook', 'add_book_api');
+$router->map('PUT', '/api/books/[i:id]', 'App\Controllers\BookController#updateBook', 'update_book_api');
+$router->map('DELETE', '/api/books/[i:id]', 'App\Controllers\BookController#deleteBook', 'delete_book_api');
+
+// Category Management API
+$router->map('GET', '/api/categories', 'App\Controllers\BookController#getAllCategories', 'get_all_categories');
+$router->map('POST', '/api/categories', 'App\Controllers\BookController#addCategory', 'add_category');
+$router->map('PUT', '/api/categories/[i:id]', 'App\Controllers\BookController#updateCategory', 'update_category');
+$router->map('DELETE', '/api/categories/[i:id]', 'App\Controllers\BookController#deleteCategory', 'delete_category');
 
 // User routes
 $router->map('GET', '/user/dashboard', 'App\Controllers\UserController#renderUserDashboard', 'user_dashboard');

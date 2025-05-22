@@ -10,6 +10,9 @@ include $headerPath;
         <button id="addBookBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookFormModal">
             <i class="bi bi-plus-circle me-2"></i>Add New Book
         </button>
+        <button id="manageCategoriesBtn" class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#categoryManagementModal">
+            <i class="bi bi-tags me-2"></i>Manage Categories
+        </button>
     </div>
 
     <!-- Book List Table -->
@@ -220,6 +223,99 @@ include $headerPath;
     </div>
 </div>
 
+<!-- Category Management Modal -->
+<div class="modal fade" id="categoryManagementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-tags me-2"></i>Category Management</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <!-- Add New Category Form -->
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Add New Category</h6>
+                            </div>
+                            <div class="card-body">
+                                <form id="addCategoryForm" class="mb-0">
+                                    <input type="hidden" id="editCategoryId">
+                                    <div class="mb-3">
+                                        <label for="categoryName" class="form-label">Category Name</label>
+                                        <input type="text" class="form-control" id="categoryName" placeholder="Enter category name" required>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary" style="display: none;">
+                                            Cancel Edit
+                                        </button>
+                                        <button type="submit" id="saveCategoryBtn" class="btn btn-primary">
+                                            <i class="bi bi-plus-circle me-1"></i> Add Category
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <!-- Categories List -->
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Categories</h6>
+                                <span id="categoryCount" class="badge bg-primary rounded-pill">0</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="categoriesLoading" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading categories...</span>
+                                    </div>
+                                    <p class="mt-2">Loading categories...</p>
+                                </div>
+                                <div id="categoriesEmpty" class="text-center py-4 d-none">
+                                    <i class="bi bi-tags" style="font-size: 2rem;"></i>
+                                    <p class="mt-2">No categories found.</p>
+                                </div>
+                                <div id="categoriesList" class="list-group list-group-flush d-none">
+                                    <!-- Categories will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="categoryAlert" class="alert mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Category Modal -->
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>Delete Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="deleteCategoryId">
+                <p>Are you sure you want to delete the category <strong id="deleteCategoryName"></strong>?</p>
+                <div id="categoryHasBooks" class="alert alert-warning d-none">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This category has associated books. Deleting it will remove the category assignment from these books.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmDeleteCategoryBtn" class="btn btn-danger">Delete Category</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Include jQuery first -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -241,7 +337,7 @@ include $headerPath;
         // Initialize DataTables
         initBookDataTable();
         
-        // Initialize file upload previews
+        // Initialize file upload handlers
         initFileUploadHandlers();
         
         // Initialize tooltips
@@ -706,6 +802,273 @@ include $headerPath;
         // Helper for formatting dates
         function formatDate(dateString) {
             return new Date(dateString).toLocaleDateString();
+        }
+
+        // ========== CATEGORY MANAGEMENT ==========
+        
+        // Load categories when the modal is opened
+        $('#categoryManagementModal').on('show.bs.modal', function (e) {
+            loadCategories();
+        });
+        
+        // Handle category form submission
+        $('#addCategoryForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const categoryId = $('#editCategoryId').val();
+            const categoryName = $('#categoryName').val().trim();
+            
+            if (!categoryName) {
+                showCategoryAlert('Please enter a category name.', 'danger');
+                return;
+            }
+            
+            if (categoryId) {
+                // Update existing category
+                updateCategory(categoryId, categoryName);
+            } else {
+                // Add new category
+                addCategory(categoryName);
+            }
+        });
+        
+        // Cancel editing category
+        $('#cancelEditBtn').on('click', function() {
+            resetCategoryForm();
+        });
+        
+        // Open delete confirmation modal
+        $(document).on('click', '.delete-category-btn', function() {
+            const categoryId = $(this).data('id');
+            const categoryName = $(this).data('name');
+            const hasBooks = $(this).data('has-books');
+            
+            $('#deleteCategoryId').val(categoryId);
+            $('#deleteCategoryName').text(categoryName);
+            
+            if (hasBooks) {
+                $('#categoryHasBooks').removeClass('d-none');
+            } else {
+                $('#categoryHasBooks').addClass('d-none');
+            }
+            
+            const deleteCategoryModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+            deleteCategoryModal.show();
+        });
+        
+        // Handle confirm delete button
+        $('#confirmDeleteCategoryBtn').on('click', function() {
+            const categoryId = $('#deleteCategoryId').val();
+            deleteCategory(categoryId);
+        });
+        
+        // Handle edit category button
+        $(document).on('click', '.edit-category-btn', function() {
+            const categoryId = $(this).data('id');
+            const categoryName = $(this).data('name');
+            
+            $('#editCategoryId').val(categoryId);
+            $('#categoryName').val(categoryName);
+            $('#saveCategoryBtn').html('<i class="bi bi-check-circle me-1"></i> Update Category');
+            $('#cancelEditBtn').show();
+        });
+        
+        // Function to load all categories
+        function loadCategories() {
+            $('#categoriesLoading').removeClass('d-none');
+            $('#categoriesList').addClass('d-none');
+            $('#categoriesEmpty').addClass('d-none');
+            
+            $.ajax({
+                url: '/api/categories',
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    $('#categoriesLoading').addClass('d-none');
+                    
+                    if (response.success && response.data && response.data.length > 0) {
+                        displayCategories(response.data);
+                    } else {
+                        $('#categoriesEmpty').removeClass('d-none');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#categoriesLoading').addClass('d-none');
+                    $('#categoriesEmpty').removeClass('d-none');
+                    showCategoryAlert('Failed to load categories: ' + error, 'danger');
+                }
+            });
+        }
+        
+        // Function to display categories
+        function displayCategories(categories) {
+            const categoriesList = $('#categoriesList');
+            categoriesList.empty();
+            
+            categories.forEach(function(category) {
+                const hasBooks = category.book_count > 0;
+                const item = `
+                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">${escapeHtml(category.g_name)}</h6>
+                            <small class="text-muted">${category.book_count} book(s)</small>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary edit-category-btn" 
+                                data-id="${category.g_id}" 
+                                data-name="${escapeHtml(category.g_name)}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger delete-category-btn" 
+                                data-id="${category.g_id}" 
+                                data-name="${escapeHtml(category.g_name)}"
+                                data-has-books="${hasBooks ? 'true' : 'false'}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                categoriesList.append(item);
+            });
+            
+            $('#categoryCount').text(categories.length);
+            categoriesList.removeClass('d-none');
+            
+            // Also update the genre dropdown in the book form
+            updateGenreDropdown(categories);
+        }
+        
+        // Function to add a new category
+        function addCategory(name) {
+            $.ajax({
+                url: '/api/categories',
+                method: 'POST',
+                dataType: 'json',
+                contentType: 'application/json',
+                data: JSON.stringify({ name: name }),
+                success: function(response) {
+                    if (response.success) {
+                        showCategoryAlert('Category added successfully.', 'success');
+                        resetCategoryForm();
+                        loadCategories();
+                    } else {
+                        showCategoryAlert(response.message || 'Failed to add category.', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    let errorMessage = 'Failed to add category.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    showCategoryAlert(errorMessage, 'danger');
+                }
+            });
+        }
+        
+        // Function to update a category
+        function updateCategory(id, name) {
+            $.ajax({
+                url: `/api/categories/${id}`,
+                method: 'PUT',
+                dataType: 'json',
+                contentType: 'application/json',
+                data: JSON.stringify({ name: name }),
+                success: function(response) {
+                    if (response.success) {
+                        showCategoryAlert('Category updated successfully.', 'success');
+                        resetCategoryForm();
+                        loadCategories();
+                    } else {
+                        showCategoryAlert(response.message || 'Failed to update category.', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    let errorMessage = 'Failed to update category.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    showCategoryAlert(errorMessage, 'danger');
+                }
+            });
+        }
+        
+        // Function to delete a category
+        function deleteCategory(id) {
+            $.ajax({
+                url: `/api/categories/${id}`,
+                method: 'DELETE',
+                dataType: 'json',
+                success: function(response) {
+                    // Close the delete modal
+                    const deleteCategoryModal = bootstrap.Modal.getInstance(document.getElementById('deleteCategoryModal'));
+                    deleteCategoryModal.hide();
+                    
+                    if (response.success) {
+                        showCategoryAlert('Category deleted successfully.', 'success');
+                        loadCategories();
+                    } else {
+                        showCategoryAlert(response.message || 'Failed to delete category.', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Close the delete modal
+                    const deleteCategoryModal = bootstrap.Modal.getInstance(document.getElementById('deleteCategoryModal'));
+                    deleteCategoryModal.hide();
+                    
+                    let errorMessage = 'Failed to delete category.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    showCategoryAlert(errorMessage, 'danger');
+                }
+            });
+        }
+        
+        // Function to reset the category form
+        function resetCategoryForm() {
+            $('#editCategoryId').val('');
+            $('#categoryName').val('');
+            $('#saveCategoryBtn').html('<i class="bi bi-plus-circle me-1"></i> Add Category');
+            $('#cancelEditBtn').hide();
+        }
+        
+        // Function to show category alerts
+        function showCategoryAlert(message, type) {
+            const alertElement = $('#categoryAlert');
+            alertElement.text(message);
+            alertElement.removeClass('d-none alert-success alert-danger alert-warning')
+                .addClass(`alert-${type}`);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(function() {
+                alertElement.addClass('d-none');
+            }, 5000);
+        }
+        
+        // Function to update the genre dropdown in the book form
+        function updateGenreDropdown(categories) {
+            const dropdown = $('#genre_id');
+            const currentValue = dropdown.val();
+            
+            // Clear existing options except the placeholder
+            dropdown.find('option:not(:first)').remove();
+            
+            // Add new options
+            categories.forEach(function(category) {
+                dropdown.append(`<option value="${category.g_id}">${escapeHtml(category.g_name)}</option>`);
+            });
+            
+            // Restore previously selected value if it still exists
+            if (currentValue) {
+                dropdown.val(currentValue);
+            }
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     });
 </script>

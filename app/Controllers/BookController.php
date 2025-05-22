@@ -58,6 +58,14 @@ class BookController extends BaseController
     }
     
     /**
+     * Alias for getBooks to maintain compatibility with route definition
+     */
+    public function getAllBooks()
+    {
+        return $this->getBooks();
+    }
+    
+    /**
      * Get a book by ID
      */
     public function getBook($id)
@@ -437,5 +445,153 @@ class BookController extends BaseController
         } else {
             $this->jsonError('Failed to process purchase', 500);
         }
+    }
+    
+    /**
+     * Get all categories with book count
+     */
+    public function getAllCategories()
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->jsonError('Access denied', 403);
+            return;
+        }
+        
+        $categories = $this->bookModel->getAllCategoriesWithBookCount();
+        $this->jsonSuccess($categories);
+    }
+    
+    /**
+     * Add a new category
+     */
+    public function addCategory()
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->jsonError('Access denied', 403);
+            return;
+        }
+        
+        // Get JSON request data
+        $jsonData = $this->getJsonInput();
+        
+        // Validate category name
+        $name = $jsonData['name'] ?? '';
+        if (empty($name)) {
+            $this->jsonError('Category name is required', 400);
+            return;
+        }
+        
+        // Check if category already exists
+        if ($this->bookModel->isCategoryNameTaken($name)) {
+            $this->jsonError('Category name already exists', 400);
+            return;
+        }
+        
+        // Add the category
+        $categoryId = $this->bookModel->addCategory($name);
+        
+        if ($categoryId) {
+            $this->jsonSuccess(['id' => $categoryId, 'name' => $name], 'Category added successfully');
+        } else {
+            $this->jsonError('Failed to add category', 500);
+        }
+    }
+    
+    /**
+     * Update a category
+     * 
+     * @param int $id Category ID
+     */
+    public function updateCategory($id)
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->jsonError('Access denied', 403);
+            return;
+        }
+        
+        // Validate ID
+        if (!$id || !is_numeric($id)) {
+            $this->jsonError('Invalid category ID', 400);
+            return;
+        }
+        
+        // Get JSON request data
+        $jsonData = $this->getJsonInput();
+        
+        // Validate category name
+        $name = $jsonData['name'] ?? '';
+        if (empty($name)) {
+            $this->jsonError('Category name is required', 400);
+            return;
+        }
+        
+        // Check if category exists
+        $category = $this->bookModel->getCategoryById($id);
+        if (!$category) {
+            $this->jsonError('Category not found', 404);
+            return;
+        }
+        
+        // Check if name is already taken by another category
+        if ($this->bookModel->isCategoryNameTaken($name, $id)) {
+            $this->jsonError('Category name already exists', 400);
+            return;
+        }
+        
+        // Update the category
+        $success = $this->bookModel->updateCategory($id, $name);
+        
+        if ($success) {
+            $this->jsonSuccess(['id' => $id, 'name' => $name], 'Category updated successfully');
+        } else {
+            $this->jsonError('Failed to update category', 500);
+        }
+    }
+    
+    /**
+     * Delete a category
+     * 
+     * @param int $id Category ID
+     */
+    public function deleteCategory($id)
+    {
+        // Check if user is admin
+        if (!$this->isAdmin()) {
+            $this->jsonError('Access denied', 403);
+            return;
+        }
+        
+        // Validate ID
+        if (!$id || !is_numeric($id)) {
+            $this->jsonError('Invalid category ID', 400);
+            return;
+        }
+        
+        // Check if category exists
+        $category = $this->bookModel->getCategoryById($id);
+        if (!$category) {
+            $this->jsonError('Category not found', 404);
+            return;
+        }
+        
+        // Delete the category and update associated books
+        $success = $this->bookModel->deleteCategory($id);
+        
+        if ($success) {
+            $this->jsonSuccess(['id' => $id], 'Category deleted successfully');
+        } else {
+            $this->jsonError('Failed to delete category', 500);
+        }
+    }
+    
+    /**
+     * Check if user is an admin
+     */
+    protected function isAdmin()
+    {
+        return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
     }
 } 
