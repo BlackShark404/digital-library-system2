@@ -254,7 +254,7 @@ include $headerPath;
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="updateProfileForm" action="/admin/admin-profile/update-profile-info" method="POST">
+                <form id="updateProfileForm">
                     <div class="mb-3">
                         <label for="firstName" class="form-label fw-bold">First Name</label>
                         <input type="text" class="form-control" id="firstName" name="firstName" value="<?= Session::get('first_name') ?>" placeholder="Enter your first name">
@@ -291,7 +291,7 @@ include $headerPath;
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="updateProfilePictureForm" action="/admin/admin-profile/update-profile-pic" method="POST" enctype="multipart/form-data">
+                <form id="updateProfilePictureForm" enctype="multipart/form-data">
                     <div class="text-center mb-4">
                         <img id="profileImagePreview" src="<?= Session::get("profile_url") ?>" class="rounded-circle img-fluid profile-image shadow" 
                             style="width: 150px; height: 150px; object-fit: cover;" alt="Profile Picture Preview">
@@ -299,7 +299,7 @@ include $headerPath;
                     
                     <div class="mb-3">
                         <label for="profileImage" class="form-label fw-bold">Upload New Picture</label>
-                        <input class="form-control" type="file" id="profileImage" name="profileImage" accept="image/*">
+                        <input class="form-control" type="file" id="profileImage" name="profile_image" accept="image/*">
                     </div>
                     
                     <div class="alert alert-info">
@@ -328,7 +328,7 @@ include $headerPath;
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="changePasswordForm" action="/admin/admin-profile/change-password" method="POST">
+                <form id="changePasswordForm">
                     <div class="mb-3">
                         <label for="currentPassword" class="form-label fw-bold">Current Password</label>
                         <div class="input-group">
@@ -387,7 +387,7 @@ include $headerPath;
                     <p class="text-muted">This action <strong>cannot</strong> be undone. This will permanently delete your account and remove your data from our servers.</p>
                 </div>
                 
-                <form id="deleteAccountForm" action="/admin/admin-profile/delete-account" method="POST">
+                <form id="deleteAccountForm">
                     <div class="mb-3">
                         <label for="deleteConfirmPassword" class="form-label fw-bold">Enter Your Password to Confirm</label>
                         <div class="input-group">
@@ -442,6 +442,139 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmDeleteCheckbox.addEventListener('change', function() {
             confirmDeleteBtn.disabled = !this.checked;
         });
+    }
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="/assets/js/utility/toast-notifications.js"></script>
+<script src="/assets/js/utility/form-handler.js"></script>
+<script src="/assets/js/utility/ImageFormHandler.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submissions with AJAX
+    handleFormSubmission('updateProfileForm', '/admin/admin-profile/update-profile-info', true);
+    handleFormSubmission('changePasswordForm', '/admin/admin-profile/change-password');
+    handleFormSubmission('deleteAccountForm', '/admin/admin-profile/delete-account');
+    
+    // Handle profile image upload
+    handleImageUpload(
+        'updateProfilePictureForm',           // Form ID
+        'profileImage',                        // File input ID
+        'profileImagePreview',                 // Image preview ID
+        '/admin/admin-profile/update-profile-pic', // Endpoint
+        {
+            modalId: 'editProfilePictureModal',  // Modal ID to close after success
+            reloadPage: false,                  // Don't reload the page after success
+            loadingText: 'Updating profile...',  // Custom loading text
+            
+            // Custom success handler
+            onSuccess: function(data) {
+                console.log('Profile picture updated successfully!');
+                
+                // Update all profile images on the page with the new URL
+                if (data.data && data.data.profile_url) {
+                    const newProfileUrl = data.data.profile_url;
+                    document.querySelectorAll('.profile-image').forEach(img => {
+                        img.src = newProfileUrl;
+                    });
+                }
+            }
+        }
+    );
+    
+    // Preview profile image when file is selected (already included)
+    const profileImage = document.getElementById('profileImage');
+    const profileImagePreview = document.getElementById('profileImagePreview');
+    
+    if (profileImage && profileImagePreview) {
+        profileImage.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    profileImagePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Handle delete account checkbox (already included)
+    const confirmDeleteCheckbox = document.getElementById('confirmDeleteCheckbox');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    if (confirmDeleteCheckbox && confirmDeleteBtn) {
+        confirmDeleteCheckbox.addEventListener('change', function() {
+            confirmDeleteBtn.disabled = !this.checked;
+        });
+    }
+    
+    // Add password toggle functionality
+    const togglePasswordButtons = document.querySelectorAll('.toggle-password');
+    if (togglePasswordButtons.length === 0) {
+        // Add toggle buttons to password fields if they don't exist
+        document.querySelectorAll('input[type="password"]').forEach(function(input) {
+            const inputGroup = input.closest('.input-group');
+            if (inputGroup && !inputGroup.querySelector('.toggle-password')) {
+                const button = document.createElement('button');
+                button.className = 'btn btn-outline-secondary toggle-password';
+                button.setAttribute('type', 'button');
+                button.setAttribute('data-target', input.id);
+                button.innerHTML = '<i class="bi bi-eye"></i>';
+                inputGroup.appendChild(button);
+            }
+        });
+    }
+    
+    // Add event listeners to toggle password visibility
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.toggle-password')) {
+            const button = e.target.closest('.toggle-password');
+            const targetId = button.getAttribute('data-target');
+            const passwordInput = document.getElementById(targetId);
+            
+            if (passwordInput) {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    button.innerHTML = '<i class="bi bi-eye-slash"></i>';
+                } else {
+                    passwordInput.type = 'password';
+                    button.innerHTML = '<i class="bi bi-eye"></i>';
+                }
+            }
+        }
+    });
+    
+    // Add clear button for profile image
+    const profileImageInput = document.getElementById('profileImage');
+    if (profileImageInput) {
+        const parent = profileImageInput.parentElement;
+        if (!parent.classList.contains('input-group')) {
+            // Convert to input group if it's not one already
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'input-group';
+            parent.insertBefore(inputGroup, profileImageInput);
+            inputGroup.appendChild(profileImageInput);
+            
+            // Add clear button
+            const clearButton = document.createElement('button');
+            clearButton.className = 'btn btn-outline-secondary';
+            clearButton.type = 'button';
+            clearButton.id = 'clearFileBtn';
+            clearButton.innerHTML = '<i class="bi bi-x-lg"></i>';
+            inputGroup.appendChild(clearButton);
+            
+            // Add event listener for clearing
+            clearButton.addEventListener('click', function() {
+                profileImageInput.value = '';
+                const imagePreview = document.getElementById('profileImagePreview');
+                if (imagePreview) {
+                    imagePreview.src = '<?= Session::get("profile_url") ?>';
+                }
+            });
+        }
     }
 });
 </script>
