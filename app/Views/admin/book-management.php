@@ -76,8 +76,8 @@ include $headerPath;
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="price" class="form-label">Price ($)</label>
-                                    <input type="number" class="form-control" id="price" name="price" step="0.01" min="0">
-                                </div>
+                                    <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required>
+                                    </div>
                             </div>
                         </div>
                         
