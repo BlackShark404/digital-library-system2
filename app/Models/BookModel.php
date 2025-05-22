@@ -287,7 +287,7 @@ class BookModel extends BaseModel
         }
         
         $result = $this->queryOne($sql, $params);
-        return $result !== false;
+        return !empty($result);
     }
     
     /**
