@@ -435,16 +435,17 @@ include $headerPath;
                         render: function(data) {
                             return `
                                 <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-info view-book" data-id="${data.id}">
+                                    <button type="button" class="btn btn-sm btn-outline-info view-book" data-id="${data.id}">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-primary edit-book" data-id="${data.id}">
+                                    <button type="button" class="btn btn-sm btn-outline-primary edit-book" data-id="${data.id}">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-danger delete-book" data-id="${data.id}">
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-book" data-id="${data.id}">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
+
                             `;
                         }
                     }

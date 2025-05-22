@@ -160,23 +160,24 @@ $action_filter = $action_filter ?? '';
 function getBadgeClass(action) {
     switch (action) {
         case 'Login':
-            return 'bg-success';
+            return 'bg-success';         // green
         case 'Register':
-            return 'bg-success';
+            return 'bg-info';            // light blue
         case 'Logout':
-            return 'bg-secondary';
+            return 'bg-secondary';       // gray
         case 'Book Purchase':
-            return 'bg-primary';
+            return 'bg-primary';         // blue
         case 'Book Added':
-            return 'bg-primary';
+            return 'bg-dark';            // dark gray/black
         case 'Reading Session':
-            return 'bg-warning';
+            return 'bg-warning';         // yellow
         case 'Profile Update':
-            return 'bg-warning';
+            return 'bg-danger';          // red
         default:
             return 'bg-secondary';
     }
 }
+
 
 // Initialize DataTable when the document is ready
 $(document).ready(function() {
@@ -214,8 +215,8 @@ $(document).ready(function() {
                 data: null,
                 orderable: false,
                 render: function(data, type, row) {
-                    return '<button class="btn btn-sm btn-info view-log" data-id="' + row.id + '">'
-                         + '<i class="bi bi-eye"></i></button>';
+                    return '<button class="btn btn-sm btn-outline-info view-log" data-id="' + row.id + '">'
+                        + '<i class="bi bi-eye"></i></button>';
                 }
             }
         ],
