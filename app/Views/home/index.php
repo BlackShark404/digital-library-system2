@@ -613,6 +613,7 @@
                         <ul class="list-unstyled mb-4">
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Unlimited browsing</li>
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> 3-day book previews</li>
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Personalized recommendations</li>
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Reading history tracking</li>
                             <li class="mb-2"><i class="fas fa-check text-primary me-2"></i> Wishlist management</li>
                         </ul>
