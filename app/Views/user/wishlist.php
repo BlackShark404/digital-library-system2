@@ -46,9 +46,9 @@ include $headerPath;
                             </button>
                         </div>
                         <div class="card-body">
-                            <span class="badge bg-secondary mb-2"><?php echo htmlspecialchars($book['genre']); ?></span>
-                            <h5 class="card-title"><?php echo htmlspecialchars($book['title']); ?></h5>
-                            <p class="card-text text-muted">by <?php echo htmlspecialchars($book['author']); ?></p>
+                            <span class="badge bg-secondary mb-2"><?php echo htmlspecialchars($book['genre'] ?? 'Uncategorized'); ?></span>
+                            <h5 class="card-title"><?php echo htmlspecialchars($book['title'] ?? 'Untitled'); ?></h5>
+                            <p class="card-text text-muted">by <?php echo htmlspecialchars($book['author'] ?? 'Unknown'); ?></p>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div>
                                     <span class="fw-bold">$<?php echo number_format($book['price'], 2); ?></span>
