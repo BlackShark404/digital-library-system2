@@ -276,8 +276,19 @@ include $headerPath;
                                     <i class="bi bi-tags" style="font-size: 2rem;"></i>
                                     <p class="mt-2">No categories found.</p>
                                 </div>
-                                <div id="categoriesList" class="list-group list-group-flush d-none">
-                                    <!-- Categories will be loaded here -->
+                                <div id="categoriesTableContainer" class="d-none" style="max-height: 300px; overflow-y: auto;">
+                                    <table class="table table-hover table-striped mb-0">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Book Count</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="categoriesList">
+                                            <!-- Categories will be loaded here -->
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -322,6 +333,30 @@ include $headerPath;
 <!-- Include DataTables CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.bootstrap5.min.css">
+
+<!-- Custom styles -->
+<style>
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background-color: #f8f9fa;
+    }
+    
+    #categoriesTableContainer {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+    
+    #categoriesTableContainer .table {
+        margin-bottom: 0;
+    }
+    
+    #categoriesTableContainer thead th {
+        border-bottom: 2px solid #dee2e6;
+        padding: 0.75rem;
+    }
+</style>
 
 <!-- Include DataTables JS and Book Management JS -->
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
@@ -876,7 +911,7 @@ include $headerPath;
         // Function to load all categories
         function loadCategories() {
             $('#categoriesLoading').removeClass('d-none');
-            $('#categoriesList').addClass('d-none');
+            $('#categoriesTableContainer').addClass('d-none');
             $('#categoriesEmpty').addClass('d-none');
             
             $.ajax({
@@ -908,31 +943,31 @@ include $headerPath;
             categories.forEach(function(category) {
                 const hasBooks = category.book_count > 0;
                 const item = `
-                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-0">${escapeHtml(category.g_name)}</h6>
-                            <small class="text-muted">${category.book_count} book(s)</small>
-                        </div>
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-primary edit-category-btn" 
-                                data-id="${category.g_id}" 
-                                data-name="${escapeHtml(category.g_name)}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger delete-category-btn" 
-                                data-id="${category.g_id}" 
-                                data-name="${escapeHtml(category.g_name)}"
-                                data-has-books="${hasBooks ? 'true' : 'false'}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <tr>
+                        <td>${escapeHtml(category.g_name)}</td>
+                        <td><span class="badge bg-primary rounded-pill">${category.book_count}</span></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary edit-category-btn" 
+                                    data-id="${category.g_id}" 
+                                    data-name="${escapeHtml(category.g_name)}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger delete-category-btn" 
+                                    data-id="${category.g_id}" 
+                                    data-name="${escapeHtml(category.g_name)}"
+                                    data-has-books="${hasBooks ? 'true' : 'false'}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
                 `;
                 categoriesList.append(item);
             });
             
             $('#categoryCount').text(categories.length);
-            categoriesList.removeClass('d-none');
+            $('#categoriesTableContainer').removeClass('d-none');
             
             // Also update the genre dropdown in the book form
             updateGenreDropdown(categories);
