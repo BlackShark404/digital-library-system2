@@ -12,6 +12,26 @@ use Core\Session;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($page_title) ? $page_title : 'Online Reading Platform'; ?></title>
+    
+    <!-- Immediate sidebar state application to prevent flicker -->
+    <script>
+        (function() {
+            // Apply no-transition class to prevent animation on page load
+            document.documentElement.classList.add('no-transition');
+            
+            // Apply saved sidebar state immediately
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                document.documentElement.classList.add('sidebar-collapsed');
+                if (document.body) document.body.classList.add('sidebar-collapsed');
+            }
+            
+            // For mobile devices
+            if (window.innerWidth < 768 && localStorage.getItem('sidebarExpanded') === 'true') {
+                document.documentElement.classList.add('sidebar-expanded');
+                if (document.body) document.body.classList.add('sidebar-expanded');
+            }
+        })();
+    </script>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -240,7 +260,13 @@ use Core\Session;
         body.no-transition .sidebar,
         body.no-transition .content-wrapper,
         body.no-transition .navbar,
-        body.no-transition .sidebar-toggler {
+        body.no-transition .sidebar-toggler,
+        body.no-transition .footer,
+        html.no-transition .sidebar,
+        html.no-transition .content-wrapper,
+        html.no-transition .navbar,
+        html.no-transition .sidebar-toggler,
+        html.no-transition .footer {
             transition: none !important;
         }
 
