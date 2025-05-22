@@ -71,15 +71,20 @@ class BookModel extends BaseModel
         try {
             $this->beginTransaction();
             
-            // Extract data
-            $title = $data['title'] ?? '';
-            $author = $data['author'] ?? '';
+            // Validate required fields
+            if (empty($data['title']) || empty($data['author'])) {
+                throw new \Exception('Title and author are required fields');
+            }
+            
+            // Extract data with validation
+            $title = $data['title'];
+            $author = $data['author'];
             $publisher = $data['publisher'] ?? '';
-            $publicationDate = $data['publication_date'] ?? null;
+            $publicationDate = !empty($data['publication_date']) ? $data['publication_date'] : null;
             $isbn = $data['isbn'] ?? '';
-            $genreId = $data['genre_id'] ?? null;
-            $pages = $data['pages'] ?? null;
-            $price = $data['price'] ?? null;
+            $genreId = !empty($data['genre_id']) ? $data['genre_id'] : null;
+            $pages = !empty($data['pages']) ? (int)$data['pages'] : null;
+            $price = isset($data['price']) && $data['price'] !== '' ? (float)$data['price'] : 0.00;
             $description = $data['description'] ?? '';
             $coverPath = $data['cover_path'] ?? null;
             $filePath = $data['file_path'] ?? null;
@@ -155,15 +160,20 @@ class BookModel extends BaseModel
         try {
             $this->beginTransaction();
             
-            // Extract data
-            $title = $data['title'] ?? null;
-            $author = $data['author'] ?? null;
+            // Validate required fields
+            if (empty($data['title']) || empty($data['author'])) {
+                throw new \Exception('Title and author are required fields');
+            }
+            
+            // Extract data with validation
+            $title = $data['title'];
+            $author = $data['author'];
             $publisher = $data['publisher'] ?? null;
-            $publicationDate = $data['publication_date'] ?? null;
+            $publicationDate = !empty($data['publication_date']) ? $data['publication_date'] : null;
             $isbn = $data['isbn'] ?? null;
-            $genreId = $data['genre_id'] ?? null;
-            $pages = $data['pages'] ?? null;
-            $price = $data['price'] ?? null;
+            $genreId = !empty($data['genre_id']) ? $data['genre_id'] : null;
+            $pages = !empty($data['pages']) ? (int)$data['pages'] : null;
+            $price = isset($data['price']) && $data['price'] !== '' ? (float)$data['price'] : 0.00;
             $description = $data['description'] ?? null;
             $coverPath = $data['cover_path'] ?? null;
             $filePath = $data['file_path'] ?? null;
@@ -211,10 +221,15 @@ class BookModel extends BaseModel
     public function deleteBook($id)
     {
         try {
+            $this->beginTransaction();
+            
             $sql = "UPDATE {$this->table} SET b_deleted_at = NOW() WHERE {$this->primaryKey} = :id";
             $this->execute($sql, ['id' => $id]);
+            
+            $this->commit();
             return true;
         } catch (\Exception $e) {
+            $this->rollBack();
             error_log("Error deleting book: " . $e->getMessage());
             return false;
         }

@@ -152,22 +152,33 @@ class BookController extends BaseController
             }
         }
         
-        $bookId = $this->bookModel->createBook($bookData);
-        
-        if (!$bookId) {
-            $this->jsonError('Failed to create book', 500);
+        try {
+            // Let the model handle the transaction
+            $bookId = $this->bookModel->createBook($bookData);
+            
+            // If there's no book ID returned, it means the operation failed
+            if (!$bookId) {
+                $this->jsonError('Failed to create book', 500);
+                return;
+            }
+            
+            // Return success with the new book ID and page count for frontend update
+            $response = [
+                'id' => $bookId
+            ];
+            
+            if (isset($bookFileResult['pageCount'])) {
+                $response['pageCount'] = $bookFileResult['pageCount'];
+            }
+            
+            $this->jsonSuccess($response, 'Book created successfully');
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('Error creating book: ' . $e->getMessage());
+            
+            // Return error to the client
+            $this->jsonError('Failed to create book: ' . $e->getMessage(), 500);
         }
-        
-        // Return success with the new book ID and page count for frontend update
-        $response = [
-            'id' => $bookId
-        ];
-        
-        if (isset($bookFileResult['pageCount'])) {
-            $response['pageCount'] = $bookFileResult['pageCount'];
-        }
-        
-        $this->jsonSuccess($response, 'Book created successfully');
     }
     
     /**
@@ -253,18 +264,28 @@ class BookController extends BaseController
             }
         }
         
-        $success = $this->bookModel->updateBook($id, $bookData);
-        
-        if (!$success) {
-            $this->jsonError('Failed to update book', 500);
+        try {
+            // Let the model handle the transaction
+            $success = $this->bookModel->updateBook($id, $bookData);
+            
+            if (!$success) {
+                $this->jsonError('Failed to update book', 500);
+                return;
+            }
+            
+            $response = [];
+            if ($pageCountUpdated && $extractedPageCount !== null) {
+                $response['pageCount'] = $extractedPageCount;
+            }
+            
+            $this->jsonSuccess($response, 'Book updated successfully');
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('Error updating book: ' . $e->getMessage());
+            
+            // Return error to the client
+            $this->jsonError('Failed to update book: ' . $e->getMessage(), 500);
         }
-        
-        $response = [];
-        if ($pageCountUpdated && $extractedPageCount !== null) {
-            $response['pageCount'] = $extractedPageCount;
-        }
-        
-        $this->jsonSuccess($response, 'Book updated successfully');
     }
     
     /**
@@ -282,13 +303,22 @@ class BookController extends BaseController
             $this->jsonError('Book not found', 404);
         }
         
-        $success = $this->bookModel->deleteBook($id);
-        
-        if (!$success) {
-            $this->jsonError('Failed to delete book', 500);
+        try {
+            $success = $this->bookModel->deleteBook($id);
+            
+            if (!$success) {
+                $this->jsonError('Failed to delete book', 500);
+                return;
+            }
+            
+            $this->jsonSuccess([], 'Book deleted successfully');
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('Error deleting book: ' . $e->getMessage());
+            
+            // Return error to the client
+            $this->jsonError('Failed to delete book: ' . $e->getMessage(), 500);
         }
-        
-        $this->jsonSuccess([], 'Book deleted successfully');
     }
     
     /**
