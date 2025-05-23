@@ -119,6 +119,13 @@ include $headerPath;
         const startPage = <?= isset($session['current_page']) ? max(1, intval($session['current_page'])) : 1 ?>;
         const totalBookPages = <?= isset($session['b_pages']) ? intval($session['b_pages']) : 0 ?>;
         
+        console.log('PDF Reader initializing...', {
+            bookId,
+            pdfUrl,
+            startPage,
+            totalBookPages
+        });
+        
         // UI Elements
         const canvas = document.getElementById('pdfCanvas');
         const ctx = canvas.getContext('2d');
@@ -159,6 +166,9 @@ include $headerPath;
         // Initial element states
         errorMessage.style.display = 'none';
         
+        // Initialize the view container right away
+        resetView();
+        
         // Load settings from localStorage
         loadZoomLevel();
         loadAntialiasingSetting();
@@ -179,6 +189,9 @@ include $headerPath;
             if (pageNum > numPages) {
                 pageNum = 1;
             }
+            
+            // Set up view container before rendering
+            resetView();
             
             // Render the view based on mode
             renderCurrentView();
@@ -201,6 +214,7 @@ include $headerPath;
         function resetView() {
             // Remove all existing canvases
             const viewerContainer = document.getElementById('viewerContainer');
+            if (!viewerContainer) return; // Guard against early execution
             
             // If in continuous mode, clear all page canvases and set up container
             if (continuousScrollMode) {
@@ -212,7 +226,7 @@ include $headerPath;
                 
                 // Clear page canvases array
                 pageCanvases.forEach(canvas => {
-                    if (canvas.parentNode && canvas.parentNode.parentNode) {
+                    if (canvas && canvas.parentNode && canvas.parentNode.parentNode) {
                         canvas.parentNode.remove();
                     }
                 });
@@ -224,8 +238,8 @@ include $headerPath;
                 continuousContainer.className = 'continuous-container';
                 viewerContainer.appendChild(continuousContainer);
                 
-                // Hide the main canvas
-                if (canvas.parentNode === viewerContainer) {
+                // Hide the main canvas if it exists in the DOM
+                if (canvas && canvas.parentNode === viewerContainer) {
                     viewerContainer.removeChild(canvas);
                 }
             } else {
@@ -238,14 +252,14 @@ include $headerPath;
                 
                 // Clear all page canvases
                 pageCanvases.forEach(canvas => {
-                    if (canvas.parentNode && canvas.parentNode.parentNode) {
+                    if (canvas && canvas.parentNode && canvas.parentNode.parentNode) {
                         canvas.parentNode.remove();
                     }
                 });
                 pageCanvases = [];
                 
                 // Ensure main canvas is in the container
-                if (!viewerContainer.contains(canvas)) {
+                if (canvas && !viewerContainer.contains(canvas)) {
                     viewerContainer.appendChild(canvas);
                 }
                 
@@ -259,6 +273,15 @@ include $headerPath;
          */
         function renderCurrentView() {
             if (continuousScrollMode) {
+                // Make sure the continuous container exists
+                const viewerContainer = document.getElementById('viewerContainer');
+                let continuousContainer = document.getElementById('continuousContainer');
+                if (!continuousContainer) {
+                    continuousContainer = document.createElement('div');
+                    continuousContainer.id = 'continuousContainer';
+                    continuousContainer.className = 'continuous-container';
+                    viewerContainer.appendChild(continuousContainer);
+                }
                 renderContinuousPages();
             } else {
                 renderPage(pageNum);
@@ -269,6 +292,12 @@ include $headerPath;
          * Render all or a range of pages for continuous scrolling
          */
         function renderContinuousPages() {
+            // Skip if PDF document isn't loaded yet
+            if (!pdfDoc) {
+                console.warn('Attempted to render continuous pages before PDF loaded');
+                return;
+            }
+            
             // Only load a reasonable number of pages at once
             const numPages = pdfDoc.numPages;
             const startPageIndex = Math.max(1, pageNum - 1);
@@ -276,7 +305,10 @@ include $headerPath;
             
             // Get continuous container
             const continuousContainer = document.getElementById('continuousContainer');
-            if (!continuousContainer) return;
+            if (!continuousContainer) {
+                console.error('No continuous container found');
+                return;
+            }
             
             // Clear container
             continuousContainer.innerHTML = '';
@@ -287,9 +319,7 @@ include $headerPath;
             loadingMessage.innerHTML = '<div class="spinner-sm"></div> Loading pages...';
             continuousContainer.appendChild(loadingMessage);
             
-            // Keep track of rendering progress
-            let pagesRendered = 0;
-            const totalPagesToRender = endPageIndex - startPageIndex + 1;
+            console.log(`Rendering continuous pages ${startPageIndex} to ${endPageIndex}`);
             
             // Render pages sequentially to ensure proper order
             const renderSequential = (index) => {
@@ -319,90 +349,110 @@ include $headerPath;
             return new Promise((resolve) => {
                 // Skip if this page is already rendered
                 if (document.querySelector(`.page-wrapper[data-page-index="${pageIndex}"]`)) {
+                    console.log(`Page ${pageIndex} already rendered, skipping`);
                     resolve();
                     return;
                 }
                 
-                pdfDoc.getPage(pageIndex).then(function(page) {
-                    // Create a wrapper for this page
-                    const pageWrapper = document.createElement('div');
-                    pageWrapper.className = 'page-wrapper';
-                    pageWrapper.dataset.pageIndex = pageIndex;
-                    
-                    // Create a canvas for this page
-                    const pageCanvas = document.createElement('canvas');
-                    pageCanvas.className = 'pdf-page';
-                    pageWrapper.appendChild(pageCanvas);
-                    
-                    // Add page number indicator
-                    const pageIndicator = document.createElement('div');
-                    pageIndicator.className = 'page-indicator';
-                    pageIndicator.textContent = `Page ${pageIndex}`;
-                    pageWrapper.appendChild(pageIndicator);
-                    
-                    // Add to document (prepend if requested, otherwise append)
-                    if (prepend && container.firstChild) {
-                        container.insertBefore(pageWrapper, container.firstChild);
-                    } else {
-                        container.appendChild(pageWrapper);
-                    }
-                    
-                    // Store canvas for later reference
-                    pageCanvases.push(pageCanvas);
-                    
-                    // Get device pixel ratio
-                    const devicePixelRatio = window.devicePixelRatio || 1;
-                    
-                    // Calculate scale for fitting page width
-                    const viewportWidth = container.clientWidth - 40; // account for padding
-                    const originalViewport = page.getViewport({ scale: 1 });
-                    
-                    // Calculate scale to fit width
-                    const widthScale = viewportWidth / originalViewport.width;
-                    
-                    // Apply user scale on top of fit scale
-                    const viewport = page.getViewport({ scale: widthScale * scale });
-                    
-                    // Set canvas dimensions accounting for device pixel ratio for higher resolution
-                    const ctx = pageCanvas.getContext('2d');
-                    pageCanvas.width = Math.floor(viewport.width * devicePixelRatio);
-                    pageCanvas.height = Math.floor(viewport.height * devicePixelRatio);
-                    pageCanvas.style.width = Math.floor(viewport.width) + "px";
-                    pageCanvas.style.height = Math.floor(viewport.height) + "px";
-                    
-                    // Reset context and prepare for high-quality rendering
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    ctx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
-                    
-                    // Enable font smoothing
-                    ctx.imageSmoothingEnabled = useAntialiasing;
-                    ctx.imageSmoothingQuality = 'high';
-                    
-                    // Scale context to ensure correct rendering
-                    ctx.scale(devicePixelRatio, devicePixelRatio);
-                    
-                    // Render PDF page into canvas context with high quality settings
-                    const renderContext = {
-                        canvasContext: ctx,
-                        viewport: viewport,
-                        enableWebGL: true,
-                        renderInteractiveForms: true,
-                        textLayer: true
-                    };
-                    
-                    const renderTask = page.render(renderContext);
-                    
-                    // Wait for rendering to finish
-                    renderTask.promise.then(function() {
-                        resolve();
+                console.log(`Rendering page ${pageIndex} in continuous mode`);
+                
+                try {
+                    pdfDoc.getPage(pageIndex).then(function(page) {
+                        try {
+                            // Create a wrapper for this page
+                            const pageWrapper = document.createElement('div');
+                            pageWrapper.className = 'page-wrapper';
+                            pageWrapper.dataset.pageIndex = pageIndex;
+                            
+                            // Create a canvas for this page
+                            const pageCanvas = document.createElement('canvas');
+                            pageCanvas.className = 'pdf-page';
+                            pageWrapper.appendChild(pageCanvas);
+                            
+                            // Add page number indicator
+                            const pageIndicator = document.createElement('div');
+                            pageIndicator.className = 'page-indicator';
+                            pageIndicator.textContent = `Page ${pageIndex}`;
+                            pageWrapper.appendChild(pageIndicator);
+                            
+                            // Add to document (prepend if requested, otherwise append)
+                            if (prepend && container.firstChild) {
+                                container.insertBefore(pageWrapper, container.firstChild);
+                            } else {
+                                container.appendChild(pageWrapper);
+                            }
+                            
+                            // Store canvas for later reference
+                            pageCanvases.push(pageCanvas);
+                            
+                            // Get device pixel ratio
+                            const devicePixelRatio = window.devicePixelRatio || 1;
+                            
+                            // Calculate scale for fitting page width
+                            const viewportWidth = container.clientWidth - 40; // account for padding
+                            const originalViewport = page.getViewport({ scale: 1 });
+                            
+                            // Calculate scale to fit width
+                            const widthScale = viewportWidth / originalViewport.width;
+                            
+                            // Apply user scale on top of fit scale
+                            const viewport = page.getViewport({ scale: widthScale * scale });
+                            
+                            // Set canvas dimensions accounting for device pixel ratio for higher resolution
+                            const ctx = pageCanvas.getContext('2d');
+                            pageCanvas.width = Math.floor(viewport.width * devicePixelRatio);
+                            pageCanvas.height = Math.floor(viewport.height * devicePixelRatio);
+                            pageCanvas.style.width = Math.floor(viewport.width) + "px";
+                            pageCanvas.style.height = Math.floor(viewport.height) + "px";
+                            
+                            // Reset context and prepare for high-quality rendering
+                            ctx.setTransform(1, 0, 0, 1, 0, 0);
+                            ctx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
+                            
+                            // Enable font smoothing
+                            ctx.imageSmoothingEnabled = useAntialiasing;
+                            ctx.imageSmoothingQuality = 'high';
+                            
+                            // Scale context to ensure correct rendering
+                            ctx.scale(devicePixelRatio, devicePixelRatio);
+                            
+                            // Render PDF page into canvas context with high quality settings
+                            const renderContext = {
+                                canvasContext: ctx,
+                                viewport: viewport,
+                                enableWebGL: true,
+                                renderInteractiveForms: true,
+                                textLayer: true
+                            };
+                            
+                            const renderTask = page.render(renderContext);
+                            
+                            // Wait for rendering to finish
+                            renderTask.promise.then(function() {
+                                console.log(`Page ${pageIndex} rendered successfully`);
+                                resolve();
+                            }).catch(function(error) {
+                                console.error(`Error rendering page ${pageIndex}:`, error);
+                                // Add error indicator to the page
+                                pageWrapper.classList.add('render-error');
+                                const errorIndicator = document.createElement('div');
+                                errorIndicator.className = 'page-error';
+                                errorIndicator.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error rendering page';
+                                pageWrapper.appendChild(errorIndicator);
+                                resolve(); // Resolve anyway to continue with other pages
+                            });
+                        } catch (error) {
+                            console.error(`Error setting up page ${pageIndex}:`, error);
+                            resolve();
+                        }
                     }).catch(function(error) {
-                        console.error('Error rendering continuous page:', error);
+                        console.error(`Error getting page ${pageIndex}:`, error);
                         resolve(); // Resolve anyway to continue with other pages
                     });
-                }).catch(function(error) {
-                    console.error('Error getting continuous page:', error);
-                    resolve(); // Resolve anyway to continue with other pages
-                });
+                } catch (error) {
+                    console.error(`Unexpected error rendering page ${pageIndex}:`, error);
+                    resolve();
+                }
             });
         }
         
@@ -1300,6 +1350,28 @@ include $headerPath;
     padding: 2px 8px;
     border-radius: 10px;
     font-size: 12px;
+}
+
+.page-error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(220, 53, 69, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.render-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    min-height: 200px;
+    position: relative;
 }
 
 @media (max-width: 767.98px) {
