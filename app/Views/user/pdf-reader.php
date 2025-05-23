@@ -42,6 +42,9 @@ include $headerPath;
                     <?php endif; ?>
                 </div>
                 <div class="controls-group">
+                    <button id="toggleToc" class="control-btn" title="Table of Contents">
+                        <i class="bi bi-list-ul"></i>
+                    </button>
                     <button id="zoomOut" class="control-btn" title="Zoom Out">
                         <i class="bi bi-zoom-out"></i>
                     </button>
@@ -70,6 +73,27 @@ include $headerPath;
         <button id="next-mobile" class="mobile-nav-btn">
             <i class="bi bi-chevron-right"></i>
         </button>
+    </div>
+
+    <!-- Table of Contents Sidebar -->
+    <div id="tocSidebar" class="toc-sidebar">
+        <div class="toc-header">
+            <h5>Table of Contents</h5>
+            <button id="closeToc" class="close-toc">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="toc-content">
+            <div id="loadingToc" class="toc-loading">
+                <div class="spinner-sm"></div>
+                <span>Loading contents...</span>
+            </div>
+            <div id="tocEmpty" class="toc-empty" style="display: none;">
+                <i class="bi bi-info-circle"></i>
+                <span>No table of contents available</span>
+            </div>
+            <ul id="tocList" class="toc-list"></ul>
+        </div>
     </div>
 
     <!-- PDF Viewer Container -->
@@ -149,6 +173,7 @@ include $headerPath;
         let pageNumPending = null;
         let scale = 1.0;
         let useAntialiasing = true; // Default state of antialiasing
+        let tocVisible = false;     // Track TOC visibility state
         
         // Initial element states
         errorMessage.style.display = 'none';
@@ -175,6 +200,9 @@ include $headerPath;
             
             // Render the first page
             renderPage(pageNum);
+            
+            // Load table of contents if available
+            loadTableOfContents(pdf);
             
             // Hide loading spinner
             loadingSpinner.style.display = 'none';
@@ -485,11 +513,159 @@ include $headerPath;
             }, 1500);
         }
         
+        /**
+         * Load and display table of contents if available
+         */
+        function loadTableOfContents(pdf) {
+            const loadingToc = document.getElementById('loadingToc');
+            const tocEmpty = document.getElementById('tocEmpty');
+            const tocList = document.getElementById('tocList');
+            
+            // Show loading indicator
+            loadingToc.style.display = 'flex';
+            tocEmpty.style.display = 'none';
+            tocList.innerHTML = '';
+            
+            // Get the table of contents from the PDF
+            pdf.getOutline().then(function(outline) {
+                // Hide loading indicator
+                loadingToc.style.display = 'none';
+                
+                if (!outline || outline.length === 0) {
+                    // No TOC available
+                    tocEmpty.style.display = 'flex';
+                    return;
+                }
+                
+                // Render TOC items
+                renderTocItems(outline, tocList);
+            }).catch(function(error) {
+                console.error('Error loading table of contents:', error);
+                loadingToc.style.display = 'none';
+                tocEmpty.style.display = 'flex';
+            });
+        }
+        
+        /**
+         * Recursively render TOC items
+         */
+        function renderTocItems(items, container, level = 0) {
+            items.forEach(function(item) {
+                const li = document.createElement('li');
+                li.className = 'toc-item';
+                
+                const link = document.createElement('a');
+                link.textContent = item.title;
+                link.href = '#';
+                link.style.paddingLeft = (level * 15) + 'px';
+                
+                // Handle click event to navigate to the destination
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    if (item.dest) {
+                        navigateToDestination(item.dest);
+                        
+                        // On mobile, automatically close the TOC after selection
+                        if (window.innerWidth < 768) {
+                            toggleTableOfContents(false);
+                        }
+                    }
+                });
+                
+                li.appendChild(link);
+                container.appendChild(li);
+                
+                // Handle nested items
+                if (item.items && item.items.length > 0) {
+                    const nestedUl = document.createElement('ul');
+                    nestedUl.className = 'nested-toc';
+                    li.appendChild(nestedUl);
+                    renderTocItems(item.items, nestedUl, level + 1);
+                }
+            });
+        }
+        
+        /**
+         * Navigate to a destination in the PDF
+         */
+        function navigateToDestination(dest) {
+            if (typeof dest === 'string') {
+                // Named destination
+                pdfDoc.getDestination(dest).then(function(destination) {
+                    navigateToExplicitDestination(destination);
+                }).catch(function(error) {
+                    console.error('Error resolving named destination:', error);
+                });
+            } else if (Array.isArray(dest)) {
+                // Explicit destination
+                navigateToExplicitDestination(dest);
+            } else {
+                console.error('Unsupported destination format');
+            }
+        }
+        
+        /**
+         * Navigate to an explicit destination in the PDF
+         */
+        function navigateToExplicitDestination(explicitDest) {
+            if (!Array.isArray(explicitDest) || explicitDest.length < 1) {
+                console.error('Invalid destination format');
+                return;
+            }
+            
+            // Get the page reference from the destination array
+            const pageRef = explicitDest[0];
+            
+            // Get the page number from the page reference
+            pdfDoc.getPageIndex(pageRef).then(function(pageIndex) {
+                // PDF.js page indices are zero-based, but our pageNum is one-based
+                const targetPage = pageIndex + 1;
+                
+                // Navigate to the target page
+                pageNum = targetPage;
+                queueRenderPage(targetPage);
+                
+                // Update any UI elements as needed
+                updateProgressBar();
+            }).catch(function(error) {
+                console.error('Error navigating to destination:', error);
+            });
+        }
+        
+        /**
+         * Toggle table of contents visibility
+         */
+        function toggleTableOfContents(forceState = null) {
+            const tocSidebar = document.getElementById('tocSidebar');
+            
+            // Determine new state
+            tocVisible = forceState !== null ? forceState : !tocVisible;
+            
+            // Update UI
+            if (tocVisible) {
+                tocSidebar.classList.add('visible');
+                document.body.classList.add('toc-is-visible');
+            } else {
+                tocSidebar.classList.remove('visible');
+                document.body.classList.remove('toc-is-visible');
+            }
+        }
+        
         // Event listeners for navigation
         prevBtn.addEventListener('click', showPrevPage);
         nextBtn.addEventListener('click', showNextPage);
         prevBtnMobile.addEventListener('click', showPrevPage);
         nextBtnMobile.addEventListener('click', showNextPage);
+        
+        // Event listeners for TOC
+        document.getElementById('toggleToc').addEventListener('click', function() {
+            toggleTableOfContents();
+        });
+        
+        document.getElementById('closeToc').addEventListener('click', function() {
+            toggleTableOfContents(false);
+        });
         
         // Event listeners for zoom
         zoomInBtn.addEventListener('click', zoomIn);
@@ -800,6 +976,131 @@ include $headerPath;
         width: 1.8rem;
         height: 1.8rem;
         font-size: 0.9rem;
+    }
+}
+
+/* Table of Contents Styles */
+.toc-sidebar {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 300px;
+    height: 100%;
+    background-color: #fff;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    z-index: 1040;
+    transition: left 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.toc-sidebar.visible {
+    left: 0;
+}
+
+.toc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.toc-header h5 {
+    margin: 0;
+}
+
+.close-toc {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toc-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+}
+
+.toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc-item {
+    margin: 0;
+    padding: 0;
+}
+
+.toc-item a {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: #212529;
+    text-decoration: none;
+    font-size: 0.925rem;
+    border-left: 3px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.toc-item a:hover {
+    background-color: #f8f9fa;
+    border-left-color: #007bff;
+}
+
+.nested-toc {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc-loading,
+.toc-empty {
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    text-align: center;
+}
+
+.spinner-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+.toc-empty i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 767.98px) {
+    .toc-sidebar {
+        width: 260px;
+    }
+    
+    body.toc-is-visible::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1035;
     }
 }
 </style>
