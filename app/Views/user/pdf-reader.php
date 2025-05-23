@@ -669,9 +669,9 @@ include $headerPath;
                             ctx.setTransform(1, 0, 0, 1, 0, 0);
                             ctx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
                             
-                            // Enable font smoothing
+                            // Apply current antialiasing setting
                             ctx.imageSmoothingEnabled = useAntialiasing;
-                            ctx.imageSmoothingQuality = 'high';
+                            ctx.imageSmoothingQuality = useAntialiasing ? 'high' : 'low';
                             
                             // Scale context to ensure correct rendering
                             ctx.scale(devicePixelRatio, devicePixelRatio);
@@ -942,9 +942,9 @@ include $headerPath;
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                // Enable font smoothing
+                // Apply current antialiasing setting
                 ctx.imageSmoothingEnabled = useAntialiasing;
-                ctx.imageSmoothingQuality = 'high';
+                ctx.imageSmoothingQuality = useAntialiasing ? 'high' : 'low';
                 
                 // Scale context to ensure correct rendering
                 ctx.scale(devicePixelRatio, devicePixelRatio);
@@ -1413,8 +1413,24 @@ include $headerPath;
             const message = useAntialiasing ? 'Text smoothing: ON' : 'Text sharpening: ON';
             showMessage(message);
             
-            // Re-render current page with new setting
-            queueRenderPage(pageNum);
+            // Re-render with new setting based on current mode
+            if (continuousScrollMode) {
+                // Show loading state
+                loadingSpinner.style.display = 'flex';
+                
+                // Use setTimeout to allow the loading spinner to show before rendering
+                setTimeout(() => {
+                    // Reset and re-render all visible pages for continuous mode
+                    resetView();
+                    renderCurrentView();
+                    
+                    // Hide loading spinner
+                    loadingSpinner.style.display = 'none';
+                }, 50);
+            } else {
+                // Just re-render the current page for single page mode
+                queueRenderPage(pageNum);
+            }
         }
         
         /**
