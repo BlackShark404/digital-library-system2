@@ -33,15 +33,7 @@ class WishlistModel extends BaseModel
                 b.b_pages AS pages,
                 b.b_price AS price,
                 b.b_description AS description,
-                b.b_cover_path AS cover_image,
-                COALESCE(
-                    (SELECT STRING_AGG(g.g_name, ', ') 
-                     FROM book_genres bg 
-                     JOIN genre g ON bg.genre_id = g.g_id 
-                     WHERE bg.book_id = b.b_id
-                     GROUP BY bg.book_id), 
-                    'Uncategorized'
-                ) AS genre
+                b.b_cover_path AS cover_image
             FROM 
                 {$this->table} wl
             JOIN 
@@ -53,7 +45,36 @@ class WishlistModel extends BaseModel
                 wl.wl_added_at DESC
         ";
         
-        return $this->query($sql, ['user_id' => $userId]);
+        $books = $this->query($sql, ['user_id' => $userId]);
+        
+        // Get genres for each book
+        foreach ($books as &$book) {
+            $genreSql = "
+                SELECT 
+                    g.g_id,
+                    g.g_name
+                FROM 
+                    book_genres bg
+                JOIN 
+                    genre g ON bg.genre_id = g.g_id
+                WHERE 
+                    bg.book_id = :book_id
+            ";
+            
+            $genres = $this->query($genreSql, ['book_id' => $book['b_id']]);
+            
+            if (!empty($genres)) {
+                $book['genres'] = $genres;
+                // Keep the single genre field for backward compatibility
+                $genreNames = array_column($genres, 'g_name');
+                $book['genre'] = implode(', ', $genreNames);
+            } else {
+                $book['genres'] = [];
+                $book['genre'] = 'Uncategorized';
+            }
+        }
+        
+        return $books;
     }
     
     /**

@@ -46,7 +46,15 @@ include $headerPath;
                             </button>
                         </div>
                         <div class="card-body">
-                            <span class="badge bg-secondary mb-2"><?php echo htmlspecialchars($book['genre'] ?? 'Uncategorized'); ?></span>
+                            <?php if (!empty($book['genres'])): ?>
+                                <div class="mb-2">
+                                    <?php foreach ($book['genres'] as $genre): ?>
+                                        <span class="badge bg-secondary me-1"><?php echo htmlspecialchars($genre['g_name']); ?></span>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <span class="badge bg-secondary mb-2">Uncategorized</span>
+                            <?php endif; ?>
                             <h5 class="card-title"><?php echo htmlspecialchars($book['title'] ?? 'Untitled'); ?></h5>
                             <p class="card-text text-muted">by <?php echo htmlspecialchars($book['author'] ?? 'Unknown'); ?></p>
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -219,7 +227,22 @@ include $headerPath;
                     document.getElementById('modalCoverImage').src = book.cover_url || '/assets/images/book-cover/default-cover.svg';
                     document.getElementById('modalTitle').textContent = book.b_title || 'N/A';
                     document.getElementById('modalAuthor').textContent = book.b_author ? `by ${book.b_author}` : 'N/A';
-                    document.getElementById('modalGenre').textContent = book.genre || 'N/A';
+                    
+                    // Handle genres
+                    const modalGenre = document.getElementById('modalGenre');
+                    modalGenre.innerHTML = '';
+                    
+                    if (book.genres && book.genres.length > 0) {
+                        book.genres.forEach(genre => {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-secondary me-1';
+                            badge.textContent = genre.g_name;
+                            modalGenre.appendChild(badge);
+                        });
+                    } else {
+                        modalGenre.textContent = 'Uncategorized';
+                    }
+                    
                     document.getElementById('modalPublisher').textContent = book.b_publisher || 'N/A';
                     document.getElementById('modalPublicationDate').textContent = book.b_publication_date ? formatDate(book.b_publication_date) : 'N/A';
                     document.getElementById('modalIsbn').textContent = book.b_isbn || 'N/A';
