@@ -88,6 +88,11 @@ include $headerPath;
             <p>Loading your book...</p>
         </div>
 
+        <!-- Zoom Indicator -->
+        <div id="zoomIndicator" class="zoom-indicator">
+            <span id="zoomPercent">100%</span>
+        </div>
+
         <!-- PDF Canvas -->
         <canvas id="pdfCanvas"></canvas>
     </div>
@@ -144,6 +149,8 @@ include $headerPath;
         const errorText = document.getElementById('errorText');
         const progressIndicator = document.getElementById('progressIndicator');
         const bookmarkBtn = document.getElementById('bookmark');
+        const zoomIndicator = document.getElementById('zoomIndicator');
+        const zoomPercent = document.getElementById('zoomPercent');
         
         // Navigation elements
         const prevBtn = document.getElementById('prev');
@@ -171,8 +178,9 @@ include $headerPath;
         // Initial element states
         errorMessage.style.display = 'none';
         
-        // Load bookmarks from localStorage
+        // Load bookmarks and zoom level from localStorage
         loadBookmarks();
+        loadZoomLevel();
         
         /**
          * Load the PDF document
@@ -341,6 +349,8 @@ include $headerPath;
         function zoomIn() {
             if (scale >= 3.0) return;
             scale += 0.1;
+            saveZoomLevel();
+            showZoomIndicator();
             queueRenderPage(pageNum);
         }
         
@@ -350,7 +360,70 @@ include $headerPath;
         function zoomOut() {
             if (scale <= 0.5) return;
             scale -= 0.1;
+            saveZoomLevel();
+            showZoomIndicator();
             queueRenderPage(pageNum);
+        }
+        
+        /**
+         * Show zoom indicator and hide after a delay
+         */
+        function showZoomIndicator() {
+            // Update zoom percentage
+            const zoomPercentValue = Math.round(scale * 100);
+            zoomPercent.textContent = zoomPercentValue + '%';
+            
+            // Show indicator
+            zoomIndicator.classList.add('visible');
+            
+            // Hide after delay
+            clearTimeout(window.zoomTimeout);
+            window.zoomTimeout = setTimeout(() => {
+                zoomIndicator.classList.remove('visible');
+            }, 1500);
+        }
+        
+        /**
+         * Load zoom level from localStorage
+         */
+        function loadZoomLevel() {
+            let zoomChanged = false;
+            
+            // Try to load book-specific zoom level first
+            const savedScale = localStorage.getItem(`zoomLevel_${sessionId}`);
+            if (savedScale) {
+                const parsedScale = parseFloat(savedScale);
+                if (!isNaN(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3.0) {
+                    scale = parsedScale;
+                    zoomChanged = true;
+                    return;
+                }
+            }
+            
+            // Fall back to global zoom preference
+            const globalScale = localStorage.getItem('globalZoomLevel');
+            if (globalScale) {
+                const parsedScale = parseFloat(globalScale);
+                if (!isNaN(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3.0) {
+                    scale = parsedScale;
+                    zoomChanged = true;
+                }
+            }
+            
+            // Show indicator if zoom was loaded from storage
+            if (zoomChanged) {
+                // Delay showing indicator until after PDF is loaded
+                setTimeout(showZoomIndicator, 1000);
+            }
+        }
+        
+        /**
+         * Save zoom level to localStorage
+         */
+        function saveZoomLevel() {
+            // Save both session-specific and global zoom preference
+            localStorage.setItem(`zoomLevel_${sessionId}`, scale.toString());
+            localStorage.setItem('globalZoomLevel', scale.toString());
         }
         
         /**
@@ -754,6 +827,27 @@ include $headerPath;
 .mobile-page-display {
     margin: 0 1rem;
     font-weight: 500;
+}
+
+.zoom-indicator {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 1000;
+}
+
+.zoom-indicator.visible {
+    opacity: 1;
+    visibility: visible;
 }
 
 @media (max-width: 767.98px) {
