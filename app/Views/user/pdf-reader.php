@@ -51,9 +51,6 @@ include $headerPath;
                     <button id="toggleAntialiasing" class="control-btn" title="Toggle Text Sharpness">
                         <i class="bi bi-type"></i>
                     </button>
-                    <button id="bookmark" class="control-btn" title="Bookmark">
-                        <i class="bi bi-bookmark"></i>
-                    </button>
                     <button id="fullscreen" class="control-btn" title="Fullscreen">
                         <i class="bi bi-arrows-fullscreen"></i>
                     </button>
@@ -104,31 +101,6 @@ include $headerPath;
     <div class="reading-progress-bar">
         <div id="progressIndicator"></div>
     </div>
-    
-    <!-- Bookmark Modal -->
-    <div class="modal fade" id="bookmarkModal" tabindex="-1" aria-labelledby="bookmarkModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="bookmarkModalLabel">Bookmarks</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="d-flex mb-3">
-                        <input type="text" id="bookmarkName" class="form-control me-2" placeholder="New bookmark name">
-                        <button id="addBookmark" class="btn btn-primary">Add</button>
-                    </div>
-                    
-                    <div id="bookmarksList" class="list-group">
-                        <!-- Bookmarks will be added here -->
-                        <div class="text-center text-muted p-3" id="noBookmarksMsg">
-                            No bookmarks yet
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- PDF.js library -->
@@ -151,7 +123,6 @@ include $headerPath;
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
         const progressIndicator = document.getElementById('progressIndicator');
-        const bookmarkBtn = document.getElementById('bookmark');
         const zoomIndicator = document.getElementById('zoomIndicator');
         const zoomPercent = document.getElementById('zoomPercent');
         
@@ -177,14 +148,12 @@ include $headerPath;
         let pageRendering = false;
         let pageNumPending = null;
         let scale = 1.0;
-        let bookmarks = [];
         let useAntialiasing = true; // Default state of antialiasing
         
         // Initial element states
         errorMessage.style.display = 'none';
         
-        // Load bookmarks and zoom level from localStorage
-        loadBookmarks();
+        // Load settings from localStorage
         loadZoomLevel();
         loadAntialiasingSetting();
         
@@ -403,15 +372,12 @@ include $headerPath;
          * Load zoom level from localStorage
          */
         function loadZoomLevel() {
-            let zoomChanged = false;
-            
             // Try to load book-specific zoom level first
             const savedScale = localStorage.getItem(`zoomLevel_${sessionId}`);
             if (savedScale) {
                 const parsedScale = parseFloat(savedScale);
                 if (!isNaN(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3.0) {
                     scale = parsedScale;
-                    zoomChanged = true;
                     return;
                 }
             }
@@ -422,14 +388,7 @@ include $headerPath;
                 const parsedScale = parseFloat(globalScale);
                 if (!isNaN(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3.0) {
                     scale = parsedScale;
-                    zoomChanged = true;
                 }
-            }
-            
-            // Show indicator if zoom was loaded from storage
-            if (zoomChanged) {
-                // Delay showing indicator until after PDF is loaded
-                setTimeout(showZoomIndicator, 1000);
             }
         }
         
@@ -454,121 +413,6 @@ include $headerPath;
                 });
             } else {
                 document.exitFullscreen();
-            }
-        }
-        
-        /**
-         * Handle bookmark functionality
-         */
-        function setupBookmarkSystem() {
-            // Set up bookmark modal
-            const bookmarkModal = new bootstrap.Modal(document.getElementById('bookmarkModal'));
-            const addBookmarkBtn = document.getElementById('addBookmark');
-            const bookmarkNameInput = document.getElementById('bookmarkName');
-            const bookmarksList = document.getElementById('bookmarksList');
-            const noBookmarksMsg = document.getElementById('noBookmarksMsg');
-            
-            // Show bookmark modal
-            bookmarkBtn.addEventListener('click', function() {
-                showBookmarks();
-                bookmarkModal.show();
-            });
-            
-            // Add a new bookmark
-            addBookmarkBtn.addEventListener('click', function() {
-                const name = bookmarkNameInput.value.trim() || `Page ${pageNum}`;
-                
-                const newBookmark = {
-                    id: Date.now(),
-                    name: name,
-                    page: pageNum,
-                    createdAt: new Date().toISOString()
-                };
-                
-                bookmarks.push(newBookmark);
-                saveBookmarks();
-                showBookmarks();
-                
-                bookmarkNameInput.value = '';
-            });
-            
-            // Show bookmarks in the modal
-            function showBookmarks() {
-                if (bookmarks.length === 0) {
-                    noBookmarksMsg.style.display = 'block';
-                    bookmarksList.innerHTML = '';
-                    return;
-                }
-                
-                noBookmarksMsg.style.display = 'none';
-                
-                // Sort bookmarks by page number
-                bookmarks.sort((a, b) => a.page - b.page);
-                
-                let html = '';
-                bookmarks.forEach(bookmark => {
-                    html += `
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>${bookmark.name}</strong>
-                                <small class="text-muted d-block">Page ${bookmark.page}</small>
-                            </div>
-                            <div>
-                                <button class="btn btn-sm btn-primary go-to-bookmark" data-page="${bookmark.page}">
-                                    Go
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger delete-bookmark" data-id="${bookmark.id}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                bookmarksList.innerHTML = html;
-                
-                // Add event listeners for bookmark actions
-                document.querySelectorAll('.go-to-bookmark').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const page = parseInt(this.dataset.page);
-                        pageNum = page;
-                        queueRenderPage(page);
-                        bookmarkModal.hide();
-                    });
-                });
-                
-                document.querySelectorAll('.delete-bookmark').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const id = parseInt(this.dataset.id);
-                        bookmarks = bookmarks.filter(b => b.id !== id);
-                        saveBookmarks();
-                        showBookmarks();
-                    });
-                });
-            }
-        }
-        
-        /**
-         * Save bookmarks to localStorage
-         */
-        function saveBookmarks() {
-            localStorage.setItem(`bookmarks_${sessionId}`, JSON.stringify(bookmarks));
-        }
-        
-        /**
-         * Load bookmarks from localStorage
-         */
-        function loadBookmarks() {
-            const saved = localStorage.getItem(`bookmarks_${sessionId}`);
-            if (saved) {
-                try {
-                    bookmarks = JSON.parse(saved);
-                } catch (e) {
-                    console.error('Error parsing bookmarks:', e);
-                    bookmarks = [];
-                }
-            } else {
-                bookmarks = [];
             }
         }
         
@@ -656,9 +500,6 @@ include $headerPath;
             // Re-render current page to adjust to new size
             queueRenderPage(pageNum);
         });
-        
-        // Set up the bookmark system
-        setupBookmarkSystem();
     });
 </script>
 
