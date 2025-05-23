@@ -656,12 +656,14 @@ include $headerPath;
     overflow: auto;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     background-color: #444;
+    padding-top: 20px;
 }
 
 #pdfCanvas {
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+    margin-bottom: 20px;
 }
 
 #errorMessage {

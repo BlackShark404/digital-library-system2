@@ -63,7 +63,7 @@ include $headerPath;
                                     <img src="<?php echo !empty($book['cover_image']) ? htmlspecialchars($book['cover_image']) : '../assets/images/book-cover/default-cover.svg'; ?>"
                                         class="card-img-top"
                                         alt="<?php echo htmlspecialchars($book['title']); ?>"
-                                        style="height: 250px; object-fit: cover;">
+                                        style="height: 270px; object-fit: cover;">
 
                                     <!-- Wishlist button -->
                                     <button type="button"
