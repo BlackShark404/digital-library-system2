@@ -196,7 +196,13 @@ include $headerPath;
                                     <h6 class="card-title"><?= $book['b_title'] ?></h6>
                                     <p class="card-text small text-muted mb-1"><?= $book['b_author'] ?></p>
                                     <p class="card-text mb-2">
-                                        <span class="badge bg-secondary"><?= $book['genre'] ?></span>
+                                        <?php if (!empty($book['genres'])): ?>
+                                            <?php foreach ($book['genres'] as $index => $genre): ?>
+                                                <span class="badge bg-secondary me-1"><?= htmlspecialchars($genre['g_name']) ?></span>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Uncategorized</span>
+                                        <?php endif; ?>
                                     </p>
                                     
                                     <div class="d-grid mt-3">

@@ -401,38 +401,81 @@ class ReadingSessionModel extends BaseModel
                     user_purchase
                 WHERE 
                     ua_id = :user_id
+            ),
+            suggested_books AS (
+                -- Get books in those genres that the user hasn't read yet
+                SELECT 
+                    b.b_id,
+                    b.b_title,
+                    b.b_author,
+                    b.b_cover_path,
+                    b.b_description,
+                    MAX(ug.read_count) as relevance_score
+                FROM 
+                    books b
+                JOIN 
+                    book_genres bg ON b.b_id = bg.book_id
+                JOIN 
+                    genre g ON bg.genre_id = g.g_id
+                JOIN 
+                    user_genres ug ON bg.genre_id = ug.genre_id
+                WHERE 
+                    b.b_id NOT IN (SELECT b_id FROM read_books)
+                    AND b.b_deleted_at IS NULL
+                GROUP BY
+                    b.b_id, b.b_title, b.b_author, b.b_cover_path, b.b_description
+                ORDER BY 
+                    relevance_score DESC, 
+                    b.b_publication_date DESC
+                LIMIT :limit
             )
-            -- Get books in those genres that the user hasn't read yet
+            -- Get the final results with all genres for each book
             SELECT 
-                b.b_id,
-                b.b_title,
-                b.b_author,
-                b.b_cover_path,
-                b.b_description,
-                g.g_name as genre
+                sb.*,
+                (
+                    SELECT jsonb_agg(
+                        jsonb_build_object(
+                            'g_id', g.g_id, 
+                            'g_name', g.g_name
+                        )
+                    )
+                    FROM book_genres bg
+                    JOIN genre g ON bg.genre_id = g.g_id
+                    WHERE bg.book_id = sb.b_id
+                ) as genres
             FROM 
-                books b
-            JOIN 
-                book_genres bg ON b.b_id = bg.book_id
-            JOIN 
-                genre g ON bg.genre_id = g.g_id
-            JOIN 
-                user_genres ug ON bg.genre_id = ug.genre_id
-            WHERE 
-                b.b_id NOT IN (SELECT b_id FROM read_books)
-                AND b.b_deleted_at IS NULL
-            GROUP BY
-                b.b_id, b.b_title, b.b_author, b.b_cover_path, b.b_description, g.g_name
+                suggested_books sb
             ORDER BY 
-                MAX(ug.read_count) DESC, 
-                b.b_publication_date DESC
-            LIMIT :limit
+                relevance_score DESC, 
+                b_title
         ";
         
-        return $this->query($sql, [
+        $suggestions = $this->query($sql, [
             'user_id' => $userId,
             'limit' => $limit
         ]);
+        
+        // Process the JSON genres array
+        foreach ($suggestions as &$book) {
+            if (isset($book['genres']) && $book['genres']) {
+                // If the database returns JSON string, parse it
+                if (is_string($book['genres'])) {
+                    $book['genres'] = json_decode($book['genres'], true);
+                }
+                
+                // Keep single genre for backward compatibility
+                if (!empty($book['genres'])) {
+                    $book['genre'] = $book['genres'][0]['g_name'];
+                } else {
+                    $book['genre'] = 'Uncategorized';
+                }
+            } else {
+                $book['genres'] = [];
+                $book['genre'] = 'Uncategorized';
+            }
+        }
+        
+        return $suggestions;
     }
     
     /**
