@@ -409,6 +409,12 @@ include $headerPath;
             // The first item is the page ref
             const pageRef = destArray[0];
             
+            // Show temporary loading indicator while we resolve the page
+            const tocLoading = document.createElement('div');
+            tocLoading.className = 'toc-temp-loading';
+            tocLoading.innerHTML = '<div class="spinner-sm"></div> Navigating...';
+            document.body.appendChild(tocLoading);
+            
             // Convert the page reference to a page number
             pdfDoc.getPageIndex(pageRef).then(function(pageIndex) {
                 // PDF.js uses zero-based indices, but we use one-based page numbers
@@ -434,8 +440,12 @@ include $headerPath;
                 if (window.innerWidth < 768) {
                     tocSidebar.classList.remove('active');
                 }
+                
+                // Remove the temporary loading indicator
+                tocLoading.remove();
             }).catch(function(error) {
                 console.error('Error resolving page from destination:', error);
+                tocLoading.remove();
             });
         }
         
@@ -808,7 +818,7 @@ include $headerPath;
                                 // After rendering, adjust scroll position to maintain view
                                 const afterHeight = continuousContainer.scrollHeight;
                                 const heightDiff = afterHeight - beforeHeight;
-                                if (heightDiff > 0) {
+                                if (heightDiff > 0 && index < targetPageNum) {
                                     viewerContainer.scrollTop = beforeScrollTop + heightDiff;
                                 }
                             });
@@ -1030,99 +1040,129 @@ include $headerPath;
             
             // If page isn't in DOM yet, we need to render it and nearby pages
             if (!targetWrapper) {
-                // If target page is ahead of current page
-                if (targetPageNum > pageNum) {
-                    // Calculate page range to render
-                    const startPage = Math.max(1, pageNum);
-                    const endPage = Math.min(pdfDoc.numPages, targetPageNum + 2);
+                // Show loading indicator immediately
+                const loadingMessage = document.createElement('div');
+                loadingMessage.className = 'continuous-loading jump-loading';
+                loadingMessage.innerHTML = '<div class="spinner-sm"></div> Loading page...';
+                continuousContainer.appendChild(loadingMessage);
+                
+                // Calculate if this is a large jump
+                const isLargeJump = Math.abs(targetPageNum - pageNum) > 20;
+                console.log(`Jump distance: ${Math.abs(targetPageNum - pageNum)} pages, large jump: ${isLargeJump}`);
+
+                if (isLargeJump) {
+                    // For large jumps, only render a small window of pages around the target
+                    const pagesToRender = [];
+                    // Add target page and a few pages before/after
+                    for (let i = Math.max(1, targetPageNum - 2); i <= Math.min(pdfDoc.numPages, targetPageNum + 3); i++) {
+                        pagesToRender.push(i);
+                    }
                     
-                    // Render pages leading to target
-                    console.log(`Target page ${targetPageNum} not rendered yet, rendering pages ${startPage} to ${endPage}`);
+                    console.log(`Large jump optimization: Rendering only pages around target: ${pagesToRender.join(', ')}`);
                     
-                    // Show loading indicator
-                    const loadingMessage = document.createElement('div');
-                    loadingMessage.className = 'continuous-loading jump-loading';
-                    loadingMessage.innerHTML = '<div class="spinner-sm"></div> Loading page...';
-                    continuousContainer.appendChild(loadingMessage);
+                    // Clear the container first
+                    while (continuousContainer.firstChild) {
+                        if (continuousContainer.firstChild !== loadingMessage) {
+                            continuousContainer.removeChild(continuousContainer.firstChild);
+                        }
+                    }
                     
-                    // Render pages sequentially until we reach target
-                    const renderSequential = (index) => {
-                        if (index > endPage) {
-                            // All pages rendered
+                    // Clear rendered pages tracking
+                    renderedPages.clear();
+                    
+                    // Render target and nearby pages
+                    let renderedCount = 0;
+                    const totalToRender = pagesToRender.length;
+                    
+                    // Update loading message to show progress
+                    loadingMessage.innerHTML = `<div class="spinner-sm"></div> Loading pages... (0/${totalToRender})`;
+                    
+                    // Render pages sequentially
+                    const renderNextPage = (index) => {
+                        if (index >= pagesToRender.length) {
+                            // All pages rendered, clean up and scroll
                             loadingMessage.remove();
                             
-                            // Now try to scroll to the target page
+                            // Find and scroll to the target page
                             setTimeout(() => {
                                 const newTargetWrapper = document.querySelector(`.page-wrapper[data-page-index="${targetPageNum}"]`);
                                 if (newTargetWrapper) {
                                     scrollToElement(newTargetWrapper);
-                                    
-                                    // Update UI elements
                                     updateUIForCurrentPage(targetPageNum);
                                 }
-                            }, 100);
+                            }, 50);
                             
                             return;
                         }
                         
-                        renderContinuousPage(index, continuousContainer).then(() => {
-                            renderSequential(index + 1);
+                        const pageIndex = pagesToRender[index];
+                        renderContinuousPage(pageIndex, continuousContainer).then(() => {
+                            renderedCount++;
+                            loadingMessage.innerHTML = `<div class="spinner-sm"></div> Loading pages... (${renderedCount}/${totalToRender})`;
+                            renderNextPage(index + 1);
                         });
                     };
                     
-                    renderSequential(startPage);
-                    
-                } else { // If target page is before current page
-                    // Calculate page range to render
-                    const startPage = Math.max(1, targetPageNum - 2);
-                    const endPage = Math.min(pdfDoc.numPages, pageNum);
-                    
-                    // Render pages leading to target
-                    console.log(`Target page ${targetPageNum} not rendered yet, rendering pages ${startPage} to ${endPage}`);
-                    
-                    // Show loading indicator
-                    const loadingMessage = document.createElement('div');
-                    loadingMessage.className = 'continuous-loading jump-loading';
-                    loadingMessage.innerHTML = '<div class="spinner-sm"></div> Loading page...';
-                    continuousContainer.appendChild(loadingMessage);
-                    
-                    // Remember current scroll position and height
-                    const beforeHeight = continuousContainer.scrollHeight;
-                    const beforeScrollTop = viewerContainer.scrollTop;
-                    
-                    // Render pages sequentially until we reach target
-                    const renderSequential = (index) => {
-                        if (index > endPage) {
-                            // All pages rendered
-                            loadingMessage.remove();
-                            
-                            // Now try to scroll to the target page
-                            setTimeout(() => {
-                                const newTargetWrapper = document.querySelector(`.page-wrapper[data-page-index="${targetPageNum}"]`);
-                                if (newTargetWrapper) {
-                                    scrollToElement(newTargetWrapper);
-                                    
-                                    // Update UI elements
-                                    updateUIForCurrentPage(targetPageNum);
-                                }
-                            }, 100);
-                            
-                            return;
-                        }
+                    // Start rendering
+                    renderNextPage(0);
+                } 
+                else {
+                    // For smaller jumps, use the original behavior but with better loading indicator
+                    // If target page is ahead of current page
+                    if (targetPageNum > pageNum) {
+                        // Calculate page range to render
+                        const startPage = Math.max(1, pageNum);
+                        const endPage = Math.min(pdfDoc.numPages, targetPageNum + 2);
+                        const pagesToRender = endPage - startPage + 1;
                         
-                        renderContinuousPage(index, continuousContainer, true).then(() => {
-                            // Adjust scroll position to maintain view when adding content at the top
-                            const afterHeight = continuousContainer.scrollHeight;
-                            const heightDiff = afterHeight - beforeHeight;
-                            if (heightDiff > 0 && index < targetPageNum) {
-                                viewerContainer.scrollTop = beforeScrollTop + heightDiff;
+                        console.log(`Target page ${targetPageNum} not rendered yet, rendering pages ${startPage} to ${endPage}`);
+                        
+                        // Update loading message with progress
+                        loadingMessage.innerHTML = `<div class="spinner-sm"></div> Loading pages... (0/${pagesToRender})`;
+                        
+                        // Remember current scroll position and height
+                        const beforeHeight = continuousContainer.scrollHeight;
+                        const beforeScrollTop = viewerContainer.scrollTop;
+                        
+                        // Render pages sequentially until we reach target
+                        let renderedCount = 0;
+                        
+                        const renderSequential = (index) => {
+                            if (index > endPage) {
+                                // All pages rendered
+                                loadingMessage.remove();
+                                
+                                // Now try to scroll to the target page
+                                setTimeout(() => {
+                                    const newTargetWrapper = document.querySelector(`.page-wrapper[data-page-index="${targetPageNum}"]`);
+                                    if (newTargetWrapper) {
+                                        scrollToElement(newTargetWrapper);
+                                        
+                                        // Update UI elements
+                                        updateUIForCurrentPage(targetPageNum);
+                                    }
+                                }, 50);
+                                
+                                return;
                             }
                             
-                            renderSequential(index + 1);
-                        });
-                    };
-                    
-                    renderSequential(startPage);
+                            renderContinuousPage(index, continuousContainer, true).then(() => {
+                                renderedCount++;
+                                loadingMessage.innerHTML = `<div class="spinner-sm"></div> Loading pages... (${renderedCount}/${pagesToRender})`;
+                                
+                                // Adjust scroll position to maintain view when adding content at the top
+                                const afterHeight = continuousContainer.scrollHeight;
+                                const heightDiff = afterHeight - beforeHeight;
+                                if (heightDiff > 0 && index < targetPageNum) {
+                                    viewerContainer.scrollTop = beforeScrollTop + heightDiff;
+                                }
+                                
+                                renderSequential(index + 1);
+                            });
+                        };
+                        
+                        renderSequential(startPage);
+                    }
                 }
             } else {
                 // If page is already in the DOM, just scroll to it
@@ -2200,6 +2240,22 @@ include $headerPath;
     padding: 1rem;
     text-align: center;
     color: #6c757d;
+}
+
+.toc-temp-loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 20px;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Small spinner for TOC loading */
