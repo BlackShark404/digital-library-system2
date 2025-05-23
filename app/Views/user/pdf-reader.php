@@ -162,6 +162,7 @@ include $headerPath;
         let useAntialiasing = true; // Default state of antialiasing
         let continuousScrollMode = true; // Default to continuous scroll mode
         let pageCanvases = []; // Array to store canvas elements for continuous mode
+        let renderedPages = new Set(); // Track rendered page numbers
         
         // Initial element states
         errorMessage.style.display = 'none';
@@ -212,6 +213,9 @@ include $headerPath;
          * Reset the view container
          */
         function resetView() {
+            // Clear rendered pages tracking
+            renderedPages.clear();
+            
             // Remove all existing canvases
             const viewerContainer = document.getElementById('viewerContainer');
             if (!viewerContainer) return; // Guard against early execution
@@ -347,12 +351,15 @@ include $headerPath;
          */
         function renderContinuousPage(pageIndex, container, prepend = false) {
             return new Promise((resolve) => {
-                // Skip if this page is already rendered
-                if (document.querySelector(`.page-wrapper[data-page-index="${pageIndex}"]`)) {
-                    console.log(`Page ${pageIndex} already rendered, skipping`);
+                // Skip if this page is already rendered or in progress
+                if (renderedPages.has(pageIndex) || document.querySelector(`.page-wrapper[data-page-index="${pageIndex}"]`)) {
+                    console.log(`Page ${pageIndex} already rendered or in progress, skipping`);
                     resolve();
                     return;
                 }
+                
+                // Mark as in progress to prevent duplicate rendering attempts
+                renderedPages.add(pageIndex);
                 
                 console.log(`Rendering page ${pageIndex} in continuous mode`);
                 
@@ -464,88 +471,110 @@ include $headerPath;
             const continuousContainer = document.getElementById('continuousContainer');
             
             // Remove previous event listener if exists
-            viewerContainer.onscroll = null;
+            if (viewerContainer._scrollHandler) {
+                viewerContainer.removeEventListener('scroll', viewerContainer._scrollHandler);
+            }
             
             // Skip if not in continuous mode
             if (!continuousScrollMode) return;
             
-            // Throttle scroll event for better performance
+            // Set up scroll detection variables
             let isScrolling = false;
             let lastScrollTop = viewerContainer.scrollTop;
-            let scrollTimeout;
+            let scrollTimer = null;
             
-            viewerContainer.onscroll = function() {
-                if (isScrolling) return;
+            // Get min and max page numbers currently rendered
+            function getRenderedPageRange() {
+                const pageWrappers = document.querySelectorAll('.page-wrapper');
+                if (pageWrappers.length === 0) return { min: 0, max: 0 };
                 
+                let minPage = Infinity;
+                let maxPage = -Infinity;
+                
+                pageWrappers.forEach(wrapper => {
+                    const pageIndex = parseInt(wrapper.dataset.pageIndex);
+                    minPage = Math.min(minPage, pageIndex);
+                    maxPage = Math.max(maxPage, pageIndex);
+                });
+                
+                return { min: minPage, max: maxPage };
+            }
+            
+            // Handle loading of pages when scrolling
+            function handleScroll() {
+                if (isScrolling) return;
                 isScrolling = true;
                 
-                // Clear previous timeout
-                clearTimeout(scrollTimeout);
+                cancelAnimationFrame(scrollTimer);
                 
-                // Check if scrolling up or down
-                const scrollTop = viewerContainer.scrollTop;
-                const scrollDirection = scrollTop > lastScrollTop ? 'down' : 'up';
-                lastScrollTop = scrollTop;
-                
-                // Update current page based on scroll position (this is very important)
-                updateCurrentPageFromScroll();
-                
-                const scrollBottom = scrollTop + viewerContainer.clientHeight;
-                const containerHeight = continuousContainer.clientHeight;
-                
-                // Load more pages when approaching bottom
-                if (scrollDirection === 'down' && scrollBottom > containerHeight - 800 && pageNum < pdfDoc.numPages) {
-                    // Check for existence of page wrappers
-                    const pageWrappers = document.querySelectorAll('.page-wrapper');
-                    if (pageWrappers.length === 0) {
-                        isScrolling = false;
-                        return;
-                    }
+                scrollTimer = requestAnimationFrame(() => {
+                    const scrollTop = viewerContainer.scrollTop;
+                    const clientHeight = viewerContainer.clientHeight;
+                    const scrollHeight = viewerContainer.scrollHeight;
                     
-                    const lastPageWrapper = pageWrappers[pageWrappers.length - 1];
-                    const lastPageIndex = parseInt(lastPageWrapper.dataset.pageIndex);
+                    // Determine scroll direction
+                    const scrollingDown = scrollTop > lastScrollTop;
+                    lastScrollTop = scrollTop;
                     
-                    // Only load if we haven't already loaded this page
-                    if (lastPageIndex < pdfDoc.numPages) {
-                        const nextPageIndex = lastPageIndex + 1;
-                        renderContinuousPage(nextPageIndex, continuousContainer);
-                    }
-                }
-                
-                // Load more pages when approaching top (if scrolling up)
-                if (scrollDirection === 'up' && scrollTop < 300 && pageNum > 1) {
-                    const pageWrappers = document.querySelectorAll('.page-wrapper');
-                    if (pageWrappers.length === 0) {
-                        isScrolling = false;
-                        return;
-                    }
+                    // Update current page based on scroll position
+                    updateCurrentPageFromScroll();
                     
-                    const firstPageWrapper = pageWrappers[0];
-                    const firstPageIndex = parseInt(firstPageWrapper.dataset.pageIndex);
+                    // Get current range of rendered pages
+                    const pageRange = getRenderedPageRange();
                     
-                    // Only load if we haven't already loaded page 1
-                    if (firstPageIndex > 1) {
-                        const prevPageIndex = firstPageIndex - 1;
+                    // When scrolling down, check if we need to load more pages at the bottom
+                    if (scrollingDown) {
+                        const scrollBottom = scrollTop + clientHeight;
+                        const scrollRatio = scrollBottom / scrollHeight;
                         
-                        // Remember scroll position to maintain it
-                        const beforeHeight = continuousContainer.scrollHeight;
-                        
-                        renderContinuousPage(prevPageIndex, continuousContainer, true).then(() => {
-                            // Adjust scroll position to maintain view
-                            const afterHeight = continuousContainer.scrollHeight;
-                            const heightDiff = afterHeight - beforeHeight;
-                            if (heightDiff > 0) {
-                                viewerContainer.scrollTop += heightDiff;
+                        // If we're near the bottom and not at the end of the document
+                        if (scrollRatio > 0.8 && pageRange.max < pdfDoc.numPages) {
+                            const nextPageToLoad = pageRange.max + 1;
+                            if (nextPageToLoad <= pdfDoc.numPages && !renderedPages.has(nextPageToLoad)) {
+                                console.log(`Near bottom, loading next page ${nextPageToLoad}`);
+                                renderContinuousPage(nextPageToLoad, continuousContainer);
                             }
-                        });
+                        }
+                    } 
+                    // When scrolling up, check if we need to load more pages at the top
+                    else if (scrollTop < 500 && pageRange.min > 1) {
+                        const prevPageToLoad = pageRange.min - 1;
+                        if (prevPageToLoad >= 1 && !renderedPages.has(prevPageToLoad)) {
+                            console.log(`Near top, loading previous page ${prevPageToLoad}`);
+                            
+                            // Remember current scroll position and height
+                            const beforeHeight = continuousContainer.scrollHeight;
+                            const beforeScrollTop = viewerContainer.scrollTop;
+                            
+                            renderContinuousPage(prevPageToLoad, continuousContainer, true).then(() => {
+                                // After rendering, adjust scroll position to maintain view
+                                const afterHeight = continuousContainer.scrollHeight;
+                                const heightDiff = afterHeight - beforeHeight;
+                                if (heightDiff > 0) {
+                                    viewerContainer.scrollTop = beforeScrollTop + heightDiff;
+                                }
+                            });
+                        }
                     }
-                }
-                
-                // Reset throttle after a short delay
-                scrollTimeout = setTimeout(() => {
+                    
+                    // Periodically clean up off-screen pages to improve performance
+                    // Use a counter to avoid doing this on every scroll event
+                    if (!viewerContainer._cleanupCounter) viewerContainer._cleanupCounter = 0;
+                    viewerContainer._cleanupCounter++;
+                    
+                    if (viewerContainer._cleanupCounter % 10 === 0) {
+                        cleanupOffscreenPages();
+                    }
+                    
                     isScrolling = false;
-                }, 100);
-            };
+                });
+            }
+            
+            // Store the handler so we can remove it later
+            viewerContainer._scrollHandler = handleScroll;
+            
+            // Add scroll event listener
+            viewerContainer.addEventListener('scroll', viewerContainer._scrollHandler, { passive: true });
         }
         
         /**
@@ -557,17 +586,29 @@ include $headerPath;
             const viewerContainer = document.getElementById('viewerContainer');
             const pageWrappers = document.querySelectorAll('.page-wrapper');
             
+            if (pageWrappers.length === 0) return;
+            
             // Find the page most visible in the viewport
             let mostVisiblePage = null;
             let maxVisibleArea = 0;
             
+            // Get viewport dimensions
+            const viewportTop = viewerContainer.scrollTop;
+            const viewportHeight = viewerContainer.clientHeight;
+            const viewportBottom = viewportTop + viewportHeight;
+            
+            // Check each page's visibility
             pageWrappers.forEach(wrapper => {
                 const rect = wrapper.getBoundingClientRect();
-                const viewportHeight = window.innerHeight;
+                const wrapperTop = wrapper.offsetTop - viewerContainer.offsetTop;
+                const wrapperBottom = wrapperTop + wrapper.offsetHeight;
+                
+                // Skip if completely out of viewport
+                if (wrapperBottom < viewportTop || wrapperTop > viewportBottom) return;
                 
                 // Calculate how much of this page is visible
-                const visibleTop = Math.max(rect.top, 0);
-                const visibleBottom = Math.min(rect.bottom, viewportHeight);
+                const visibleTop = Math.max(wrapperTop, viewportTop);
+                const visibleBottom = Math.min(wrapperBottom, viewportBottom);
                 const visibleHeight = Math.max(0, visibleBottom - visibleTop);
                 const visibleArea = visibleHeight * rect.width;
                 
@@ -1010,6 +1051,77 @@ include $headerPath;
                 queueRenderPage(pageNum);
             }
         });
+
+        /**
+         * Clean up pages that are far outside the current viewport
+         * to improve performance and reduce memory usage
+         */
+        function cleanupOffscreenPages() {
+            if (!continuousScrollMode) return;
+            
+            const viewerContainer = document.getElementById('viewerContainer');
+            const pageWrappers = document.querySelectorAll('.page-wrapper');
+            
+            if (pageWrappers.length <= 10) return; // Don't cleanup if we have few pages
+            
+            const viewportTop = viewerContainer.scrollTop;
+            const viewportHeight = viewerContainer.clientHeight;
+            const viewportBottom = viewportTop + viewportHeight;
+            
+            // Keep a buffer of pages before and after the viewport
+            const bufferSize = viewportHeight * 2; // Keep pages within 2x viewport height
+            const minKeepTop = viewportTop - bufferSize;
+            const maxKeepBottom = viewportBottom + bufferSize;
+            
+            let pagesToRemove = [];
+            
+            // Find pages that are far outside the viewport
+            pageWrappers.forEach(wrapper => {
+                const pageIndex = parseInt(wrapper.dataset.pageIndex);
+                const wrapperTop = wrapper.offsetTop - viewerContainer.offsetTop;
+                const wrapperBottom = wrapperTop + wrapper.offsetHeight;
+                
+                // If the page is far outside the viewport, mark for removal
+                if (wrapperBottom < minKeepTop || wrapperTop > maxKeepBottom) {
+                    // Don't remove pages very close to the current page
+                    if (Math.abs(pageIndex - pageNum) > 5) {
+                        pagesToRemove.push({
+                            wrapper: wrapper,
+                            pageIndex: pageIndex
+                        });
+                    }
+                }
+            });
+            
+            // Sort so we keep pages closest to the current page
+            pagesToRemove.sort((a, b) => {
+                return Math.abs(b.pageIndex - pageNum) - Math.abs(a.pageIndex - pageNum);
+            });
+            
+            // Only remove a few pages at a time to avoid jank
+            const maxRemoveCount = Math.min(3, pagesToRemove.length);
+            
+            if (maxRemoveCount > 0) {
+                console.log(`Cleaning up ${maxRemoveCount} offscreen pages`);
+                
+                for (let i = 0; i < maxRemoveCount; i++) {
+                    const page = pagesToRemove[i];
+                    page.wrapper.remove();
+                    
+                    // Remove from canvas tracking
+                    const canvasElement = page.wrapper.querySelector('canvas');
+                    if (canvasElement) {
+                        const canvasIndex = pageCanvases.indexOf(canvasElement);
+                        if (canvasIndex !== -1) {
+                            pageCanvases.splice(canvasIndex, 1);
+                        }
+                    }
+                    
+                    // Remove from rendered pages tracking
+                    renderedPages.delete(page.pageIndex);
+                }
+            }
+        }
     });
 </script>
 
