@@ -42,6 +42,9 @@ include $headerPath;
                     <?php endif; ?>
                 </div>
                 <div class="controls-group">
+                    <button id="toggleToc" class="control-btn" title="Table of Contents">
+                        <i class="bi bi-list-ul"></i>
+                    </button>
                     <button id="zoomOut" class="control-btn" title="Zoom Out">
                         <i class="bi bi-zoom-out"></i>
                     </button>
@@ -59,8 +62,54 @@ include $headerPath;
         </div>
     </div>
     
+    <div class="pdf-reader-main">
+        <!-- Table of Contents Sidebar -->
+        <div id="tocSidebar" class="toc-sidebar">
+            <div class="toc-header">
+                <h5>Table of Contents</h5>
+                <button id="tocClose" class="toc-close-btn">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div id="tocContent" class="toc-content">
+                <div class="toc-loading">
+                    <div class="spinner-sm"></div>
+                    <span>Loading contents...</span>
+                </div>
+            </div>
+        </div>
+    
+        <!-- PDF Viewer Container -->
+        <div id="viewerContainer">
+            <!-- Error Message -->
+            <div id="errorMessage">
+                <div class="error-content">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span id="errorText">Error loading PDF</span>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner">
+                <div class="spinner"></div>
+                <p>Loading your book...</p>
+            </div>
+
+            <!-- Zoom Indicator -->
+            <div id="zoomIndicator" class="zoom-indicator">
+                <span id="zoomPercent">100%</span>
+            </div>
+
+            <!-- PDF Container for continuous scrolling -->
+            <div id="pdfPagesContainer"></div>
+        </div>
+    </div>
+    
     <!-- Floating Mobile Controls -->
     <div class="mobile-controls d-md-none">
+        <button id="toggleTocMobile" class="mobile-nav-btn">
+            <i class="bi bi-list-ul"></i>
+        </button>
         <button id="prev-mobile" class="mobile-nav-btn">
             <i class="bi bi-chevron-left"></i>
         </button>
@@ -70,31 +119,6 @@ include $headerPath;
         <button id="next-mobile" class="mobile-nav-btn">
             <i class="bi bi-chevron-right"></i>
         </button>
-    </div>
-
-    <!-- PDF Viewer Container -->
-    <div id="viewerContainer">
-        <!-- Error Message -->
-        <div id="errorMessage">
-            <div class="error-content">
-                <i class="bi bi-exclamation-triangle"></i>
-                <span id="errorText">Error loading PDF</span>
-            </div>
-        </div>
-
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner">
-            <div class="spinner"></div>
-            <p>Loading your book...</p>
-        </div>
-
-        <!-- Zoom Indicator -->
-        <div id="zoomIndicator" class="zoom-indicator">
-            <span id="zoomPercent">100%</span>
-        </div>
-
-        <!-- PDF Container for continuous scrolling -->
-        <div id="pdfPagesContainer"></div>
     </div>
     
     <!-- Progress Bar -->
@@ -125,6 +149,13 @@ include $headerPath;
         const progressIndicator = document.getElementById('progressIndicator');
         const zoomIndicator = document.getElementById('zoomIndicator');
         const zoomPercent = document.getElementById('zoomPercent');
+        
+        // Table of Contents elements
+        const tocSidebar = document.getElementById('tocSidebar');
+        const tocContent = document.getElementById('tocContent');
+        const toggleTocBtn = document.getElementById('toggleToc');
+        const toggleTocMobileBtn = document.getElementById('toggleTocMobile');
+        const tocCloseBtn = document.getElementById('tocClose');
         
         // Navigation elements
         const prevBtn = document.getElementById('prev');
@@ -182,6 +213,9 @@ include $headerPath;
             
             // Initial render of visible pages
             renderVisiblePages();
+            
+            // Extract and load table of contents
+            extractTableOfContents();
             
             // Hide loading spinner
             loadingSpinner.style.display = 'none';
@@ -388,6 +422,9 @@ include $headerPath;
                 
                 // Update UI page numbers with page number and percentage
                 updatePageNumberDisplay(pageNum);
+                
+                // Update TOC highlight
+                updateTocHighlight();
                 
                 // Update progress bar
                 updateProgressBar();
@@ -710,6 +747,289 @@ include $headerPath;
             });
             renderVisiblePages();
         });
+
+        /**
+         * Extract and display the table of contents from the PDF
+         */
+        function extractTableOfContents() {
+            pdfDoc.getOutline().then(outline => {
+                // Clear loading indicator
+                tocContent.innerHTML = '';
+                
+                if (!outline || outline.length === 0) {
+                    // Generate a simple TOC if PDF doesn't have one
+                    generateSimpleToc();
+                    return;
+                }
+                
+                // Create TOC items from the outline
+                const tocFragment = document.createDocumentFragment();
+                processOutlineItems(outline, tocFragment, 0);
+                tocContent.appendChild(tocFragment);
+                
+                // Add event listeners to TOC links
+                addTocLinkListeners();
+            }).catch(error => {
+                console.error('Error extracting table of contents:', error);
+                // Generate a simple TOC as fallback
+                generateSimpleToc();
+            });
+        }
+        
+        /**
+         * Generate a simple table of contents when PDF doesn't have one
+         */
+        function generateSimpleToc() {
+            tocContent.innerHTML = '';
+            const tocFragment = document.createDocumentFragment();
+            
+            const numPages = pdfDoc.numPages;
+            let chapterCount = 0;
+            let lastChapterPage = 0;
+            
+            // Create header
+            const tocHeader = document.createElement('div');
+            tocHeader.className = 'toc-header-text';
+            tocHeader.textContent = 'Contents';
+            tocFragment.appendChild(tocHeader);
+            
+            // Create page entries based on estimated chapters
+            for (let i = 1; i <= numPages; i++) {
+                // Create chapters at reasonable intervals
+                if (i === 1 || (i - lastChapterPage) >= 10 || i === numPages) {
+                    chapterCount++;
+                    lastChapterPage = i;
+                    
+                    const tocItem = document.createElement('div');
+                    tocItem.className = 'toc-item';
+                    
+                    const tocLink = document.createElement('a');
+                    tocLink.className = 'toc-link';
+                    tocLink.href = '#';
+                    tocLink.setAttribute('data-page', i);
+                    tocLink.textContent = `Chapter ${chapterCount}`;
+                    
+                    const pageSpan = document.createElement('span');
+                    pageSpan.className = 'toc-page';
+                    pageSpan.textContent = i;
+                    tocLink.appendChild(pageSpan);
+                    
+                    tocItem.appendChild(tocLink);
+                    tocFragment.appendChild(tocItem);
+                }
+            }
+            
+            tocContent.appendChild(tocFragment);
+            
+            // Add event listeners to TOC links
+            addTocLinkListeners();
+        }
+        
+        /**
+         * Add event listeners to all TOC links
+         */
+        function addTocLinkListeners() {
+            const tocLinks = tocContent.querySelectorAll('.toc-link');
+            tocLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetPage = parseInt(this.dataset.page);
+                    if (targetPage) {
+                        scrollToPage(targetPage);
+                        
+                        // Close TOC on mobile after navigation
+                        if (window.innerWidth < 768) {
+                            toggleToc(false);
+                        }
+                    }
+                });
+            });
+            
+            // Initial highlight
+            updateTocHighlight();
+        }
+        
+        /**
+         * Toggle the table of contents sidebar
+         */
+        function toggleToc(show) {
+            if (show === undefined) {
+                tocSidebar.classList.toggle('active');
+                document.body.classList.toggle('toc-open');
+            } else {
+                if (show) {
+                    tocSidebar.classList.add('active');
+                    document.body.classList.add('toc-open');
+                } else {
+                    tocSidebar.classList.remove('active');
+                    document.body.classList.remove('toc-open');
+                }
+            }
+        }
+        
+        /**
+         * Update the highlighted item in the table of contents
+         */
+        function updateTocHighlight() {
+            // Remove current highlight
+            const currentLinks = tocContent.querySelectorAll('.toc-link.current');
+            currentLinks.forEach(link => {
+                link.classList.remove('current');
+            });
+            
+            // Find the appropriate TOC item to highlight
+            const tocLinks = tocContent.querySelectorAll('.toc-link');
+            let closestLink = null;
+            let closestDistance = Infinity;
+            
+            tocLinks.forEach(link => {
+                const linkPage = parseInt(link.dataset.page);
+                if (linkPage && linkPage <= currentPage) {
+                    const distance = currentPage - linkPage;
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestLink = link;
+                    }
+                }
+            });
+            
+            // Highlight the closest link
+            if (closestLink) {
+                closestLink.classList.add('current');
+                
+                // Ensure the highlighted item is visible in the TOC
+                if (tocSidebar.classList.contains('active')) {
+                    closestLink.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
+            }
+        }
+
+        // Event listeners for TOC toggle
+        toggleTocBtn.addEventListener('click', function() {
+            toggleToc();
+        });
+        
+        toggleTocMobileBtn.addEventListener('click', function() {
+            toggleToc();
+        });
+        
+        tocCloseBtn.addEventListener('click', function() {
+            toggleToc(false);
+        });
+        
+        // Close TOC when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth < 768 && 
+                tocSidebar.classList.contains('active') && 
+                !tocSidebar.contains(e.target) && 
+                e.target !== toggleTocBtn && 
+                e.target !== toggleTocMobileBtn) {
+                toggleToc(false);
+            }
+        });
+
+        /**
+         * Process outline items recursively to build the TOC
+         */
+        function processOutlineItems(items, container, level) {
+            items.forEach(item => {
+                if (!item.title) return;
+                
+                const tocItem = document.createElement('div');
+                tocItem.className = 'toc-item';
+                if (level > 0) {
+                    tocItem.className += ' toc-indent';
+                    // Add more indentation for deeper levels
+                    tocItem.style.marginLeft = (level * 10) + 'px';
+                }
+                
+                const tocLink = document.createElement('a');
+                tocLink.className = 'toc-link';
+                tocLink.href = '#';
+                tocLink.textContent = item.title;
+                
+                // Check if item has a destination
+                if (item.dest) {
+                    // If destination is an array (PDF reference)
+                    if (Array.isArray(item.dest)) {
+                        const destRef = item.dest[0];
+                        
+                        // Get the page number from the reference
+                        new Promise((resolve) => {
+                            pdfDoc.getDestination(item.dest)
+                                .then(dest => pdfDoc.getPageIndex(dest[0]))
+                                .then(pageIndex => {
+                                    // PDF.js uses 0-based indices, but we want 1-based page numbers
+                                    const pageNumber = pageIndex + 1;
+                                    tocLink.setAttribute('data-page', pageNumber);
+                                    
+                                    // Add page number to display
+                                    const pageSpan = document.createElement('span');
+                                    pageSpan.className = 'toc-page';
+                                    pageSpan.textContent = pageNumber;
+                                    tocLink.appendChild(pageSpan);
+                                    resolve();
+                                })
+                                .catch(() => {
+                                    // If we can't resolve the destination, try to use a numeric dest if available
+                                    if (typeof item.dest[0] === 'object' && item.dest[0].num !== undefined) {
+                                        const pageNumber = item.dest[0].num + 1;
+                                        tocLink.setAttribute('data-page', pageNumber);
+                                        
+                                        const pageSpan = document.createElement('span');
+                                        pageSpan.className = 'toc-page';
+                                        pageSpan.textContent = pageNumber;
+                                        tocLink.appendChild(pageSpan);
+                                    }
+                                    resolve();
+                                });
+                        });
+                    } 
+                    // If destination is a string
+                    else if (typeof item.dest === 'string') {
+                        new Promise((resolve) => {
+                            pdfDoc.getDestination(item.dest)
+                                .then(dest => pdfDoc.getPageIndex(dest[0]))
+                                .then(pageIndex => {
+                                    const pageNumber = pageIndex + 1;
+                                    tocLink.setAttribute('data-page', pageNumber);
+                                    
+                                    const pageSpan = document.createElement('span');
+                                    pageSpan.className = 'toc-page';
+                                    pageSpan.textContent = pageNumber;
+                                    tocLink.appendChild(pageSpan);
+                                    resolve();
+                                })
+                                .catch(() => {
+                                    // Skip page number on error
+                                    resolve();
+                                });
+                        });
+                    }
+                    // If destination is a number or can be parsed as one
+                    else if (!isNaN(parseInt(item.dest))) {
+                        const pageNumber = parseInt(item.dest);
+                        tocLink.setAttribute('data-page', pageNumber);
+                        
+                        const pageSpan = document.createElement('span');
+                        pageSpan.className = 'toc-page';
+                        pageSpan.textContent = pageNumber;
+                        tocLink.appendChild(pageSpan);
+                    }
+                }
+                
+                tocItem.appendChild(tocLink);
+                container.appendChild(tocItem);
+                
+                // Process child items recursively
+                if (item.items && item.items.length > 0) {
+                    processOutlineItems(item.items, tocItem, level + 1);
+                }
+            });
+        }
     });
 </script>
 
@@ -735,6 +1055,119 @@ include $headerPath;
     background-color: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     z-index: 1;
+}
+
+.pdf-reader-main {
+    display: flex;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Table of Contents Sidebar */
+.toc-sidebar {
+    width: 300px;
+    background-color: #fff;
+    border-right: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.toc-sidebar.active {
+    transform: translateX(0);
+}
+
+.toc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.toc-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.toc-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toc-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.toc-item {
+    margin-bottom: 0.5rem;
+}
+
+.toc-link {
+    display: block;
+    padding: 0.25rem 0;
+    color: #212529;
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color 0.2s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.toc-link:hover {
+    color: #007bff;
+}
+
+.toc-link.current {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.toc-link .toc-page {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-left: 0.5rem;
+}
+
+.toc-indent {
+    padding-left: 15px;
+}
+
+.toc-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+    color: #6c757d;
+}
+
+.spinner-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 0.5rem;
 }
 
 .navbar-left {
@@ -867,6 +1300,21 @@ include $headerPath;
     overflow-y: auto;
     overflow-x: hidden;
     background-color: #444;
+    width: 100%;
+    transition: margin-left 0.3s ease;
+}
+
+body.toc-open #viewerContainer {
+    margin-left: 300px;
+    width: calc(100% - 300px);
+}
+
+@media (max-width: 767.98px) {
+    body.toc-open #viewerContainer {
+        margin-left: 0;
+        width: 100%;
+        filter: blur(2px);
+    }
 }
 
 #pdfPagesContainer {
@@ -1031,6 +1479,22 @@ include $headerPath;
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* Table of Contents Sidebar */
+.toc-header-text {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.5rem;
+}
+
+.toc-empty {
+    text-align: center;
+    color: #6c757d;
+    padding: 2rem 0;
+    font-style: italic;
 }
 </style>
 
