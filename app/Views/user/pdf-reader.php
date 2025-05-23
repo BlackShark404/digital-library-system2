@@ -48,6 +48,9 @@ include $headerPath;
                     <button id="zoomIn" class="control-btn" title="Zoom In">
                         <i class="bi bi-zoom-in"></i>
                     </button>
+                    <button id="toggleAntialiasing" class="control-btn" title="Toggle Text Sharpness">
+                        <i class="bi bi-type"></i>
+                    </button>
                     <button id="bookmark" class="control-btn" title="Bookmark">
                         <i class="bi bi-bookmark"></i>
                     </button>
@@ -166,6 +169,7 @@ include $headerPath;
         const zoomInBtn = document.getElementById('zoomIn');
         const zoomOutBtn = document.getElementById('zoomOut');
         const fullscreenBtn = document.getElementById('fullscreen');
+        const antialiasingBtn = document.getElementById('toggleAntialiasing');
         
         // State variables
         let pdfDoc = null;
@@ -174,6 +178,7 @@ include $headerPath;
         let pageNumPending = null;
         let scale = 1.0;
         let bookmarks = [];
+        let useAntialiasing = true; // Default state of antialiasing
         
         // Initial element states
         errorMessage.style.display = 'none';
@@ -181,6 +186,7 @@ include $headerPath;
         // Load bookmarks and zoom level from localStorage
         loadBookmarks();
         loadZoomLevel();
+        loadAntialiasingSetting();
         
         /**
          * Load the PDF document
@@ -231,6 +237,9 @@ include $headerPath;
             
             // Get the page
             pdfDoc.getPage(num).then(function(page) {
+                // Get device pixel ratio
+                const devicePixelRatio = window.devicePixelRatio || 1;
+                
                 // Adjust scale based on viewport
                 const viewportWidth = document.getElementById('viewerContainer').clientWidth - 20;
                 const viewportHeight = document.getElementById('viewerContainer').clientHeight - 20;
@@ -245,14 +254,30 @@ include $headerPath;
                 // Apply user scale on top of fit scale
                 const viewport = page.getViewport({ scale: fitScale * scale });
                 
-                // Set canvas dimensions
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
+                // Set canvas dimensions accounting for device pixel ratio for higher resolution
+                canvas.width = Math.floor(viewport.width * devicePixelRatio);
+                canvas.height = Math.floor(viewport.height * devicePixelRatio);
+                canvas.style.width = Math.floor(viewport.width) + "px";
+                canvas.style.height = Math.floor(viewport.height) + "px";
                 
-                // Render PDF page into canvas context
+                // Reset context and prepare for high-quality rendering
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Enable font smoothing
+                ctx.imageSmoothingEnabled = useAntialiasing;
+                ctx.imageSmoothingQuality = 'high';
+                
+                // Scale context to ensure correct rendering
+                ctx.scale(devicePixelRatio, devicePixelRatio);
+                
+                // Render PDF page into canvas context with high quality settings
                 const renderContext = {
                     canvasContext: ctx,
-                    viewport: viewport
+                    viewport: viewport,
+                    enableWebGL: true,
+                    renderInteractiveForms: true,
+                    textLayer: true
                 };
                 
                 const renderTask = page.render(renderContext);
@@ -371,16 +396,7 @@ include $headerPath;
         function showZoomIndicator() {
             // Update zoom percentage
             const zoomPercentValue = Math.round(scale * 100);
-            zoomPercent.textContent = zoomPercentValue + '%';
-            
-            // Show indicator
-            zoomIndicator.classList.add('visible');
-            
-            // Hide after delay
-            clearTimeout(window.zoomTimeout);
-            window.zoomTimeout = setTimeout(() => {
-                zoomIndicator.classList.remove('visible');
-            }, 1500);
+            showMessage(zoomPercentValue + '%');
         }
         
         /**
@@ -556,6 +572,62 @@ include $headerPath;
             }
         }
         
+        /**
+         * Toggle text antialiasing for clarity
+         */
+        function toggleAntialiasing() {
+            useAntialiasing = !useAntialiasing;
+            
+            // Update button visual state
+            if (useAntialiasing) {
+                antialiasingBtn.classList.remove('active');
+            } else {
+                antialiasingBtn.classList.add('active');
+            }
+            
+            // Save preference
+            localStorage.setItem('pdfAntialiasing', useAntialiasing ? 'true' : 'false');
+            
+            // Show indicator with current state
+            const message = useAntialiasing ? 'Text smoothing: ON' : 'Text sharpening: ON';
+            showMessage(message);
+            
+            // Re-render current page with new setting
+            queueRenderPage(pageNum);
+        }
+        
+        /**
+         * Load antialiasing setting from localStorage
+         */
+        function loadAntialiasingSetting() {
+            const savedSetting = localStorage.getItem('pdfAntialiasing');
+            if (savedSetting !== null) {
+                useAntialiasing = savedSetting === 'true';
+                
+                // Update button visual state
+                if (!useAntialiasing) {
+                    antialiasingBtn.classList.add('active');
+                }
+            }
+        }
+        
+        /**
+         * Show a temporary message notification
+         */
+        function showMessage(message) {
+            // Update zoom indicator to show the message
+            zoomPercent.textContent = message;
+            
+            // Show indicator
+            zoomIndicator.classList.add('visible');
+            
+            // Hide after delay
+            clearTimeout(window.zoomTimeout);
+            window.zoomTimeout = setTimeout(() => {
+                zoomIndicator.classList.remove('visible');
+            }, 1500);
+        }
+        
         // Event listeners for navigation
         prevBtn.addEventListener('click', showPrevPage);
         nextBtn.addEventListener('click', showNextPage);
@@ -566,6 +638,9 @@ include $headerPath;
         zoomInBtn.addEventListener('click', zoomIn);
         zoomOutBtn.addEventListener('click', zoomOut);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
+        
+        // Event listener for antialiasing toggle
+        antialiasingBtn.addEventListener('click', toggleAntialiasing);
         
         // Set up keyboard navigation
         document.addEventListener('keydown', function(e) {
@@ -723,6 +798,11 @@ include $headerPath;
     cursor: pointer;
 }
 
+.control-btn.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
 #viewerContainer {
     flex: 1;
     position: relative;
@@ -737,6 +817,9 @@ include $headerPath;
 #pdfCanvas {
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
     margin-bottom: 20px;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    transform: translateZ(0);
 }
 
 #errorMessage {
