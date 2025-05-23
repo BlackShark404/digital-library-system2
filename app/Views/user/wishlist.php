@@ -33,7 +33,7 @@ include $headerPath;
                 <div class="col wishlist-item" data-wishlist-id="<?php echo $book['wl_id']; ?>">
                     <div class="card h-100 shadow-sm">
                         <div class="position-relative">
-                            <img src="<?php echo !empty($book['cover_image']) ? htmlspecialchars($book['cover_image']) : '/assets/images/book-cover/default-cover.svg'; ?>" 
+                            <img src="<?php echo !empty($book['cover_image']) ? '/assets/images/book-cover/' . htmlspecialchars($book['cover_image']) : '/assets/images/book-cover/default-cover.svg'; ?>" 
                                  class="card-img-top" 
                                  alt="<?php echo htmlspecialchars($book['title']); ?>" 
                                  style="height: 250px; object-fit: cover;">
