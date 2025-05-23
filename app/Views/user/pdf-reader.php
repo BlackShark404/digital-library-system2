@@ -117,8 +117,8 @@ include $headerPath;
             <span id="zoomPercent">100%</span>
         </div>
 
-        <!-- PDF Canvas -->
-        <canvas id="pdfCanvas"></canvas>
+        <!-- PDF Container for continuous scroll -->
+        <div id="pdfPagesContainer"></div>
     </div>
     
     <!-- Progress Bar -->
@@ -141,8 +141,6 @@ include $headerPath;
         const totalBookPages = <?= isset($session['b_pages']) ? intval($session['b_pages']) : 0 ?>;
         
         // UI Elements
-        const canvas = document.getElementById('pdfCanvas');
-        const ctx = canvas.getContext('2d');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
@@ -174,9 +172,14 @@ include $headerPath;
         let scale = 1.0;
         let useAntialiasing = true; // Default state of antialiasing
         let tocVisible = false;     // Track TOC visibility state
+        let pagesRendered = {};     // Track which pages have been rendered
+        let visiblePages = [];      // Currently visible pages
+        let scrollTimeout = null;   // For scroll debouncing
+        let pagesContainer = null;  // Container for PDF pages
         
         // Initial element states
         errorMessage.style.display = 'none';
+        pagesContainer = document.getElementById('pdfPagesContainer');
         
         // Load settings from localStorage
         loadZoomLevel();
@@ -198,8 +201,8 @@ include $headerPath;
                 pageNum = 1;
             }
             
-            // Render the first page
-            renderPage(pageNum);
+            // Initialize the PDF viewer with continuous scrolling
+            initContinuousScrollViewer(pageNum);
             
             // Load table of contents if available
             loadTableOfContents(pdf);
@@ -217,45 +220,197 @@ include $headerPath;
         });
         
         /**
+         * Initialize the continuous scroll PDF viewer
+         */
+        function initContinuousScrollViewer(startPageNum) {
+            // Clear any existing content
+            pagesContainer.innerHTML = '';
+            pagesRendered = {};
+            
+            // Create initial viewport for sizing calculations
+            pdfDoc.getPage(1).then(function(page) {
+                const viewport = page.getViewport({ scale: 1.0 });
+                const pageWidth = viewport.width;
+                
+                // Set container width to accommodate the page width
+                pagesContainer.style.width = `${pageWidth * scale}px`;
+                
+                // Create placeholders for all pages
+                for (let i = 1; i <= pdfDoc.numPages; i++) {
+                    const pageContainer = document.createElement('div');
+                    pageContainer.className = 'pdf-page-container';
+                    pageContainer.id = `page-container-${i}`;
+                    pageContainer.dataset.pageNumber = i;
+                    
+                    // Size placeholder to match page's eventual dimensions
+                    const aspectRatio = viewport.height / viewport.width;
+                    const placeholderHeight = pageWidth * scale * aspectRatio;
+                    
+                    pageContainer.style.height = `${placeholderHeight}px`;
+                    pageContainer.style.width = '100%';
+                    pageContainer.style.position = 'relative';
+                    
+                    // Add page number indicator
+                    const pageNumberIndicator = document.createElement('div');
+                    pageNumberIndicator.className = 'page-number-indicator';
+                    pageNumberIndicator.textContent = i;
+                    pageContainer.appendChild(pageNumberIndicator);
+                    
+                    pagesContainer.appendChild(pageContainer);
+                }
+                
+                // Set up scroll event listener for lazy loading pages
+                const viewerContainer = document.getElementById('viewerContainer');
+                viewerContainer.addEventListener('scroll', handleScroll);
+                
+                // Render the start page and surrounding pages
+                const pagesToRenderInitially = [startPageNum];
+                if (startPageNum > 1) pagesToRenderInitially.push(startPageNum - 1);
+                if (startPageNum < pdfDoc.numPages) pagesToRenderInitially.push(startPageNum + 1);
+                
+                // Render initial pages
+                pagesToRenderInitially.forEach(pageNum => {
+                    renderPage(pageNum);
+                });
+                
+                // Scroll to the starting page
+                scrollToPage(startPageNum);
+                
+                // Update the current visible pages after initial render
+                setTimeout(updateVisiblePages, 100);
+            });
+        }
+        
+        /**
+         * Handle scroll events to load pages dynamically
+         */
+        function handleScroll() {
+            // Clear previous timeout to debounce scroll events
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            
+            // Set a new timeout
+            scrollTimeout = setTimeout(function() {
+                updateVisiblePages();
+                
+                // Render pages that are now visible or will soon be visible
+                const pagesToRender = [];
+                
+                // Find visible pages and surrounding pages to preload
+                visiblePages.forEach(pageNum => {
+                    if (!pagesRendered[pageNum]) {
+                        pagesToRender.push(pageNum);
+                    }
+                    
+                    // Preload next and previous pages
+                    if (pageNum > 1 && !pagesRendered[pageNum - 1]) {
+                        pagesToRender.push(pageNum - 1);
+                    }
+                    
+                    if (pageNum < pdfDoc.numPages && !pagesRendered[pageNum + 1]) {
+                        pagesToRender.push(pageNum + 1);
+                    }
+                });
+                
+                // Ensure we render pages in the correct order
+                pagesToRender.sort().forEach(pageNum => {
+                    renderPage(pageNum);
+                });
+                
+                // Update progress based on the midpoint of visible pages
+                if (visiblePages.length > 0) {
+                    // Get the middle page number
+                    const midPageIndex = Math.floor(visiblePages.length / 2);
+                    const currentPageNum = visiblePages[midPageIndex];
+                    
+                    // Update displayed page number
+                    pageNum = currentPageNum;
+                    pageNumDisplay.textContent = currentPageNum;
+                    pageNumMobileDisplay.textContent = currentPageNum;
+                    
+                    // Update progress bar
+                    updateProgressBar();
+                    
+                    // Update TOC highlighting
+                    highlightCurrentTocItem(currentPageNum);
+                    
+                    // Save progress
+                    saveProgress(currentPageNum);
+                }
+            }, 100); // 100ms debounce
+        }
+        
+        /**
+         * Update the array of currently visible pages
+         */
+        function updateVisiblePages() {
+            const viewerContainer = document.getElementById('viewerContainer');
+            const containerRect = viewerContainer.getBoundingClientRect();
+            visiblePages = [];
+            
+            // Check each page container to see if it's visible
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                const pageContainer = document.getElementById(`page-container-${i}`);
+                if (!pageContainer) continue;
+                
+                const pageRect = pageContainer.getBoundingClientRect();
+                
+                // Page is visible if it intersects with the viewer container
+                if (
+                    pageRect.top < containerRect.bottom &&
+                    pageRect.bottom > containerRect.top
+                ) {
+                    visiblePages.push(i);
+                }
+            }
+        }
+        
+        /**
          * Render a specific page of the PDF
          */
-        function renderPage(num, scrollPosition = null) {
-            pageRendering = true;
+        function renderPage(num) {
+            // Check if the page is already rendered or being rendered
+            if (pagesRendered[num] || document.getElementById(`canvas-${num}`)) {
+                return;
+            }
             
-            // Update UI page numbers
-            pageNumDisplay.textContent = num;
-            pageNumMobileDisplay.textContent = num;
-            
-            // Update progress bar
-            updateProgressBar();
-            
-            // Update reading progress on the server
-            saveProgress(num);
+            // Mark as rendering in progress
+            pagesRendered[num] = 'rendering';
             
             // Get the page
             pdfDoc.getPage(num).then(function(page) {
+                // Get page container
+                const pageContainer = document.getElementById(`page-container-${num}`);
+                if (!pageContainer) return;
+                
                 // Get device pixel ratio
                 const devicePixelRatio = window.devicePixelRatio || 1;
                 
-                // Adjust scale based on viewport
-                const viewportWidth = document.getElementById('viewerContainer').clientWidth - 20;
-                const viewportHeight = document.getElementById('viewerContainer').clientHeight - 20;
+                // Calculate dimensions for this page
+                const viewport = page.getViewport({ scale: scale });
                 
-                const originalViewport = page.getViewport({ scale: 1 });
-                
-                // Calculate scale to fit page within container
-                const widthScale = viewportWidth / originalViewport.width;
-                const heightScale = viewportHeight / originalViewport.height;
-                const fitScale = Math.min(widthScale, heightScale);
-                
-                // Apply user scale on top of fit scale
-                const viewport = page.getViewport({ scale: fitScale * scale });
-                
-                // Set canvas dimensions accounting for device pixel ratio for higher resolution
+                // Create canvas for this page
+                const canvas = document.createElement('canvas');
+                canvas.id = `canvas-${num}`;
                 canvas.width = Math.floor(viewport.width * devicePixelRatio);
                 canvas.height = Math.floor(viewport.height * devicePixelRatio);
                 canvas.style.width = Math.floor(viewport.width) + "px";
                 canvas.style.height = Math.floor(viewport.height) + "px";
+                
+                // Position canvas in page container
+                canvas.style.position = 'absolute';
+                canvas.style.top = '0';
+                canvas.style.left = '0';
+                
+                // Append canvas to page container
+                pageContainer.appendChild(canvas);
+                
+                // Adjust page container height to match actual page
+                pageContainer.style.height = Math.floor(viewport.height) + "px";
+                
+                // Get context for rendering
+                const ctx = canvas.getContext('2d');
                 
                 // Reset context and prepare for high-quality rendering
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -281,39 +436,39 @@ include $headerPath;
                 
                 // Wait for rendering to finish
                 renderTask.promise.then(function() {
-                    pageRendering = false;
-                    
-                    // Apply scroll position if specified
-                    const container = document.getElementById('viewerContainer');
-                    if (scrollPosition === 'top') {
-                        container.scrollTop = 0;
-                    } else if (scrollPosition === 'bottom') {
-                        container.scrollTop = container.scrollHeight;
-                    }
-                    
-                    // Update TOC highlighting after page is completely rendered
-                    highlightCurrentTocItem(num);
-                    
-                    // Check if there's a pending page
-                    if (pageNumPending !== null) {
-                        // Capture the pending scroll position if available
-                        const pendingScroll = window.pendingScrollPosition;
-                        window.pendingScrollPosition = null;
-                        renderPage(pageNumPending, pendingScroll);
-                        pageNumPending = null;
-                    }
+                    // Mark as fully rendered
+                    pagesRendered[num] = 'rendered';
                 }).catch(function(error) {
-                    console.error('Error rendering page:', error);
-                    pageRendering = false;
-                    errorMessage.style.display = 'flex';
-                    errorText.textContent = 'Error rendering page: ' + error.message;
+                    console.error(`Error rendering page ${num}:`, error);
+                    pageContainer.innerHTML = `<div class="page-error">Error rendering page ${num}</div>`;
+                    pagesRendered[num] = 'error';
                 });
             }).catch(function(error) {
-                console.error('Error getting page:', error);
-                pageRendering = false;
-                errorMessage.style.display = 'flex';
-                errorText.textContent = 'Error getting page: ' + error.message;
+                console.error(`Error getting page ${num}:`, error);
+                pagesRendered[num] = 'error';
             });
+        }
+        
+        /**
+         * Scroll to a specific page
+         */
+        function scrollToPage(num) {
+            const pageContainer = document.getElementById(`page-container-${num}`);
+            if (pageContainer) {
+                const viewerContainer = document.getElementById('viewerContainer');
+                viewerContainer.scrollTo({
+                    top: pageContainer.offsetTop - 20,
+                    behavior: 'smooth'
+                });
+                
+                // Update page number display
+                pageNum = num;
+                pageNumDisplay.textContent = num;
+                pageNumMobileDisplay.textContent = num;
+                
+                // Highlight TOC item
+                highlightCurrentTocItem(num);
+            }
         }
         
         /**
@@ -322,11 +477,8 @@ include $headerPath;
         function showPrevPage() {
             if (pageNum <= 1) return;
             
-            pageNum--;
-            queueRenderPage(pageNum, 'bottom');
-            
-            // Update TOC highlight
-            highlightCurrentTocItem(pageNum);
+            const newPage = pageNum - 1;
+            scrollToPage(newPage);
         }
         
         /**
@@ -335,24 +487,8 @@ include $headerPath;
         function showNextPage() {
             if (pageNum >= pdfDoc.numPages) return;
             
-            pageNum++;
-            queueRenderPage(pageNum, 'top');
-            
-            // Update TOC highlight
-            highlightCurrentTocItem(pageNum);
-        }
-        
-        /**
-         * Queue a page for rendering
-         */
-        function queueRenderPage(num, scrollPosition = null) {
-            if (pageRendering) {
-                pageNumPending = num;
-                // Store the scroll position intention to apply after rendering
-                window.pendingScrollPosition = scrollPosition;
-            } else {
-                renderPage(num, scrollPosition);
-            }
+            const newPage = pageNum + 1;
+            scrollToPage(newPage);
         }
         
         /**
@@ -395,7 +531,9 @@ include $headerPath;
             scale += 0.1;
             saveZoomLevel();
             showZoomIndicator();
-            queueRenderPage(pageNum, null);
+            
+            // Resize and re-render all pages
+            resizeAndRerenderPages();
         }
         
         /**
@@ -406,7 +544,9 @@ include $headerPath;
             scale -= 0.1;
             saveZoomLevel();
             showZoomIndicator();
-            queueRenderPage(pageNum, null);
+            
+            // Resize and re-render all pages
+            resizeAndRerenderPages();
         }
         
         /**
@@ -487,7 +627,7 @@ include $headerPath;
             showMessage(message);
             
             // Re-render current page with new setting
-            queueRenderPage(pageNum, null);
+            scrollToPage(pageNum);
         }
         
         /**
@@ -669,12 +809,10 @@ include $headerPath;
                 const targetPage = pageIndex + 1;
                 
                 // Navigate to the target page
-                pageNum = targetPage;
-                queueRenderPage(targetPage);
+                scrollToPage(targetPage);
                 
-                // Update any UI elements as needed
+                // Update progress bar
                 updateProgressBar();
-                highlightCurrentTocItem(targetPage);
             }).catch(function(error) {
                 console.error('Error navigating to destination:', error);
             });
@@ -851,8 +989,58 @@ include $headerPath;
         // Handle window resize
         window.addEventListener('resize', function() {
             // Re-render current page to adjust to new size
-            queueRenderPage(pageNum, null);
+            scrollToPage(pageNum);
         });
+
+        /**
+         * Resize and re-render all pages when zoom changes
+         */
+        function resizeAndRerenderPages() {
+            // Update container width based on new scale
+            pdfDoc.getPage(1).then(function(page) {
+                const viewport = page.getViewport({ scale: 1.0 });
+                const pageWidth = viewport.width;
+                
+                // Resize the container
+                pagesContainer.style.width = `${pageWidth * scale}px`;
+                
+                // Clear all rendered pages
+                for (let i = 1; i <= pdfDoc.numPages; i++) {
+                    const pageContainer = document.getElementById(`page-container-${i}`);
+                    if (pageContainer) {
+                        // Adjust container height based on aspect ratio
+                        const aspectRatio = viewport.height / viewport.width;
+                        const newHeight = pageWidth * scale * aspectRatio;
+                        pageContainer.style.height = `${newHeight}px`;
+                        
+                        // Remove existing canvas
+                        const existingCanvas = document.getElementById(`canvas-${i}`);
+                        if (existingCanvas) {
+                            existingCanvas.remove();
+                        }
+                    }
+                }
+                
+                // Reset rendered pages tracking
+                pagesRendered = {};
+                
+                // Update visible pages and render them
+                updateVisiblePages();
+                visiblePages.forEach(pageNum => {
+                    renderPage(pageNum);
+                });
+                
+                // Also render pages before and after visible pages
+                visiblePages.forEach(pageNum => {
+                    if (pageNum > 1) {
+                        renderPage(pageNum - 1);
+                    }
+                    if (pageNum < pdfDoc.numPages) {
+                        renderPage(pageNum + 1);
+                    }
+                });
+            });
+        }
     });
 </script>
 
@@ -1039,9 +1227,8 @@ include $headerPath;
     padding-top: 20px;
 }
 
-#pdfCanvas {
+.pdf-page-container canvas {
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
-    margin-bottom: 20px;
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     transform: translateZ(0);
@@ -1317,6 +1504,48 @@ include $headerPath;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: 1035;
     }
+}
+
+#pdfPagesContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100%;
+    margin: 0 auto;
+}
+
+.pdf-page-container {
+    position: relative;
+    margin-bottom: 20px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+    background-color: white;
+    width: 100%;
+}
+
+.page-number-indicator {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    opacity: 0.7;
+    z-index: 5;
+}
+
+.page-error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    color: #dc3545;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 20px;
 }
 </style>
 
