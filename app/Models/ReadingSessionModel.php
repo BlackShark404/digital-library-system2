@@ -358,10 +358,10 @@ class ReadingSessionModel extends BaseModel
     }
     
     /**
-     * Get reading suggestions based on a user's reading history
+     * Get book suggestions based on user's reading history
      * 
      * @param int $userId User ID
-     * @param int $limit Maximum number of suggestions
+     * @param int $limit Maximum number of suggestions to return
      * @return array Book suggestions
      */
     public function getReadingSuggestions($userId, $limit = 5)
@@ -370,17 +370,18 @@ class ReadingSessionModel extends BaseModel
             WITH user_genres AS (
                 -- Get genres the user has read
                 SELECT 
-                    b.b_genre_id,
+                    bg.genre_id,
                     COUNT(*) as read_count
                 FROM 
                     {$this->table} rs
                 JOIN 
                     books b ON rs.b_id = b.b_id
+                JOIN
+                    book_genres bg ON b.b_id = bg.book_id
                 WHERE 
                     rs.ua_id = :user_id
-                    AND b.b_genre_id IS NOT NULL
                 GROUP BY 
-                    b.b_genre_id
+                    bg.genre_id
                 ORDER BY 
                     read_count DESC
                 LIMIT 3
@@ -412,14 +413,18 @@ class ReadingSessionModel extends BaseModel
             FROM 
                 books b
             JOIN 
-                genre g ON b.b_genre_id = g.g_id
+                book_genres bg ON b.b_id = bg.book_id
             JOIN 
-                user_genres ug ON b.b_genre_id = ug.b_genre_id
+                genre g ON bg.genre_id = g.g_id
+            JOIN 
+                user_genres ug ON bg.genre_id = ug.genre_id
             WHERE 
                 b.b_id NOT IN (SELECT b_id FROM read_books)
                 AND b.b_deleted_at IS NULL
+            GROUP BY
+                b.b_id, b.b_title, b.b_author, b.b_cover_path, b.b_description, g.g_name
             ORDER BY 
-                ug.read_count DESC, 
+                MAX(ug.read_count) DESC, 
                 b.b_publication_date DESC
             LIMIT :limit
         ";

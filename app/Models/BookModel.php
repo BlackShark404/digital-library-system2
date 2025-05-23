@@ -361,11 +361,13 @@ class BookModel extends BaseModel
             SELECT 
                 g.g_id,
                 g.g_name,
-                COUNT(b.b_id) AS book_count
+                COUNT(DISTINCT bg.book_id) AS book_count
             FROM 
                 genre g
             LEFT JOIN 
-                books b ON g.g_id = b.b_genre_id AND b.b_deleted_at IS NULL
+                book_genres bg ON g.g_id = bg.genre_id
+            LEFT JOIN
+                books b ON bg.book_id = b.b_id AND b.b_deleted_at IS NULL
             GROUP BY 
                 g.g_id,
                 g.g_name
@@ -464,8 +466,8 @@ class BookModel extends BaseModel
         try {
             $this->beginTransaction();
             
-            // First, set b_genre_id to NULL for all books with this category
-            $sql = "UPDATE books SET b_genre_id = NULL WHERE b_genre_id = :id";
+            // First, delete all relationships in book_genres for this genre
+            $sql = "DELETE FROM book_genres WHERE genre_id = :id";
             $this->execute($sql, ['id' => $id]);
             
             // Then delete the category
