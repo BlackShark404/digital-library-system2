@@ -896,6 +896,13 @@ include $headerPath;
     color: #495057;
     margin-right: 1rem;
     text-decoration: none;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+}
+
+.back-btn:hover {
+    background-color: #e9ecef;
+    color: #212529;
+    transform: scale(1.05);
 }
 
 .book-title {
@@ -925,6 +932,12 @@ include $headerPath;
     font-size: 1.25rem;
     cursor: pointer;
     padding: 0.25rem 0.5rem;
+    transition: color 0.2s, transform 0.1s;
+}
+
+.nav-btn:hover {
+    color: #212529;
+    transform: scale(1.1);
 }
 
 .page-display {
@@ -956,6 +969,13 @@ include $headerPath;
     display: flex;
     align-items: center;
     gap: 0.25rem;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.purchase-btn:hover {
+    background-color: #218838;
+    color: #fff;
+    transform: scale(1.02);
 }
 
 .session-badge {
@@ -990,11 +1010,22 @@ include $headerPath;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+}
+
+.control-btn:hover {
+    background-color: #e9ecef;
+    color: #212529;
+    transform: scale(1.05);
 }
 
 .control-btn.active {
     background-color: #0d6efd;
     color: white;
+}
+
+.control-btn.active:hover {
+    background-color: #0b5ed7;
 }
 
 #viewerContainer {
@@ -1099,6 +1130,13 @@ include $headerPath;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+}
+
+.mobile-nav-btn:hover {
+    background-color: #e9ecef;
+    color: #212529;
+    transform: scale(1.05);
 }
 
 .mobile-page-display {
@@ -1183,6 +1221,12 @@ include $headerPath;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: color 0.2s, transform 0.1s;
+}
+
+.close-toc:hover {
+    color: #343a40;
+    transform: scale(1.1);
 }
 
 .toc-content {
