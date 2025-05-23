@@ -506,7 +506,7 @@ use Core\Session;
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user-circle me-1"></i>
-                            User
+                            <?= Session::get('full_name'); ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>
