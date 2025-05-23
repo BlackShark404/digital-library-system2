@@ -153,7 +153,7 @@ include $headerPath;
         let pageNumPending = null;
         let scale = 1.0;
         let useAntialiasing = true; // Default state of antialiasing
-        let continuousScrollMode = false; // Default state of continuous scroll mode
+        let continuousScrollMode = true; // Default to continuous scroll mode
         let pageCanvases = []; // Array to store canvas elements for continuous mode
         
         // Initial element states
@@ -736,11 +736,36 @@ include $headerPath;
         }
         
         /**
+         * Save zoom level to localStorage
+         */
+        function saveZoomLevel() {
+            // Save mode-specific zoom level
+            if (continuousScrollMode) {
+                localStorage.setItem(`zoomLevel_continuous_${sessionId}`, scale.toString());
+                localStorage.setItem('globalZoomLevel_continuous', scale.toString());
+            } else {
+                localStorage.setItem(`zoomLevel_single_${sessionId}`, scale.toString());
+                localStorage.setItem('globalZoomLevel_single', scale.toString());
+            }
+        }
+        
+        /**
          * Load zoom level from localStorage
          */
         function loadZoomLevel() {
+            let zoomKey, globalZoomKey;
+            
+            // Determine which zoom settings to load based on current mode
+            if (continuousScrollMode) {
+                zoomKey = `zoomLevel_continuous_${sessionId}`;
+                globalZoomKey = 'globalZoomLevel_continuous';
+            } else {
+                zoomKey = `zoomLevel_single_${sessionId}`;
+                globalZoomKey = 'globalZoomLevel_single';
+            }
+            
             // Try to load book-specific zoom level first
-            const savedScale = localStorage.getItem(`zoomLevel_${sessionId}`);
+            const savedScale = localStorage.getItem(zoomKey);
             if (savedScale) {
                 const parsedScale = parseFloat(savedScale);
                 if (!isNaN(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3.0) {
@@ -749,23 +774,14 @@ include $headerPath;
                 }
             }
             
-            // Fall back to global zoom preference
-            const globalScale = localStorage.getItem('globalZoomLevel');
+            // Fall back to global zoom preference for the current mode
+            const globalScale = localStorage.getItem(globalZoomKey);
             if (globalScale) {
                 const parsedScale = parseFloat(globalScale);
                 if (!isNaN(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3.0) {
                     scale = parsedScale;
                 }
             }
-        }
-        
-        /**
-         * Save zoom level to localStorage
-         */
-        function saveZoomLevel() {
-            // Save both session-specific and global zoom preference
-            localStorage.setItem(`zoomLevel_${sessionId}`, scale.toString());
-            localStorage.setItem('globalZoomLevel', scale.toString());
         }
         
         /**
@@ -848,6 +864,9 @@ include $headerPath;
                 // Save preference
                 localStorage.setItem('pdfContinuousScroll', continuousScrollMode ? 'true' : 'false');
                 
+                // Load zoom level appropriate for the current mode
+                loadZoomLevel();
+                
                 // Reset the view and render with new mode
                 resetView();
                 renderCurrentView();
@@ -873,11 +892,16 @@ include $headerPath;
             const savedSetting = localStorage.getItem('pdfContinuousScroll');
             if (savedSetting !== null) {
                 continuousScrollMode = savedSetting === 'true';
-                
-                // Update button visual state
-                if (continuousScrollMode) {
-                    continuousScrollBtn.classList.add('active');
-                }
+            } else {
+                // If no preference is saved, default to continuous mode
+                continuousScrollMode = true;
+            }
+            
+            // Update button visual state
+            if (continuousScrollMode) {
+                continuousScrollBtn.classList.add('active');
+            } else {
+                continuousScrollBtn.classList.remove('active');
             }
         }
         
