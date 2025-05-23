@@ -42,6 +42,9 @@ include $headerPath;
                     <?php endif; ?>
                 </div>
                 <div class="controls-group">
+                    <button id="toggleTOC" class="control-btn" title="Table of Contents">
+                        <i class="bi bi-list-ul"></i>
+                    </button>
                     <button id="zoomOut" class="control-btn" title="Zoom Out">
                         <i class="bi bi-zoom-out"></i>
                     </button>
@@ -76,33 +79,59 @@ include $headerPath;
     </div>
 
     <!-- PDF Viewer Container -->
-    <div id="viewerContainer">
-        <!-- Error Message -->
-        <div id="errorMessage">
-            <div class="error-content">
-                <i class="bi bi-exclamation-triangle"></i>
-                <span id="errorText">Error loading PDF</span>
+    <div class="pdf-reader-content">
+        <!-- Table of Contents Sidebar -->
+        <div id="tocSidebar" class="toc-sidebar">
+            <div class="toc-header">
+                <h5>Table of Contents</h5>
+                <button id="closeTOC" class="close-toc-btn">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="tocContent" class="toc-content">
+                <div class="toc-loading">
+                    <div class="spinner-sm"></div>
+                    <p>Loading table of contents...</p>
+                </div>
+                <div id="tocEmpty" class="toc-empty" style="display: none;">
+                    <i class="bi bi-info-circle"></i>
+                    <p>No table of contents available for this book.</p>
+                </div>
+                <ul id="tocList" class="toc-list"></ul>
             </div>
         </div>
 
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner">
-            <div class="spinner"></div>
-            <p>Loading your book...</p>
-        </div>
+        <!-- Main Content Wrapper -->
+        <div class="main-content-wrapper">
+            <div id="viewerContainer">
+                <!-- Error Message -->
+                <div id="errorMessage">
+                    <div class="error-content">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span id="errorText">Error loading PDF</span>
+                    </div>
+                </div>
 
-        <!-- Zoom Indicator -->
-        <div id="zoomIndicator" class="zoom-indicator">
-            <span id="zoomPercent">100%</span>
-        </div>
+                <!-- Loading Spinner -->
+                <div id="loadingSpinner">
+                    <div class="spinner"></div>
+                    <p>Loading your book...</p>
+                </div>
 
-        <!-- PDF Canvas -->
-        <canvas id="pdfCanvas"></canvas>
-    </div>
-    
-    <!-- Progress Bar -->
-    <div class="reading-progress-bar">
-        <div id="progressIndicator"></div>
+                <!-- Zoom Indicator -->
+                <div id="zoomIndicator" class="zoom-indicator">
+                    <span id="zoomPercent">100%</span>
+                </div>
+
+                <!-- PDF Canvas -->
+                <canvas id="pdfCanvas"></canvas>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="reading-progress-bar">
+                <div id="progressIndicator"></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -115,11 +144,20 @@ include $headerPath;
     document.addEventListener('DOMContentLoaded', function() {
         const sessionId = <?= $session['rs_id'] ?>;
         const bookId = <?= $session['b_id'] ?>;
-        const pdfUrl = '/assets/books/<?= $session['b_file_path'] ?>';
+        let pdfUrl = '<?= $session['b_file_path'] ?>';
         const startPage = <?= isset($session['current_page']) ? max(1, intval($session['current_page'])) : 1 ?>;
         const totalBookPages = <?= isset($session['b_pages']) ? intval($session['b_pages']) : 0 ?>;
         
+        // Fix PDF URL if needed
+        if (!pdfUrl.startsWith('/')) {
+            pdfUrl = '/assets/books/' + pdfUrl;
+        }
+        
+        // Add cache-busting parameter to avoid caching issues
+        pdfUrl += '?t=' + new Date().getTime();
+        
         console.log('PDF Reader initializing...', {
+            sessionId,
             bookId,
             pdfUrl,
             startPage,
@@ -128,10 +166,30 @@ include $headerPath;
         
         // UI Elements
         const canvas = document.getElementById('pdfCanvas');
-        const ctx = canvas.getContext('2d');
-        const loadingSpinner = document.getElementById('loadingSpinner');
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
+        
+        if (!canvas) {
+            console.error('Canvas element not found!');
+            errorMessage.style.display = 'flex';
+            errorText.textContent = 'Error: PDF viewer canvas not found.';
+            return;
+        }
+
+        // Initialize canvas and context
+        const ctx = canvas.getContext('2d', { alpha: false });
+        if (!ctx) {
+            console.error('Could not get 2D context for canvas!');
+            errorMessage.style.display = 'flex';
+            errorText.textContent = 'Error: Could not initialize PDF rendering context.';
+            return;
+        }
+
+        // Ensure canvas has a reasonable initial size
+        canvas.width = 800;
+        canvas.height = 1200;
+        
+        const loadingSpinner = document.getElementById('loadingSpinner');
         const progressIndicator = document.getElementById('progressIndicator');
         const zoomIndicator = document.getElementById('zoomIndicator');
         const zoomPercent = document.getElementById('zoomPercent');
@@ -153,6 +211,13 @@ include $headerPath;
         const antialiasingBtn = document.getElementById('toggleAntialiasing');
         const continuousScrollBtn = document.getElementById('toggleContinuousScroll');
         
+        // TOC controls
+        const toggleTOCBtn = document.getElementById('toggleTOC');
+        const tocSidebar = document.getElementById('tocSidebar');
+        const closeTOCBtn = document.getElementById('closeTOC');
+        const tocList = document.getElementById('tocList');
+        const tocEmpty = document.getElementById('tocEmpty');
+        
         // State variables
         let pdfDoc = null;
         let pageNum = startPage;
@@ -163,6 +228,7 @@ include $headerPath;
         let continuousScrollMode = true; // Default to continuous scroll mode
         let pageCanvases = []; // Array to store canvas elements for continuous mode
         let renderedPages = new Set(); // Track rendered page numbers
+        let outline = null; // Store the PDF outline/table of contents
         
         // Initial element states
         errorMessage.style.display = 'none';
@@ -178,16 +244,48 @@ include $headerPath;
         /**
          * Load the PDF document
          */
-        pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+        console.log('Loading PDF from URL:', pdfUrl);
+
+        // Clear any previous errors
+        errorMessage.style.display = 'none';
+        loadingSpinner.style.display = 'flex';
+
+        // Configure maximum canvas size to avoid browser limitations
+        const CMAP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/';
+        const CMAP_PACKED = true;
+
+        // Use lower quality for better performance
+        const loadingTask = pdfjsLib.getDocument({
+            url: pdfUrl,
+            cMapUrl: CMAP_URL,
+            cMapPacked: CMAP_PACKED,
+            disableRange: false,
+            disableStream: false,
+            disableAutoFetch: false
+        });
+
+        loadingTask.onProgress = function(progress) {
+            if (progress.total > 0) {
+                const percent = progress.loaded / progress.total * 100;
+                console.log(`Loading: ${percent.toFixed(2)}%`);
+            } else {
+                console.log(`Loading: ${progress.loaded} bytes`);
+            }
+        };
+
+        loadingTask.promise.then(function(pdf) {
+            console.log('PDF document loaded successfully');
             pdfDoc = pdf;
             
             // Update page count display
             const numPages = pdf.numPages;
+            console.log(`PDF has ${numPages} pages`);
             pageCountDisplay.textContent = numPages;
             pageCountMobileDisplay.textContent = numPages;
             
             // Check if the requested page is valid
             if (pageNum > numPages) {
+                console.log(`Requested page ${pageNum} exceeds document length, setting to page 1`);
                 pageNum = 1;
             }
             
@@ -196,6 +294,9 @@ include $headerPath;
             
             // Render the view based on mode
             renderCurrentView();
+            
+            // Load the document outline (table of contents)
+            loadDocumentOutline(pdf);
             
             // Hide loading spinner
             loadingSpinner.style.display = 'none';
@@ -210,28 +311,163 @@ include $headerPath;
         });
         
         /**
+         * Load and parse document outline (table of contents)
+         */
+        function loadDocumentOutline(pdf) {
+            pdf.getOutline().then(function(pdfOutline) {
+                outline = pdfOutline;
+                
+                if (outline && outline.length > 0) {
+                    // TOC is available
+                    renderOutline(outline, tocList);
+                    tocEmpty.style.display = 'none';
+                } else {
+                    // No TOC available
+                    tocEmpty.style.display = 'block';
+                }
+                
+                // Remove the loading state
+                const tocLoading = document.querySelector('.toc-loading');
+                if (tocLoading) {
+                    tocLoading.style.display = 'none';
+                }
+            }).catch(function(error) {
+                console.error('Error loading document outline:', error);
+                tocEmpty.style.display = 'block';
+                
+                // Remove the loading state
+                const tocLoading = document.querySelector('.toc-loading');
+                if (tocLoading) {
+                    tocLoading.style.display = 'none';
+                }
+            });
+        }
+        
+        /**
+         * Render the outline as a nested list
+         */
+        function renderOutline(outlineItems, parentElement) {
+            outlineItems.forEach(function(item) {
+                const li = document.createElement('li');
+                li.className = 'toc-item';
+                
+                const link = document.createElement('a');
+                link.className = 'toc-link';
+                link.textContent = item.title;
+                
+                // Handle destination
+                if (item.dest) {
+                    link.addEventListener('click', function() {
+                        navigateToDestination(item.dest);
+                    });
+                }
+                
+                li.appendChild(link);
+                
+                // Handle nested items
+                if (item.items && item.items.length > 0) {
+                    const nestedList = document.createElement('ul');
+                    nestedList.className = 'toc-list-nested';
+                    renderOutline(item.items, nestedList);
+                    li.appendChild(nestedList);
+                }
+                
+                parentElement.appendChild(li);
+            });
+        }
+        
+        /**
+         * Navigate to a specific destination in the PDF
+         */
+        function navigateToDestination(dest) {
+            if (!pdfDoc) return;
+            
+            // Process the destination to get the page reference
+            if (typeof dest === 'string') {
+                pdfDoc.getDestination(dest).then(function(destArray) {
+                    navigateToDestArray(destArray);
+                });
+            } else if (Array.isArray(dest)) {
+                navigateToDestArray(dest);
+            }
+        }
+        
+        /**
+         * Process a destination array and navigate to the target page
+         */
+        function navigateToDestArray(destArray) {
+            if (!destArray || !Array.isArray(destArray) || destArray.length < 1) {
+                console.error('Invalid destination array:', destArray);
+                return;
+            }
+            
+            // The first item is the page ref
+            const pageRef = destArray[0];
+            
+            // Convert the page reference to a page number
+            pdfDoc.getPageIndex(pageRef).then(function(pageIndex) {
+                // PDF.js uses zero-based indices, but we use one-based page numbers
+                const targetPage = pageIndex + 1;
+                console.log(`Navigating to destination. Page index: ${pageIndex}, Page number: ${targetPage}`);
+                
+                if (continuousScrollMode) {
+                    scrollToPageInContinuousMode(targetPage);
+                } else {
+                    queueRenderPage(targetPage);
+                }
+                
+                // Track this as the current page
+                pageNum = targetPage;
+                pageNumDisplay.textContent = pageNum;
+                pageNumMobileDisplay.textContent = pageNum;
+                
+                // Save progress and update UI
+                updateProgressBar();
+                saveProgress(pageNum);
+                
+                // Close the TOC sidebar on small screens
+                if (window.innerWidth < 768) {
+                    tocSidebar.classList.remove('active');
+                }
+            }).catch(function(error) {
+                console.error('Error resolving page from destination:', error);
+            });
+        }
+        
+        /**
          * Reset the view container
          */
         function resetView() {
+            console.log('Resetting view, continuous mode:', continuousScrollMode);
+            
             // Clear rendered pages tracking
             renderedPages.clear();
             
-            // Remove all existing canvases
             const viewerContainer = document.getElementById('viewerContainer');
-            if (!viewerContainer) return; // Guard against early execution
+            if (!viewerContainer) {
+                console.error('viewerContainer not found');
+                return; // Guard against early execution
+            }
             
-            // If in continuous mode, clear all page canvases and set up container
+            // If in continuous mode
             if (continuousScrollMode) {
+                console.log('Setting up continuous view');
+                
                 // Remove any existing continuous container
                 const existingContainer = document.getElementById('continuousContainer');
                 if (existingContainer) {
+                    console.log('Removing existing continuous container');
                     existingContainer.remove();
                 }
                 
                 // Clear page canvases array
                 pageCanvases.forEach(canvas => {
-                    if (canvas && canvas.parentNode && canvas.parentNode.parentNode) {
-                        canvas.parentNode.remove();
+                    if (canvas && canvas.parentNode) {
+                        try {
+                            canvas.parentNode.remove();
+                        } catch (e) {
+                            console.error('Error removing canvas parent:', e);
+                        }
                     }
                 });
                 pageCanvases = [];
@@ -241,29 +477,44 @@ include $headerPath;
                 continuousContainer.id = 'continuousContainer';
                 continuousContainer.className = 'continuous-container';
                 viewerContainer.appendChild(continuousContainer);
+                console.log('Created new continuous container');
                 
-                // Hide the main canvas if it exists in the DOM
-                if (canvas && canvas.parentNode === viewerContainer) {
-                    viewerContainer.removeChild(canvas);
+                // Hide the main canvas
+                if (canvas) {
+                    if (viewerContainer.contains(canvas)) {
+                        console.log('Removing main canvas from viewerContainer');
+                        viewerContainer.removeChild(canvas);
+                    }
+                    // Reset canvas size to avoid issues
+                    canvas.width = 1;
+                    canvas.height = 1;
                 }
             } else {
                 // In single page mode
+                console.log('Setting up single page view');
+                
                 // Remove continuous container if exists
                 const continuousContainer = document.getElementById('continuousContainer');
                 if (continuousContainer) {
+                    console.log('Removing continuous container');
                     continuousContainer.remove();
                 }
                 
                 // Clear all page canvases
                 pageCanvases.forEach(canvas => {
-                    if (canvas && canvas.parentNode && canvas.parentNode.parentNode) {
-                        canvas.parentNode.remove();
+                    if (canvas && canvas.parentNode) {
+                        try {
+                            canvas.parentNode.remove();
+                        } catch (e) {
+                            console.error('Error removing canvas parent:', e);
+                        }
                     }
                 });
                 pageCanvases = [];
                 
                 // Ensure main canvas is in the container
                 if (canvas && !viewerContainer.contains(canvas)) {
+                    console.log('Adding main canvas to viewerContainer');
                     viewerContainer.appendChild(canvas);
                 }
                 
@@ -301,6 +552,8 @@ include $headerPath;
                 console.warn('Attempted to render continuous pages before PDF loaded');
                 return;
             }
+            
+            console.log('Rendering continuous pages');
             
             // Only load a reasonable number of pages at once
             const numPages = pdfDoc.numPages;
@@ -632,6 +885,8 @@ include $headerPath;
         function renderPage(num) {
             pageRendering = true;
             
+            console.log(`Rendering page ${num} in single page mode`);
+            
             // Update UI page numbers
             pageNumDisplay.textContent = num;
             pageNumMobileDisplay.textContent = num;
@@ -647,9 +902,23 @@ include $headerPath;
                 // Get device pixel ratio
                 const devicePixelRatio = window.devicePixelRatio || 1;
                 
+                // Get the viewer container
+                const viewerContainer = document.getElementById('viewerContainer');
+                if (!viewerContainer) {
+                    console.error('viewerContainer not found when rendering page');
+                    return;
+                }
+                
+                // Ensure canvas is in the DOM
+                if (canvas && !viewerContainer.contains(canvas)) {
+                    viewerContainer.appendChild(canvas);
+                }
+                
                 // Adjust scale based on viewport
-                const viewportWidth = document.getElementById('viewerContainer').clientWidth - 20;
-                const viewportHeight = document.getElementById('viewerContainer').clientHeight - 20;
+                const viewportWidth = viewerContainer.clientWidth - 20;
+                const viewportHeight = viewerContainer.clientHeight - 20;
+                
+                console.log(`Viewport dimensions: ${viewportWidth} x ${viewportHeight}`);
                 
                 const originalViewport = page.getViewport({ scale: 1 });
                 
@@ -660,6 +929,8 @@ include $headerPath;
                 
                 // Apply user scale on top of fit scale
                 const viewport = page.getViewport({ scale: fitScale * scale });
+                
+                console.log(`Rendering with scale: ${fitScale * scale} (fit: ${fitScale}, user: ${scale})`);
                 
                 // Set canvas dimensions accounting for device pixel ratio for higher resolution
                 canvas.width = Math.floor(viewport.width * devicePixelRatio);
@@ -691,6 +962,7 @@ include $headerPath;
                 
                 // Wait for rendering to finish
                 renderTask.promise.then(function() {
+                    console.log(`Page ${num} rendered successfully`);
                     pageRendering = false;
                     
                     // Check if there's a pending page
@@ -877,9 +1149,98 @@ include $headerPath;
             pageNumDisplay.textContent = pageNum;
             pageNumMobileDisplay.textContent = pageNum;
             
+            // Update TOC highlighting
+            updateTOCHighlight(pageNumber);
+            
             // Update progress
             updateProgressBar();
             saveProgress(pageNum);
+        }
+        
+        /**
+         * Update highlighting in the table of contents
+         */
+        function updateTOCHighlight(pageNumber) {
+            if (!outline || outline.length === 0) return;
+            
+            // Remove active class from all TOC links
+            document.querySelectorAll('.toc-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Find the TOC item that corresponds to this page or the closest preceding page
+            let closestItem = null;
+            let closestPageNum = 0;
+            
+            // Function to search through the outline items recursively
+            function findClosestTOCItem(items) {
+                for (const item of items) {
+                    if (item.dest) {
+                        // Try to get the page number for this item
+                        (function(tocItem) {
+                            // Process the destination to get the page number
+                            let dest = tocItem.dest;
+                            if (typeof dest === 'string') {
+                                pdfDoc.getDestination(dest).then(function(destArray) {
+                                    processDestArray(destArray, tocItem);
+                                });
+                            } else if (Array.isArray(dest)) {
+                                processDestArray(dest, tocItem);
+                            }
+                        })(item);
+                    }
+                    
+                    // Recursively check nested items
+                    if (item.items && item.items.length > 0) {
+                        findClosestTOCItem(item.items);
+                    }
+                }
+            }
+            
+            function processDestArray(destArray, tocItem) {
+                if (!destArray || !Array.isArray(destArray) || destArray.length < 1) return;
+                
+                // Get the page reference
+                const pageRef = destArray[0];
+                
+                // Get the page number for this reference
+                pdfDoc.getPageIndex(pageRef).then(function(pageIndex) {
+                    const itemPageNum = pageIndex + 1; // Convert to 1-based
+                    
+                    // If this item is for the current page or a preceding page that's closer to current
+                    if (itemPageNum <= pageNumber && itemPageNum > closestPageNum) {
+                        closestPageNum = itemPageNum;
+                        closestItem = tocItem;
+                        
+                        // Find the link element for this item
+                        const allLinks = document.querySelectorAll('.toc-link');
+                        for (const link of allLinks) {
+                            if (link.textContent === tocItem.title) {
+                                // Mark this link as active
+                                link.classList.add('active');
+                                
+                                // Scroll the TOC to make this visible if needed
+                                const tocContent = document.getElementById('tocContent');
+                                if (tocContent) {
+                                    const linkTop = link.offsetTop;
+                                    const tocScrollTop = tocContent.scrollTop;
+                                    const tocHeight = tocContent.clientHeight;
+                                    
+                                    // If link is out of view, scroll to make it visible
+                                    if (linkTop < tocScrollTop || linkTop > tocScrollTop + tocHeight) {
+                                        tocContent.scrollTop = linkTop - (tocHeight / 2);
+                                    }
+                                }
+                                
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Start the search
+            findClosestTOCItem(outline);
         }
         
         /**
@@ -1264,6 +1625,16 @@ include $headerPath;
                 }
             }
         }
+
+        // Initialize TOC toggle button
+        toggleTOCBtn.addEventListener('click', function() {
+            tocSidebar.classList.toggle('active');
+        });
+
+        // Initialize TOC close button
+        closeTOCBtn.addEventListener('click', function() {
+            tocSidebar.classList.remove('active');
+        });
     });
 </script>
 
@@ -1408,6 +1779,23 @@ include $headerPath;
     color: white;
 }
 
+.pdf-reader-content {
+    display: flex;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    height: calc(100vh - 60px); /* Adjust for navbar height */
+}
+
+.main-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+}
+
 #viewerContainer {
     flex: 1;
     position: relative;
@@ -1417,6 +1805,9 @@ include $headerPath;
     align-items: flex-start;
     background-color: #444;
     padding-top: 20px;
+    width: 100%;
+    z-index: 1;
+    height: calc(100% - 4px); /* Subtract progress bar height */
 }
 
 #pdfCanvas {
@@ -1473,9 +1864,14 @@ include $headerPath;
 }
 
 .reading-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     height: 4px;
     background-color: #dee2e6;
     width: 100%;
+    z-index: 2;
 }
 
 #progressIndicator {
@@ -1546,6 +1942,7 @@ include $headerPath;
     width: 100%;
     padding: 20px;
     min-height: 100%;
+    background-color: #444;
 }
 
 .continuous-loading {
@@ -1649,6 +2046,126 @@ include $headerPath;
         width: 1.8rem;
         height: 1.8rem;
         font-size: 0.9rem;
+    }
+}
+
+/* Table of Contents Styles */
+.toc-sidebar {
+    width: 300px;
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+    transform: translateX(-100%);
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.toc-sidebar.active {
+    transform: translateX(0);
+}
+
+.toc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.toc-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.close-toc-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toc-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 0;
+}
+
+.toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc-item {
+    padding: 0;
+    margin: 0;
+}
+
+.toc-link {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: #495057;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.toc-link:hover {
+    background-color: #e9ecef;
+}
+
+.toc-link.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.toc-list-nested {
+    list-style: none;
+    padding-left: 1.5rem;
+}
+
+.toc-loading, .toc-empty {
+    padding: 1rem;
+    text-align: center;
+    color: #6c757d;
+}
+
+/* Small spinner for TOC loading */
+.spinner-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+    display: block;
+}
+
+.toc-empty i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #adb5bd;
+}
+
+/* Responsive styles */
+@media (max-width: 767px) {
+    .toc-sidebar {
+        width: 250px;
     }
 }
 </style>
