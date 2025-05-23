@@ -14,6 +14,9 @@ include $headerPath;
         </div>
         
         <div class="navbar-center d-none d-md-flex">
+            <button id="goToStart" class="nav-btn" title="Go to first page">
+                <i class="bi bi-chevron-double-left"></i>
+            </button>
             <button id="prev" class="nav-btn">
                 <i class="bi bi-chevron-left"></i>
             </button>
@@ -22,6 +25,9 @@ include $headerPath;
             </div>
             <button id="next" class="nav-btn">
                 <i class="bi bi-chevron-right"></i>
+            </button>
+            <button id="goToEnd" class="nav-btn" title="Go to last page">
+                <i class="bi bi-chevron-double-right"></i>
             </button>
         </div>
         
@@ -64,6 +70,9 @@ include $headerPath;
     
     <!-- Floating Mobile Controls -->
     <div class="mobile-controls d-md-none">
+        <button id="goToStart-mobile" class="mobile-nav-btn" title="Go to first page">
+            <i class="bi bi-chevron-double-left"></i>
+        </button>
         <button id="prev-mobile" class="mobile-nav-btn">
             <i class="bi bi-chevron-left"></i>
         </button>
@@ -72,6 +81,9 @@ include $headerPath;
         </div>
         <button id="next-mobile" class="mobile-nav-btn">
             <i class="bi bi-chevron-right"></i>
+        </button>
+        <button id="goToEnd-mobile" class="mobile-nav-btn" title="Go to last page">
+            <i class="bi bi-chevron-double-right"></i>
         </button>
     </div>
 
@@ -951,11 +963,33 @@ include $headerPath;
             }
         }
         
+        /**
+         * Navigate to the first page of the PDF
+         */
+        function goToFirstPage() {
+            scrollToPage(1);
+        }
+        
+        /**
+         * Navigate to the last page of the PDF
+         */
+        function goToLastPage() {
+            if (pdfDoc) {
+                scrollToPage(pdfDoc.numPages);
+            }
+        }
+        
         // Event listeners for navigation
         prevBtn.addEventListener('click', showPrevPage);
         nextBtn.addEventListener('click', showNextPage);
         prevBtnMobile.addEventListener('click', showPrevPage);
         nextBtnMobile.addEventListener('click', showNextPage);
+        
+        // Event listeners for start/end navigation
+        document.getElementById('goToStart').addEventListener('click', goToFirstPage);
+        document.getElementById('goToEnd').addEventListener('click', goToLastPage);
+        document.getElementById('goToStart-mobile').addEventListener('click', goToFirstPage);
+        document.getElementById('goToEnd-mobile').addEventListener('click', goToLastPage);
         
         // Event listeners for TOC
         document.getElementById('toggleToc').addEventListener('click', function() {
@@ -980,6 +1014,10 @@ include $headerPath;
                 showNextPage();
             } else if (e.key === 'ArrowLeft') {
                 showPrevPage();
+            } else if (e.key === 'Home') {
+                goToFirstPage();
+            } else if (e.key === 'End') {
+                goToLastPage();
             }
         });
         
@@ -1303,11 +1341,12 @@ include $headerPath;
     border-radius: 50px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     z-index: 100;
+    max-width: 95%;
 }
 
 .mobile-nav-btn {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background: #f8f9fa;
     color: #495057;
@@ -1317,6 +1356,8 @@ include $headerPath;
     justify-content: center;
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s, transform 0.1s;
+    font-size: 0.85rem;
+    padding: 0;
 }
 
 .mobile-nav-btn:hover {
