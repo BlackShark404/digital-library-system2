@@ -515,7 +515,7 @@ include $headerPath;
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest' // Ensure request is recognized as AJAX
                 },
                 body: JSON.stringify({
                     session_id: sessionId,
@@ -524,11 +524,57 @@ include $headerPath;
                     is_completed: page === pdfDoc.numPages || scrollPercent >= 95 // Consider completed if on last page or scrolled to near end
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                // Check if response is ok before parsing JSON
+                if (!response.ok) {
+                    throw new Error(`Server responded with status ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Process success response if needed
+                if (data.success) {
+                    // Optionally handle success (e.g. update UI)
+                }
+            })
             .catch(error => {
                 console.error('Error saving reading progress:', error);
+                
+                // Add auto-retry on error (but limit to prevent infinite loops)
+                if (!window.saveProgressRetryCount) {
+                    window.saveProgressRetryCount = 0;
+                }
+                
+                if (window.saveProgressRetryCount < 3) {
+                    window.saveProgressRetryCount++;
+                    console.log(`Retrying save progress (attempt ${window.saveProgressRetryCount})...`);
+                    setTimeout(() => saveProgress(page, scrollPercent), 1000);
+                } else {
+                    // Reset retry counter after a while to allow future retries
+                    setTimeout(() => {
+                        window.saveProgressRetryCount = 0;
+                    }, 30000);
+                }
             });
         }
+        
+        // Add event listener to save progress when leaving the page
+        window.addEventListener('beforeunload', function() {
+            // Use sync XMLHttpRequest for unload events since fetch is async
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/reading-session/update-progress', false); // false makes it synchronous
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.send(JSON.stringify({
+                    session_id: sessionId,
+                    current_page: currentPage,
+                    is_completed: currentPage === pdfDoc.numPages
+                }));
+            } catch (e) {
+                console.error('Error saving progress on page unload:', e);
+            }
+        });
         
         /**
          * Handle zoom in
@@ -730,13 +776,31 @@ include $headerPath;
         
         // Debounced version for more intensive operations
         viewerContainer.addEventListener('scroll', debounce(function() {
-            // Additional scroll handling that should be less frequent
-            // Like sending analytics or saving progress to server
+            // Calculate the scroll percentage
             const scrollPercent = Math.round((viewerContainer.scrollTop / (viewerContainer.scrollHeight - viewerContainer.clientHeight)) * 100);
-            if (scrollPercent % 10 === 0) { // Save at every 10% of scrolling
+            
+            // Track last saved scroll position to avoid duplicate saves
+            if (!window.lastSavedScrollPercent) {
+                window.lastSavedScrollPercent = -1;
+            }
+            
+            // Save at every 10% of scrolling and avoid duplicate saves
+            if (scrollPercent % 10 === 0 && scrollPercent !== window.lastSavedScrollPercent) {
+                window.lastSavedScrollPercent = scrollPercent;
                 saveProgress(currentPage, scrollPercent);
+                
+                // Reset the retry counter for the next save operation
+                window.saveProgressRetryCount = 0;
             }
         }, 300));
+        
+        // Save reading progress when the tab is hidden (user switches tabs or minimizes)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') {
+                // Before the page is hidden, save progress
+                saveProgress(currentPage, null);
+            }
+        });
         
         // Handle window resize
         window.addEventListener('resize', function() {
