@@ -158,7 +158,7 @@ include $headerPath;
                                 wishlistItem.remove();
                                 
                                 // Show toast notification
-                                showToast('info', 'Success', 'Book removed from wishlist');
+                                showToast('success', 'Success', 'Book removed from wishlist');
                                 
                                 // If no items left, refresh page to show empty state
                                 const remainingItems = document.querySelectorAll('.wishlist-item');
@@ -168,12 +168,12 @@ include $headerPath;
                             }
                         } else {
                             // Show error notification
-                            showToast('danger', 'Error', data.message || 'Failed to remove from wishlist');
+                            showToast('error', 'Error', data.message || 'Failed to remove from wishlist');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        showToast('danger', 'Error', 'An error occurred');
+                        showToast('error', 'Error', 'An error occurred');
                     });
                 }
             });

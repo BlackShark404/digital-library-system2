@@ -226,11 +226,13 @@ include $headerPath;
                             icon.classList.add('bi-heart-fill');
                             this.setAttribute('data-action', 'remove');
                             this.setAttribute('data-bs-title', 'Remove from wishlist');
+                            showToast('success', 'Success', 'Book added to wishlist');
                         } else {
                             icon.classList.remove('bi-heart-fill');
                             icon.classList.add('bi-heart');
                             this.setAttribute('data-action', 'add');
                             this.setAttribute('data-bs-title', 'Add to wishlist');
+                            showToast('info', 'Success', 'Book removed from wishlist');
                         }
                         
                         // Update tooltip
@@ -239,10 +241,14 @@ include $headerPath;
                             tooltip.dispose();
                         }
                         new bootstrap.Tooltip(this);
+                    } else {
+                        // Show error toast
+                        showToast('error', 'Error', data.message || 'Failed to update wishlist');
                     }
                 })
                 .catch(error => {
                     console.error('Error toggling wishlist:', error);
+                    showToast('error', 'Error', 'Failed to update wishlist. Please try again.');
                 });
             });
         });
