@@ -51,6 +51,9 @@ include $headerPath;
                     <button id="toggleAntialiasing" class="control-btn" title="Toggle Text Sharpness">
                         <i class="bi bi-type"></i>
                     </button>
+                    <button id="toggleContinuousScroll" class="control-btn" title="Toggle Continuous Scroll">
+                        <i class="bi bi-arrows-expand-vertical"></i>
+                    </button>
                     <button id="fullscreen" class="control-btn" title="Fullscreen">
                         <i class="bi bi-arrows-fullscreen"></i>
                     </button>
@@ -141,6 +144,7 @@ include $headerPath;
         const zoomOutBtn = document.getElementById('zoomOut');
         const fullscreenBtn = document.getElementById('fullscreen');
         const antialiasingBtn = document.getElementById('toggleAntialiasing');
+        const continuousScrollBtn = document.getElementById('toggleContinuousScroll');
         
         // State variables
         let pdfDoc = null;
@@ -149,6 +153,8 @@ include $headerPath;
         let pageNumPending = null;
         let scale = 1.0;
         let useAntialiasing = true; // Default state of antialiasing
+        let continuousScrollMode = false; // Default state of continuous scroll mode
+        let pageCanvases = []; // Array to store canvas elements for continuous mode
         
         // Initial element states
         errorMessage.style.display = 'none';
@@ -156,6 +162,7 @@ include $headerPath;
         // Load settings from localStorage
         loadZoomLevel();
         loadAntialiasingSetting();
+        loadContinuousScrollSetting();
         
         /**
          * Load the PDF document
@@ -173,8 +180,8 @@ include $headerPath;
                 pageNum = 1;
             }
             
-            // Render the first page
-            renderPage(pageNum);
+            // Render the view based on mode
+            renderCurrentView();
             
             // Hide loading spinner
             loadingSpinner.style.display = 'none';
@@ -187,6 +194,354 @@ include $headerPath;
             errorMessage.style.display = 'flex';
             errorText.textContent = 'Error loading PDF: ' + error.message;
         });
+        
+        /**
+         * Reset the view container
+         */
+        function resetView() {
+            // Remove all existing canvases
+            const viewerContainer = document.getElementById('viewerContainer');
+            
+            // If in continuous mode, clear all page canvases and set up container
+            if (continuousScrollMode) {
+                // Remove any existing continuous container
+                const existingContainer = document.getElementById('continuousContainer');
+                if (existingContainer) {
+                    existingContainer.remove();
+                }
+                
+                // Clear page canvases array
+                pageCanvases.forEach(canvas => {
+                    if (canvas.parentNode && canvas.parentNode.parentNode) {
+                        canvas.parentNode.remove();
+                    }
+                });
+                pageCanvases = [];
+                
+                // Create fresh continuous container
+                const continuousContainer = document.createElement('div');
+                continuousContainer.id = 'continuousContainer';
+                continuousContainer.className = 'continuous-container';
+                viewerContainer.appendChild(continuousContainer);
+                
+                // Hide the main canvas
+                if (canvas.parentNode === viewerContainer) {
+                    viewerContainer.removeChild(canvas);
+                }
+            } else {
+                // In single page mode
+                // Remove continuous container if exists
+                const continuousContainer = document.getElementById('continuousContainer');
+                if (continuousContainer) {
+                    continuousContainer.remove();
+                }
+                
+                // Clear all page canvases
+                pageCanvases.forEach(canvas => {
+                    if (canvas.parentNode && canvas.parentNode.parentNode) {
+                        canvas.parentNode.remove();
+                    }
+                });
+                pageCanvases = [];
+                
+                // Ensure main canvas is in the container
+                if (!viewerContainer.contains(canvas)) {
+                    viewerContainer.appendChild(canvas);
+                }
+                
+                // Reset scroll position
+                viewerContainer.scrollTop = 0;
+            }
+        }
+        
+        /**
+         * Render the current view based on the active mode
+         */
+        function renderCurrentView() {
+            if (continuousScrollMode) {
+                renderContinuousPages();
+            } else {
+                renderPage(pageNum);
+            }
+        }
+        
+        /**
+         * Render all or a range of pages for continuous scrolling
+         */
+        function renderContinuousPages() {
+            // Only load a reasonable number of pages at once
+            const numPages = pdfDoc.numPages;
+            const startPageIndex = Math.max(1, pageNum - 1);
+            const endPageIndex = Math.min(numPages, startPageIndex + 4); // Load 5 pages at a time
+            
+            // Get continuous container
+            const continuousContainer = document.getElementById('continuousContainer');
+            if (!continuousContainer) return;
+            
+            // Clear container
+            continuousContainer.innerHTML = '';
+            
+            // Create loading message
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'continuous-loading';
+            loadingMessage.innerHTML = '<div class="spinner-sm"></div> Loading pages...';
+            continuousContainer.appendChild(loadingMessage);
+            
+            // Keep track of rendering progress
+            let pagesRendered = 0;
+            const totalPagesToRender = endPageIndex - startPageIndex + 1;
+            
+            // Render pages sequentially to ensure proper order
+            const renderSequential = (index) => {
+                if (index > endPageIndex) {
+                    // All pages rendered
+                    loadingMessage.remove();
+                    setupScrollDetection();
+                    return;
+                }
+                
+                renderContinuousPage(index, continuousContainer).then(() => {
+                    renderSequential(index + 1);
+                });
+            };
+            
+            // Start rendering from the first page
+            renderSequential(startPageIndex);
+            
+            // Update progress based on the first visible page
+            updateProgressBar();
+        }
+        
+        /**
+         * Render a single page in continuous mode
+         */
+        function renderContinuousPage(pageIndex, container, prepend = false) {
+            return new Promise((resolve) => {
+                // Skip if this page is already rendered
+                if (document.querySelector(`.page-wrapper[data-page-index="${pageIndex}"]`)) {
+                    resolve();
+                    return;
+                }
+                
+                pdfDoc.getPage(pageIndex).then(function(page) {
+                    // Create a wrapper for this page
+                    const pageWrapper = document.createElement('div');
+                    pageWrapper.className = 'page-wrapper';
+                    pageWrapper.dataset.pageIndex = pageIndex;
+                    
+                    // Create a canvas for this page
+                    const pageCanvas = document.createElement('canvas');
+                    pageCanvas.className = 'pdf-page';
+                    pageWrapper.appendChild(pageCanvas);
+                    
+                    // Add page number indicator
+                    const pageIndicator = document.createElement('div');
+                    pageIndicator.className = 'page-indicator';
+                    pageIndicator.textContent = `Page ${pageIndex}`;
+                    pageWrapper.appendChild(pageIndicator);
+                    
+                    // Add to document (prepend if requested, otherwise append)
+                    if (prepend && container.firstChild) {
+                        container.insertBefore(pageWrapper, container.firstChild);
+                    } else {
+                        container.appendChild(pageWrapper);
+                    }
+                    
+                    // Store canvas for later reference
+                    pageCanvases.push(pageCanvas);
+                    
+                    // Get device pixel ratio
+                    const devicePixelRatio = window.devicePixelRatio || 1;
+                    
+                    // Calculate scale for fitting page width
+                    const viewportWidth = container.clientWidth - 40; // account for padding
+                    const originalViewport = page.getViewport({ scale: 1 });
+                    
+                    // Calculate scale to fit width
+                    const widthScale = viewportWidth / originalViewport.width;
+                    
+                    // Apply user scale on top of fit scale
+                    const viewport = page.getViewport({ scale: widthScale * scale });
+                    
+                    // Set canvas dimensions accounting for device pixel ratio for higher resolution
+                    const ctx = pageCanvas.getContext('2d');
+                    pageCanvas.width = Math.floor(viewport.width * devicePixelRatio);
+                    pageCanvas.height = Math.floor(viewport.height * devicePixelRatio);
+                    pageCanvas.style.width = Math.floor(viewport.width) + "px";
+                    pageCanvas.style.height = Math.floor(viewport.height) + "px";
+                    
+                    // Reset context and prepare for high-quality rendering
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
+                    
+                    // Enable font smoothing
+                    ctx.imageSmoothingEnabled = useAntialiasing;
+                    ctx.imageSmoothingQuality = 'high';
+                    
+                    // Scale context to ensure correct rendering
+                    ctx.scale(devicePixelRatio, devicePixelRatio);
+                    
+                    // Render PDF page into canvas context with high quality settings
+                    const renderContext = {
+                        canvasContext: ctx,
+                        viewport: viewport,
+                        enableWebGL: true,
+                        renderInteractiveForms: true,
+                        textLayer: true
+                    };
+                    
+                    const renderTask = page.render(renderContext);
+                    
+                    // Wait for rendering to finish
+                    renderTask.promise.then(function() {
+                        resolve();
+                    }).catch(function(error) {
+                        console.error('Error rendering continuous page:', error);
+                        resolve(); // Resolve anyway to continue with other pages
+                    });
+                }).catch(function(error) {
+                    console.error('Error getting continuous page:', error);
+                    resolve(); // Resolve anyway to continue with other pages
+                });
+            });
+        }
+        
+        /**
+         * Set up scroll detection to dynamically load more pages
+         */
+        function setupScrollDetection() {
+            const viewerContainer = document.getElementById('viewerContainer');
+            const continuousContainer = document.getElementById('continuousContainer');
+            
+            // Remove previous event listener if exists
+            viewerContainer.onscroll = null;
+            
+            // Skip if not in continuous mode
+            if (!continuousScrollMode) return;
+            
+            // Throttle scroll event for better performance
+            let isScrolling = false;
+            let lastScrollTop = viewerContainer.scrollTop;
+            let scrollTimeout;
+            
+            viewerContainer.onscroll = function() {
+                if (isScrolling) return;
+                
+                isScrolling = true;
+                
+                // Clear previous timeout
+                clearTimeout(scrollTimeout);
+                
+                // Check if scrolling up or down
+                const scrollTop = viewerContainer.scrollTop;
+                const scrollDirection = scrollTop > lastScrollTop ? 'down' : 'up';
+                lastScrollTop = scrollTop;
+                
+                // Update current page based on scroll position (this is very important)
+                updateCurrentPageFromScroll();
+                
+                const scrollBottom = scrollTop + viewerContainer.clientHeight;
+                const containerHeight = continuousContainer.clientHeight;
+                
+                // Load more pages when approaching bottom
+                if (scrollDirection === 'down' && scrollBottom > containerHeight - 800 && pageNum < pdfDoc.numPages) {
+                    // Check for existence of page wrappers
+                    const pageWrappers = document.querySelectorAll('.page-wrapper');
+                    if (pageWrappers.length === 0) {
+                        isScrolling = false;
+                        return;
+                    }
+                    
+                    const lastPageWrapper = pageWrappers[pageWrappers.length - 1];
+                    const lastPageIndex = parseInt(lastPageWrapper.dataset.pageIndex);
+                    
+                    // Only load if we haven't already loaded this page
+                    if (lastPageIndex < pdfDoc.numPages) {
+                        const nextPageIndex = lastPageIndex + 1;
+                        renderContinuousPage(nextPageIndex, continuousContainer);
+                    }
+                }
+                
+                // Load more pages when approaching top (if scrolling up)
+                if (scrollDirection === 'up' && scrollTop < 300 && pageNum > 1) {
+                    const pageWrappers = document.querySelectorAll('.page-wrapper');
+                    if (pageWrappers.length === 0) {
+                        isScrolling = false;
+                        return;
+                    }
+                    
+                    const firstPageWrapper = pageWrappers[0];
+                    const firstPageIndex = parseInt(firstPageWrapper.dataset.pageIndex);
+                    
+                    // Only load if we haven't already loaded page 1
+                    if (firstPageIndex > 1) {
+                        const prevPageIndex = firstPageIndex - 1;
+                        
+                        // Remember scroll position to maintain it
+                        const beforeHeight = continuousContainer.scrollHeight;
+                        
+                        renderContinuousPage(prevPageIndex, continuousContainer, true).then(() => {
+                            // Adjust scroll position to maintain view
+                            const afterHeight = continuousContainer.scrollHeight;
+                            const heightDiff = afterHeight - beforeHeight;
+                            if (heightDiff > 0) {
+                                viewerContainer.scrollTop += heightDiff;
+                            }
+                        });
+                    }
+                }
+                
+                // Reset throttle after a short delay
+                scrollTimeout = setTimeout(() => {
+                    isScrolling = false;
+                }, 100);
+            };
+        }
+        
+        /**
+         * Update current page based on scroll position
+         */
+        function updateCurrentPageFromScroll() {
+            if (!continuousScrollMode) return;
+            
+            const viewerContainer = document.getElementById('viewerContainer');
+            const pageWrappers = document.querySelectorAll('.page-wrapper');
+            
+            // Find the page most visible in the viewport
+            let mostVisiblePage = null;
+            let maxVisibleArea = 0;
+            
+            pageWrappers.forEach(wrapper => {
+                const rect = wrapper.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                
+                // Calculate how much of this page is visible
+                const visibleTop = Math.max(rect.top, 0);
+                const visibleBottom = Math.min(rect.bottom, viewportHeight);
+                const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+                const visibleArea = visibleHeight * rect.width;
+                
+                if (visibleArea > maxVisibleArea) {
+                    maxVisibleArea = visibleArea;
+                    mostVisiblePage = wrapper;
+                }
+            });
+            
+            if (mostVisiblePage) {
+                const newPageNum = parseInt(mostVisiblePage.dataset.pageIndex);
+                if (newPageNum !== pageNum) {
+                    pageNum = newPageNum;
+                    
+                    // Update UI elements
+                    pageNumDisplay.textContent = pageNum;
+                    pageNumMobileDisplay.textContent = pageNum;
+                    
+                    // Update progress
+                    updateProgressBar();
+                    saveProgress(pageNum);
+                }
+            }
+        }
         
         /**
          * Render a specific page of the PDF
@@ -345,7 +700,13 @@ include $headerPath;
             scale += 0.1;
             saveZoomLevel();
             showZoomIndicator();
-            queueRenderPage(pageNum);
+            
+            if (continuousScrollMode) {
+                resetView();
+                renderCurrentView();
+            } else {
+                queueRenderPage(pageNum);
+            }
         }
         
         /**
@@ -356,7 +717,13 @@ include $headerPath;
             scale -= 0.1;
             saveZoomLevel();
             showZoomIndicator();
-            queueRenderPage(pageNum);
+            
+            if (continuousScrollMode) {
+                resetView();
+                renderCurrentView();
+            } else {
+                queueRenderPage(pageNum);
+            }
         }
         
         /**
@@ -456,6 +823,65 @@ include $headerPath;
         }
         
         /**
+         * Toggle continuous scroll mode
+         */
+        function toggleContinuousScroll() {
+            // Prevent rapid toggling by adding a brief debounce
+            if (window.isTogglingScrollMode) return;
+            window.isTogglingScrollMode = true;
+            
+            // Show loading state
+            loadingSpinner.style.display = 'flex';
+            
+            // Short delay to allow loading indicator to appear
+            setTimeout(() => {
+                // Toggle the mode
+                continuousScrollMode = !continuousScrollMode;
+                
+                // Update button visual state
+                if (continuousScrollMode) {
+                    continuousScrollBtn.classList.add('active');
+                } else {
+                    continuousScrollBtn.classList.remove('active');
+                }
+                
+                // Save preference
+                localStorage.setItem('pdfContinuousScroll', continuousScrollMode ? 'true' : 'false');
+                
+                // Reset the view and render with new mode
+                resetView();
+                renderCurrentView();
+                
+                // Hide loading spinner
+                loadingSpinner.style.display = 'none';
+                
+                // Show indicator with current state
+                const message = continuousScrollMode ? 'Continuous scroll: ON' : 'Continuous scroll: OFF';
+                showMessage(message);
+                
+                // Clear toggle lock
+                setTimeout(() => {
+                    window.isTogglingScrollMode = false;
+                }, 500);
+            }, 100);
+        }
+        
+        /**
+         * Load continuous scroll setting from localStorage
+         */
+        function loadContinuousScrollSetting() {
+            const savedSetting = localStorage.getItem('pdfContinuousScroll');
+            if (savedSetting !== null) {
+                continuousScrollMode = savedSetting === 'true';
+                
+                // Update button visual state
+                if (continuousScrollMode) {
+                    continuousScrollBtn.classList.add('active');
+                }
+            }
+        }
+        
+        /**
          * Show a temporary message notification
          */
         function showMessage(message) {
@@ -486,6 +912,9 @@ include $headerPath;
         // Event listener for antialiasing toggle
         antialiasingBtn.addEventListener('click', toggleAntialiasing);
         
+        // Event listener for continuous scroll toggle
+        continuousScrollBtn.addEventListener('click', toggleContinuousScroll);
+        
         // Set up keyboard navigation
         document.addEventListener('keydown', function(e) {
             if (e.key === 'ArrowRight') {
@@ -497,8 +926,15 @@ include $headerPath;
         
         // Handle window resize
         window.addEventListener('resize', function() {
-            // Re-render current page to adjust to new size
-            queueRenderPage(pageNum);
+            // Re-render current view to adjust to new size
+            if (continuousScrollMode) {
+                // Just re-render the current continuous view
+                resetView();
+                renderCurrentView();
+            } else {
+                // Just re-render the current page
+                queueRenderPage(pageNum);
+            }
         });
     });
 </script>
@@ -772,6 +1208,74 @@ include $headerPath;
 .zoom-indicator.visible {
     opacity: 1;
     visibility: visible;
+}
+
+.continuous-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    width: 100%;
+    padding: 20px;
+    min-height: 100%;
+}
+
+.continuous-loading {
+    padding: 10px 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 20px;
+    margin: 20px 0;
+    position: sticky;
+    top: 20px;
+    z-index: 10;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.spinner-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-left-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.page-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 50px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    background-color: white;
+    border-radius: 2px;
+}
+
+.pdf-page {
+    display: block;
+    background-color: white;
+    max-width: 100%;
+    height: auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    transform: translateZ(0);
+}
+
+.page-indicator {
+    position: absolute;
+    bottom: -25px;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
 }
 
 @media (max-width: 767.98px) {
