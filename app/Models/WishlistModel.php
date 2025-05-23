@@ -34,13 +34,18 @@ class WishlistModel extends BaseModel
                 b.b_price AS price,
                 b.b_description AS description,
                 b.b_cover_path AS cover_image,
-                g.g_name AS genre
+                COALESCE(
+                    (SELECT STRING_AGG(g.g_name, ', ') 
+                     FROM book_genres bg 
+                     JOIN genre g ON bg.genre_id = g.g_id 
+                     WHERE bg.book_id = b.b_id
+                     GROUP BY bg.book_id), 
+                    'Uncategorized'
+                ) AS genre
             FROM 
                 {$this->table} wl
             JOIN 
                 books b ON wl.b_id = b.b_id
-            LEFT JOIN 
-                genre g ON b.b_genre_id = g.g_id
             WHERE 
                 wl.ua_id = :user_id
                 AND b.b_deleted_at IS NULL

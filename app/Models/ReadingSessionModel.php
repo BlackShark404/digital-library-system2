@@ -669,7 +669,14 @@ class ReadingSessionModel extends BaseModel
                 b.b_cover_path,
                 b.b_pages,
                 b.b_isbn,
-                g.g_name as genre,
+                COALESCE(
+                    (SELECT STRING_AGG(g.g_name, ', ') 
+                     FROM book_genres bg 
+                     JOIN genre g ON bg.genre_id = g.g_id 
+                     WHERE bg.book_id = b.b_id
+                     GROUP BY bg.book_id), 
+                    'Uncategorized'
+                ) AS genre,
                 rp.current_page,
                 rp.is_completed,
                 rp.last_updated,
@@ -687,8 +694,6 @@ class ReadingSessionModel extends BaseModel
                 books b ON rs.b_id = b.b_id
             JOIN
                 user_account ua ON rs.ua_id = ua.ua_id
-            LEFT JOIN
-                genre g ON b.b_genre_id = g.g_id
             LEFT JOIN 
                 {$this->progressTable} rp ON rs.rs_id = rp.rs_id
             LEFT JOIN
