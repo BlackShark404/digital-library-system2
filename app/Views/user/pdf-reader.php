@@ -152,6 +152,7 @@ include $headerPath;
         let pageCanvases = [];
         let pageObservers = [];
         let visiblePages = new Set();
+        let scrollTimeout = null;
         
         // Initial element states
         errorMessage.style.display = 'none';
@@ -245,11 +246,13 @@ include $headerPath;
             const options = {
                 root: viewerContainer,
                 rootMargin: '100px 0px',
-                threshold: 0.1
+                threshold: [0.1, 0.5, 0.9]
             };
             
             const observer = new IntersectionObserver((entries) => {
                 let needsUpdate = false;
+                let mostVisiblePage = null;
+                let highestVisibility = 0;
                 
                 entries.forEach(entry => {
                     const pageNum = parseInt(entry.target.dataset.pageNumber);
@@ -258,14 +261,20 @@ include $headerPath;
                         visiblePages.add(pageNum);
                         needsUpdate = true;
                         
-                        // Update current page for navigation
-                        if (entry.intersectionRatio > 0.5) {
-                            updateCurrentPage(pageNum);
+                        // Track the most visible page
+                        if (entry.intersectionRatio > highestVisibility) {
+                            highestVisibility = entry.intersectionRatio;
+                            mostVisiblePage = pageNum;
                         }
                     } else {
                         visiblePages.delete(pageNum);
                     }
                 });
+                
+                // Update current page based on the most visible page
+                if (mostVisiblePage !== null) {
+                    updateCurrentPage(mostVisiblePage);
+                }
                 
                 if (needsUpdate) {
                     renderVisiblePages();
@@ -377,15 +386,34 @@ include $headerPath;
             if (currentPage !== pageNum) {
                 currentPage = pageNum;
                 
-                // Update UI page numbers
-                pageNumDisplay.textContent = pageNum;
-                pageNumMobileDisplay.textContent = pageNum;
+                // Update UI page numbers with page number and percentage
+                updatePageNumberDisplay(pageNum);
                 
                 // Update progress bar
                 updateProgressBar();
                 
                 // Save progress for this page
                 saveProgress(pageNum);
+            }
+        }
+        
+        /**
+         * Update the page number display with both the page number and percentage
+         */
+        function updatePageNumberDisplay(pageNum) {
+            // Calculate percentage through document
+            const percent = Math.round((pageNum / pdfDoc.numPages) * 100);
+            
+            // Update the desktop page display with percentage
+            const pageDisplayDesktop = document.querySelector('.page-display');
+            if (pageDisplayDesktop) {
+                pageDisplayDesktop.innerHTML = `<span id="page_num">${pageNum}</span> / <span id="page_count">${pdfDoc.numPages}</span> <span class="progress-percent">(${percent}%)</span>`;
+            }
+            
+            // Update the mobile page display with percentage
+            const pageDisplayMobile = document.querySelector('.mobile-page-display');
+            if (pageDisplayMobile) {
+                pageDisplayMobile.innerHTML = `<span id="page_num_mobile">${pageNum}</span> / <span id="page_count_mobile">${pdfDoc.numPages}</span> <span class="progress-percent">(${percent}%)</span>`;
             }
         }
         
@@ -425,14 +453,27 @@ include $headerPath;
         function updateProgressBar() {
             if (!pdfDoc) return;
             
-            const progress = (currentPage / pdfDoc.numPages) * 100;
+            // Calculate scroll-based progress instead of just page-based
+            const scrollPosition = viewerContainer.scrollTop;
+            const scrollHeight = viewerContainer.scrollHeight - viewerContainer.clientHeight;
+            
+            // Blend page-based and scroll-based progress for a smoother experience
+            // 70% based on scroll position, 30% based on current page
+            const scrollProgress = scrollHeight > 0 ? (scrollPosition / scrollHeight) * 100 : 0;
+            const pageProgress = (currentPage / pdfDoc.numPages) * 100;
+            
+            const blendedProgress = (scrollProgress * 0.7) + (pageProgress * 0.3);
+            
+            // Ensure progress is between 0-100%
+            const progress = Math.max(0, Math.min(100, blendedProgress));
+            
             progressIndicator.style.width = progress + '%';
         }
         
         /**
          * Save reading progress to the server
          */
-        function saveProgress(page) {
+        function saveProgress(page, scrollPercent = null) {
             fetch('/reading-session/update-progress', {
                 method: 'POST',
                 headers: {
@@ -442,7 +483,8 @@ include $headerPath;
                 body: JSON.stringify({
                     session_id: sessionId,
                     current_page: page,
-                    is_completed: page === pdfDoc.numPages
+                    scroll_percent: scrollPercent,
+                    is_completed: page === pdfDoc.numPages || scrollPercent >= 95 // Consider completed if on last page or scrolled to near end
                 })
             })
             .then(response => response.json())
@@ -629,10 +671,35 @@ include $headerPath;
             }
         });
         
-        // Set up scroll event to track current page
+        /**
+         * Debounce function to limit how often a function is called
+         */
+        function debounce(func, wait) {
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    func.apply(context, args);
+                }, wait);
+            };
+        }
+
+        // Set up scroll event to track current page and update progress
         viewerContainer.addEventListener('scroll', function() {
-            // This will be handled by Intersection Observer
+            // Update the progress bar based on scroll position immediately for responsive UI
+            updateProgressBar();
         });
+        
+        // Debounced version for more intensive operations
+        viewerContainer.addEventListener('scroll', debounce(function() {
+            // Additional scroll handling that should be less frequent
+            // Like sending analytics or saving progress to server
+            const scrollPercent = Math.round((viewerContainer.scrollTop / (viewerContainer.scrollHeight - viewerContainer.clientHeight)) * 100);
+            if (scrollPercent % 10 === 0) { // Save at every 10% of scrolling
+                saveProgress(currentPage, scrollPercent);
+            }
+        }, 300));
         
         // Handle window resize
         window.addEventListener('resize', function() {
@@ -722,6 +789,13 @@ include $headerPath;
     font-weight: 500;
 }
 
+.progress-percent {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: normal;
+    margin-left: 4px;
+}
+
 .navbar-right {
     display: flex;
     align-items: center;
@@ -805,7 +879,7 @@ include $headerPath;
 
 .pdf-page-container {
     position: relative;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
     background-color: white;
 }
