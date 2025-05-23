@@ -46,12 +46,22 @@ class BookController extends BaseController
                 ? '/assets/images/book-cover/' . $book['b_cover_path'] 
                 : '/assets/images/book-cover/default-cover.svg';
             
+            // Format genres for display
+            $genres = [];
+            if (!empty($book['genres'])) {
+                foreach ($book['genres'] as $genre) {
+                    $genres[] = $genre['g_name'];
+                }
+            }
+            $genreDisplay = !empty($genres) ? implode(', ', $genres) : 'Uncategorized';
+            
             $data[] = [
                 'id' => $book['b_id'],
                 'cover' => $coverPath,
                 'title' => $book['b_title'],
                 'author' => $book['b_author'],
-                'genre' => $book['genre_name'] ?? 'Uncategorized',
+                'genre' => $genreDisplay,
+                'genres' => $book['genres'], // Include full genres array for reference
                 'price' => '$' . number_format($book['b_price'], 2),
                 'raw_price' => $book['b_price']
             ];

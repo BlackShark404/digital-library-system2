@@ -428,7 +428,17 @@ include $headerPath;
                     },
                     { data: 'title' },
                     { data: 'author' },
-                    { data: 'genre' },
+                    { 
+                        data: 'genre',
+                        render: function(data, type, row) {
+                            if (type === 'display' && row.genres && row.genres.length > 0) {
+                                return row.genres.map(function(genre) {
+                                    return `<span class="badge bg-secondary me-1">${escapeHtml(genre.g_name)}</span>`;
+                                }).join(' ');
+                            }
+                            return data || 'Uncategorized';
+                        }
+                    },
                     { data: 'price' },
                     {
                         data: null,
@@ -633,43 +643,60 @@ include $headerPath;
         }
         
         // Function to handle view book
-        function viewBook(id) {
+        function viewBook(bookId) {
             $.ajax({
-                url: `/api/books/${id}`,
-                type: 'GET',
-                dataType: 'json',
+                url: `/api/books/${bookId}`,
+                method: 'GET',
                 success: function(response) {
+                    if (response.success) {
                         const book = response.data;
+                        // Store ID for edit button
+                        currentBookId = book.b_id;
                         
-                        // Populate view modal
-                    $('#viewCoverImage').attr('src', book.cover_url);
-                        $('#viewTitle').text(book.b_title);
-                        $('#viewAuthor').text(book.b_author);
-                    
-                    // Display genres as a comma-separated list
-                    const genres = book.genres.map(genre => genre.g_name).join(', ') || 'Uncategorized';
-                    $('#viewGenres').text(genres);
-                    
+                        // Populate modal with book data
+                        $('#viewCoverImage').attr('src', book.cover_url || '/assets/images/book-cover/default-cover.svg');
+                        $('#viewTitle').text(book.b_title || 'N/A');
+                        $('#viewAuthor').text(book.b_author || 'N/A');
+                        
+                        // Display genres as badges
+                        const genresElement = $('#viewGenres');
+                        genresElement.empty();
+                        
+                        if (book.genres && book.genres.length > 0) {
+                            book.genres.forEach(function(genre) {
+                                genresElement.append(
+                                    $('<span></span>')
+                                        .addClass('badge bg-secondary me-1')
+                                        .text(genre.g_name)
+                                );
+                            });
+                        } else {
+                            genresElement.text('Uncategorized');
+                        }
+                        
                         $('#viewPublisher').text(book.b_publisher || 'N/A');
                         $('#viewPublicationDate').text(book.b_publication_date ? formatDate(book.b_publication_date) : 'N/A');
                         $('#viewIsbn').text(book.b_isbn || 'N/A');
                         $('#viewPages').text(book.b_pages || 'N/A');
-                    $('#viewPrice').text(book.b_price ? '$' + parseFloat(book.b_price).toFixed(2) : 'N/A');
-                    $('#viewDescription').html(book.b_description ? book.b_description.replace(/\n/g, '<br>') : 'No description available.');
+                        $('#viewPrice').text(book.b_price ? '$' + parseFloat(book.b_price).toFixed(2) : 'N/A');
+                        $('#viewDescription').html(book.b_description ? book.b_description.replace(/\n/g, '<br>') : 'No description available.');
                         
-                    // File download link
+                        // File download link
                         if (book.file_url) {
                             $('#viewFileSection').show();
-                        $('#viewFileLink').attr('href', book.file_url);
+                            $('#viewFileLink').attr('href', book.file_url);
                         } else {
                             $('#viewFileSection').hide();
                         }
-                    
-                    // Set data for edit button
-                    $('#editBookFromViewBtn').data('id', book.b_id);
+                        
+                        // Set data for edit button
+                        $('#editBookFromViewBtn').data('id', book.b_id);
                         
                         // Show the modal
                         $('#viewBookModal').modal('show');
+                    } else {
+                        dataTable.showErrorToast('Error', 'Failed to load book details');
+                    }
                 },
                 error: function(xhr) {
                     dataTable.showErrorToast('Error', 'Failed to load book details');
