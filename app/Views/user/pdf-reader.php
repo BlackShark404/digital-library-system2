@@ -233,13 +233,15 @@ include $headerPath;
         // Initial element states
         errorMessage.style.display = 'none';
         
+        // First load settings from localStorage before any rendering
+        loadContinuousScrollSetting();
+        loadZoomLevel(); // This will set the correct scale value
+        loadAntialiasingSetting();
+        
+        console.log(`Initial settings loaded - Mode: ${continuousScrollMode ? 'continuous' : 'single'}, Scale: ${scale}`);
+        
         // Initialize the view container right away
         resetView();
-        
-        // Load settings from localStorage
-        loadZoomLevel();
-        loadAntialiasingSetting();
-        loadContinuousScrollSetting();
         
         /**
          * Load the PDF document
@@ -288,6 +290,9 @@ include $headerPath;
                 console.log(`Requested page ${pageNum} exceeds document length, setting to page 1`);
                 pageNum = 1;
             }
+            
+            // Ensure we're using the loaded zoom level
+            console.log(`Rendering with loaded scale: ${scale}, mode: ${continuousScrollMode ? 'continuous' : 'single'}`);
             
             // Set up view container before rendering
             resetView();
@@ -1280,7 +1285,15 @@ include $headerPath;
                     is_completed: page === pdfDoc.numPages
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                // Check if response is JSON before attempting to parse
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                }
+                // If not JSON, just return success status
+                return { success: response.ok };
+            })
             .catch(error => {
                 console.error('Error saving reading progress:', error);
             });
@@ -1293,6 +1306,7 @@ include $headerPath;
             if (scale >= 3.0) return;
             scale += 0.1;
             saveZoomLevel();
+            console.log(`Zoomed in: ${scale}, mode: ${continuousScrollMode ? 'continuous' : 'single'}`);
             showZoomIndicator();
             
             if (continuousScrollMode) {
@@ -1310,6 +1324,7 @@ include $headerPath;
             if (scale <= 0.5) return;
             scale -= 0.1;
             saveZoomLevel();
+            console.log(`Zoomed out: ${scale}, mode: ${continuousScrollMode ? 'continuous' : 'single'}`);
             showZoomIndicator();
             
             if (continuousScrollMode) {
@@ -1337,9 +1352,11 @@ include $headerPath;
             if (continuousScrollMode) {
                 localStorage.setItem(`zoomLevel_continuous_${sessionId}`, scale.toString());
                 localStorage.setItem('globalZoomLevel_continuous', scale.toString());
+                console.log(`Saved continuous mode zoom: ${scale}`);
             } else {
                 localStorage.setItem(`zoomLevel_single_${sessionId}`, scale.toString());
                 localStorage.setItem('globalZoomLevel_single', scale.toString());
+                console.log(`Saved single page mode zoom: ${scale}`);
             }
         }
         
@@ -1364,6 +1381,7 @@ include $headerPath;
                 const parsedScale = parseFloat(savedScale);
                 if (!isNaN(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3.0) {
                     scale = parsedScale;
+                    console.log(`Loaded book-specific ${continuousScrollMode ? 'continuous' : 'single'} zoom: ${scale}`);
                     return;
                 }
             }
@@ -1374,7 +1392,10 @@ include $headerPath;
                 const parsedScale = parseFloat(globalScale);
                 if (!isNaN(parsedScale) && parsedScale >= 0.5 && parsedScale <= 3.0) {
                     scale = parsedScale;
+                    console.log(`Loaded global ${continuousScrollMode ? 'continuous' : 'single'} zoom: ${scale}`);
                 }
+            } else {
+                console.log(`No saved zoom found for ${continuousScrollMode ? 'continuous' : 'single'} mode, using default: ${scale}`);
             }
         }
         
@@ -1459,6 +1480,13 @@ include $headerPath;
             // Show loading state
             loadingSpinner.style.display = 'flex';
             
+            // Get current zoom before switching modes
+            const oldScale = scale;
+            console.log(`Current scale before mode switch: ${oldScale}`);
+            
+            // Save current zoom level before changing modes
+            saveZoomLevel();
+            
             // Short delay to allow loading indicator to appear
             setTimeout(() => {
                 // Toggle the mode
@@ -1476,6 +1504,14 @@ include $headerPath;
                 
                 // Load zoom level appropriate for the current mode
                 loadZoomLevel();
+                console.log(`Mode changed to: ${continuousScrollMode ? 'continuous' : 'single page'}, scale loaded: ${scale}`);
+                
+                // If no mode-specific zoom saved yet, use the previous zoom level from the other mode
+                if (scale === 1.0 && oldScale !== 1.0) {
+                    scale = oldScale;
+                    console.log(`Using previous zoom level: ${scale}`);
+                    saveZoomLevel(); // Save this zoom level for the current mode
+                }
                 
                 // Reset the view and render with new mode
                 resetView();
@@ -1650,6 +1686,12 @@ include $headerPath;
         // Initialize TOC close button
         closeTOCBtn.addEventListener('click', function() {
             tocSidebar.classList.remove('active');
+        });
+
+        // Add event listener to save state before unload
+        window.addEventListener('beforeunload', function() {
+            // Make sure zoom level is saved when leaving the page
+            saveZoomLevel();
         });
     });
 </script>
