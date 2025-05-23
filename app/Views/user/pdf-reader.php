@@ -232,9 +232,6 @@ include $headerPath;
                 const viewport = page.getViewport({ scale: 1.0 });
                 const pageWidth = viewport.width;
                 
-                // Set container width to accommodate the page width
-                pagesContainer.style.width = `${pageWidth * scale}px`;
-                
                 // Create placeholders for all pages
                 for (let i = 1; i <= pdfDoc.numPages; i++) {
                     const pageContainer = document.createElement('div');
@@ -247,8 +244,8 @@ include $headerPath;
                     const placeholderHeight = pageWidth * scale * aspectRatio;
                     
                     pageContainer.style.height = `${placeholderHeight}px`;
-                    pageContainer.style.width = '100%';
-                    pageContainer.style.position = 'relative';
+                    pageContainer.style.width = `${pageWidth * scale}px`;
+                    pageContainer.style.margin = '0 auto 20px auto';
                     
                     // Add page number indicator
                     const pageNumberIndicator = document.createElement('div');
@@ -398,16 +395,16 @@ include $headerPath;
                 canvas.style.width = Math.floor(viewport.width) + "px";
                 canvas.style.height = Math.floor(viewport.height) + "px";
                 
-                // Position canvas in page container
-                canvas.style.position = 'absolute';
-                canvas.style.top = '0';
-                canvas.style.left = '0';
+                // Position canvas in page container - no longer absolute positioning
+                canvas.style.position = 'relative';
+                canvas.style.margin = '0 auto';
                 
                 // Append canvas to page container
                 pageContainer.appendChild(canvas);
                 
                 // Adjust page container height to match actual page
                 pageContainer.style.height = Math.floor(viewport.height) + "px";
+                pageContainer.style.width = Math.floor(viewport.width) + "px";
                 
                 // Get context for rendering
                 const ctx = canvas.getContext('2d');
@@ -1001,9 +998,6 @@ include $headerPath;
                 const viewport = page.getViewport({ scale: 1.0 });
                 const pageWidth = viewport.width;
                 
-                // Resize the container
-                pagesContainer.style.width = `${pageWidth * scale}px`;
-                
                 // Clear all rendered pages
                 for (let i = 1; i <= pdfDoc.numPages; i++) {
                     const pageContainer = document.getElementById(`page-container-${i}`);
@@ -1011,7 +1005,10 @@ include $headerPath;
                         // Adjust container height based on aspect ratio
                         const aspectRatio = viewport.height / viewport.width;
                         const newHeight = pageWidth * scale * aspectRatio;
+                        
+                        // Set both height and width for proper centering
                         pageContainer.style.height = `${newHeight}px`;
+                        pageContainer.style.width = `${pageWidth * scale}px`;
                         
                         // Remove existing canvas
                         const existingCanvas = document.getElementById(`canvas-${i}`);
@@ -1225,6 +1222,7 @@ include $headerPath;
     align-items: flex-start;
     background-color: #444;
     padding-top: 20px;
+    width: 100%;
 }
 
 .pdf-page-container canvas {
@@ -1232,6 +1230,7 @@ include $headerPath;
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     transform: translateZ(0);
+    margin: 0 auto;
 }
 
 #errorMessage {
@@ -1513,6 +1512,7 @@ include $headerPath;
     padding: 20px;
     min-height: 100%;
     margin: 0 auto;
+    max-width: 100%;
 }
 
 .pdf-page-container {
@@ -1521,6 +1521,8 @@ include $headerPath;
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
     background-color: white;
     width: 100%;
+    display: flex;
+    justify-content: center;
 }
 
 .page-number-indicator {
