@@ -621,15 +621,7 @@ include $headerPath;
             if (mostVisiblePage) {
                 const newPageNum = parseInt(mostVisiblePage.dataset.pageIndex);
                 if (newPageNum !== pageNum) {
-                    pageNum = newPageNum;
-                    
-                    // Update UI elements
-                    pageNumDisplay.textContent = pageNum;
-                    pageNumMobileDisplay.textContent = pageNum;
-                    
-                    // Update progress
-                    updateProgressBar();
-                    saveProgress(pageNum);
+                    updateUIForCurrentPage(newPageNum);
                 }
             }
         }
@@ -727,7 +719,12 @@ include $headerPath;
             if (pageNum <= 1) return;
             
             pageNum--;
-            queueRenderPage(pageNum);
+            
+            if (continuousScrollMode) {
+                scrollToPageInContinuousMode(pageNum);
+            } else {
+                queueRenderPage(pageNum);
+            }
         }
         
         /**
@@ -737,7 +734,152 @@ include $headerPath;
             if (pageNum >= pdfDoc.numPages) return;
             
             pageNum++;
-            queueRenderPage(pageNum);
+            
+            if (continuousScrollMode) {
+                scrollToPageInContinuousMode(pageNum);
+            } else {
+                queueRenderPage(pageNum);
+            }
+        }
+        
+        /**
+         * Scroll to a specific page in continuous mode
+         */
+        function scrollToPageInContinuousMode(targetPageNum) {
+            // Find the wrapper for the target page
+            const targetWrapper = document.querySelector(`.page-wrapper[data-page-index="${targetPageNum}"]`);
+            const viewerContainer = document.getElementById('viewerContainer');
+            const continuousContainer = document.getElementById('continuousContainer');
+            
+            // If page isn't in DOM yet, we need to render it and nearby pages
+            if (!targetWrapper) {
+                // If target page is ahead of current page
+                if (targetPageNum > pageNum) {
+                    // Calculate page range to render
+                    const startPage = Math.max(1, pageNum);
+                    const endPage = Math.min(pdfDoc.numPages, targetPageNum + 2);
+                    
+                    // Render pages leading to target
+                    console.log(`Target page ${targetPageNum} not rendered yet, rendering pages ${startPage} to ${endPage}`);
+                    
+                    // Show loading indicator
+                    const loadingMessage = document.createElement('div');
+                    loadingMessage.className = 'continuous-loading jump-loading';
+                    loadingMessage.innerHTML = '<div class="spinner-sm"></div> Loading page...';
+                    continuousContainer.appendChild(loadingMessage);
+                    
+                    // Render pages sequentially until we reach target
+                    const renderSequential = (index) => {
+                        if (index > endPage) {
+                            // All pages rendered
+                            loadingMessage.remove();
+                            
+                            // Now try to scroll to the target page
+                            setTimeout(() => {
+                                const newTargetWrapper = document.querySelector(`.page-wrapper[data-page-index="${targetPageNum}"]`);
+                                if (newTargetWrapper) {
+                                    scrollToElement(newTargetWrapper);
+                                    
+                                    // Update UI elements
+                                    updateUIForCurrentPage(targetPageNum);
+                                }
+                            }, 100);
+                            
+                            return;
+                        }
+                        
+                        renderContinuousPage(index, continuousContainer).then(() => {
+                            renderSequential(index + 1);
+                        });
+                    };
+                    
+                    renderSequential(startPage);
+                    
+                } else { // If target page is before current page
+                    // Calculate page range to render
+                    const startPage = Math.max(1, targetPageNum - 2);
+                    const endPage = Math.min(pdfDoc.numPages, pageNum);
+                    
+                    // Render pages leading to target
+                    console.log(`Target page ${targetPageNum} not rendered yet, rendering pages ${startPage} to ${endPage}`);
+                    
+                    // Show loading indicator
+                    const loadingMessage = document.createElement('div');
+                    loadingMessage.className = 'continuous-loading jump-loading';
+                    loadingMessage.innerHTML = '<div class="spinner-sm"></div> Loading page...';
+                    continuousContainer.appendChild(loadingMessage);
+                    
+                    // Remember current scroll position and height
+                    const beforeHeight = continuousContainer.scrollHeight;
+                    const beforeScrollTop = viewerContainer.scrollTop;
+                    
+                    // Render pages sequentially until we reach target
+                    const renderSequential = (index) => {
+                        if (index > endPage) {
+                            // All pages rendered
+                            loadingMessage.remove();
+                            
+                            // Now try to scroll to the target page
+                            setTimeout(() => {
+                                const newTargetWrapper = document.querySelector(`.page-wrapper[data-page-index="${targetPageNum}"]`);
+                                if (newTargetWrapper) {
+                                    scrollToElement(newTargetWrapper);
+                                    
+                                    // Update UI elements
+                                    updateUIForCurrentPage(targetPageNum);
+                                }
+                            }, 100);
+                            
+                            return;
+                        }
+                        
+                        renderContinuousPage(index, continuousContainer, true).then(() => {
+                            // Adjust scroll position to maintain view when adding content at the top
+                            const afterHeight = continuousContainer.scrollHeight;
+                            const heightDiff = afterHeight - beforeHeight;
+                            if (heightDiff > 0 && index < targetPageNum) {
+                                viewerContainer.scrollTop = beforeScrollTop + heightDiff;
+                            }
+                            
+                            renderSequential(index + 1);
+                        });
+                    };
+                    
+                    renderSequential(startPage);
+                }
+            } else {
+                // If page is already in the DOM, just scroll to it
+                scrollToElement(targetWrapper);
+                
+                // Update UI elements
+                updateUIForCurrentPage(targetPageNum);
+            }
+        }
+        
+        /**
+         * Smooth scroll to an element
+         */
+        function scrollToElement(element) {
+            const viewerContainer = document.getElementById('viewerContainer');
+            
+            // Scroll with animation
+            viewerContainer.scrollTo({
+                top: element.offsetTop - viewerContainer.offsetTop,
+                behavior: 'smooth'
+            });
+        }
+        
+        /**
+         * Update UI elements to reflect the current page
+         */
+        function updateUIForCurrentPage(pageNumber) {
+            pageNum = pageNumber;
+            pageNumDisplay.textContent = pageNum;
+            pageNumMobileDisplay.textContent = pageNum;
+            
+            // Update progress
+            updateProgressBar();
+            saveProgress(pageNum);
         }
         
         /**
@@ -1484,6 +1626,14 @@ include $headerPath;
     border: 1px solid #f5c6cb;
     min-height: 200px;
     position: relative;
+}
+
+.jump-loading {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 @media (max-width: 767.98px) {
