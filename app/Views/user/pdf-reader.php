@@ -191,7 +191,7 @@ include $headerPath;
         /**
          * Render a specific page of the PDF
          */
-        function renderPage(num) {
+        function renderPage(num, scrollPosition = null) {
             pageRendering = true;
             
             // Update UI page numbers
@@ -255,9 +255,20 @@ include $headerPath;
                 renderTask.promise.then(function() {
                     pageRendering = false;
                     
+                    // Apply scroll position if specified
+                    const container = document.getElementById('viewerContainer');
+                    if (scrollPosition === 'top') {
+                        container.scrollTop = 0;
+                    } else if (scrollPosition === 'bottom') {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                    
                     // Check if there's a pending page
                     if (pageNumPending !== null) {
-                        renderPage(pageNumPending);
+                        // Capture the pending scroll position if available
+                        const pendingScroll = window.pendingScrollPosition;
+                        window.pendingScrollPosition = null;
+                        renderPage(pageNumPending, pendingScroll);
                         pageNumPending = null;
                     }
                 }).catch(function(error) {
@@ -281,7 +292,7 @@ include $headerPath;
             if (pageNum <= 1) return;
             
             pageNum--;
-            queueRenderPage(pageNum);
+            queueRenderPage(pageNum, 'bottom');
         }
         
         /**
@@ -291,17 +302,19 @@ include $headerPath;
             if (pageNum >= pdfDoc.numPages) return;
             
             pageNum++;
-            queueRenderPage(pageNum);
+            queueRenderPage(pageNum, 'top');
         }
         
         /**
          * Queue a page for rendering
          */
-        function queueRenderPage(num) {
+        function queueRenderPage(num, scrollPosition = null) {
             if (pageRendering) {
                 pageNumPending = num;
+                // Store the scroll position intention to apply after rendering
+                window.pendingScrollPosition = scrollPosition;
             } else {
-                renderPage(num);
+                renderPage(num, scrollPosition);
             }
         }
         
@@ -345,7 +358,7 @@ include $headerPath;
             scale += 0.1;
             saveZoomLevel();
             showZoomIndicator();
-            queueRenderPage(pageNum);
+            queueRenderPage(pageNum, null);
         }
         
         /**
@@ -356,7 +369,7 @@ include $headerPath;
             scale -= 0.1;
             saveZoomLevel();
             showZoomIndicator();
-            queueRenderPage(pageNum);
+            queueRenderPage(pageNum, null);
         }
         
         /**
@@ -437,7 +450,7 @@ include $headerPath;
             showMessage(message);
             
             // Re-render current page with new setting
-            queueRenderPage(pageNum);
+            queueRenderPage(pageNum, null);
         }
         
         /**
@@ -498,7 +511,7 @@ include $headerPath;
         // Handle window resize
         window.addEventListener('resize', function() {
             // Re-render current page to adjust to new size
-            queueRenderPage(pageNum);
+            queueRenderPage(pageNum, null);
         });
     });
 </script>
