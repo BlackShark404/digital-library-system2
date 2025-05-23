@@ -93,8 +93,8 @@ include $headerPath;
             <span id="zoomPercent">100%</span>
         </div>
 
-        <!-- PDF Canvas -->
-        <canvas id="pdfCanvas"></canvas>
+        <!-- PDF Container for continuous scrolling -->
+        <div id="pdfPagesContainer"></div>
     </div>
     
     <!-- Progress Bar -->
@@ -117,8 +117,8 @@ include $headerPath;
         const totalBookPages = <?= isset($session['b_pages']) ? intval($session['b_pages']) : 0 ?>;
         
         // UI Elements
-        const canvas = document.getElementById('pdfCanvas');
-        const ctx = canvas.getContext('2d');
+        const pdfPagesContainer = document.getElementById('pdfPagesContainer');
+        const viewerContainer = document.getElementById('viewerContainer');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
@@ -144,11 +144,14 @@ include $headerPath;
         
         // State variables
         let pdfDoc = null;
-        let pageNum = startPage;
+        let currentPage = startPage;
+        let pagesRendered = new Set();
         let pageRendering = false;
-        let pageNumPending = null;
         let scale = 1.0;
         let useAntialiasing = true; // Default state of antialiasing
+        let pageCanvases = [];
+        let pageObservers = [];
+        let visiblePages = new Set();
         
         // Initial element states
         errorMessage.style.display = 'none';
@@ -169,18 +172,27 @@ include $headerPath;
             pageCountMobileDisplay.textContent = numPages;
             
             // Check if the requested page is valid
-            if (pageNum > numPages) {
-                pageNum = 1;
+            if (currentPage > numPages) {
+                currentPage = 1;
             }
             
-            // Render the first page
-            renderPage(pageNum);
+            // Initialize page containers for all pages
+            setupPageContainers(numPages);
+            
+            // Initial render of visible pages
+            renderVisiblePages();
             
             // Hide loading spinner
             loadingSpinner.style.display = 'none';
             
-            // Update progress bar
+            // Scroll to starting page
+            scrollToPage(currentPage);
+            
+            // Update progress bar based on current scroll position
             updateProgressBar();
+            
+            // Set up intersection observers to detect visible pages
+            setupIntersectionObservers();
         }).catch(function(error) {
             console.error('Error loading PDF:', error);
             loadingSpinner.style.display = 'none';
@@ -189,41 +201,134 @@ include $headerPath;
         });
         
         /**
+         * Set up page containers for all pages
+         */
+        function setupPageContainers(numPages) {
+            pdfPagesContainer.innerHTML = '';
+            pageCanvases = [];
+            
+            for (let i = 1; i <= numPages; i++) {
+                const pageContainer = document.createElement('div');
+                pageContainer.className = 'pdf-page-container';
+                pageContainer.id = `page-container-${i}`;
+                pageContainer.dataset.pageNumber = i;
+                
+                const pageCanvas = document.createElement('canvas');
+                pageCanvas.className = 'pdf-page-canvas';
+                pageCanvas.id = `page-${i}`;
+                
+                const pageLabel = document.createElement('div');
+                pageLabel.className = 'pdf-page-label';
+                pageLabel.textContent = `Page ${i}`;
+                
+                pageContainer.appendChild(pageCanvas);
+                pageContainer.appendChild(pageLabel);
+                pdfPagesContainer.appendChild(pageContainer);
+                
+                pageCanvases.push({
+                    pageNum: i,
+                    canvas: pageCanvas,
+                    container: pageContainer,
+                    rendered: false
+                });
+            }
+        }
+        
+        /**
+         * Setup intersection observers to detect visible pages
+         */
+        function setupIntersectionObservers() {
+            // Disconnect any existing observers
+            pageObservers.forEach(observer => observer.disconnect());
+            pageObservers = [];
+            
+            const options = {
+                root: viewerContainer,
+                rootMargin: '100px 0px',
+                threshold: 0.1
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                let needsUpdate = false;
+                
+                entries.forEach(entry => {
+                    const pageNum = parseInt(entry.target.dataset.pageNumber);
+                    
+                    if (entry.isIntersecting) {
+                        visiblePages.add(pageNum);
+                        needsUpdate = true;
+                        
+                        // Update current page for navigation
+                        if (entry.intersectionRatio > 0.5) {
+                            updateCurrentPage(pageNum);
+                        }
+                    } else {
+                        visiblePages.delete(pageNum);
+                    }
+                });
+                
+                if (needsUpdate) {
+                    renderVisiblePages();
+                }
+                
+            }, options);
+            
+            // Observe all page containers
+            pageCanvases.forEach(page => {
+                observer.observe(page.container);
+            });
+            
+            pageObservers.push(observer);
+        }
+        
+        /**
+         * Render all currently visible pages
+         */
+        function renderVisiblePages() {
+            visiblePages.forEach(pageNum => {
+                if (!pagesRendered.has(pageNum)) {
+                    renderPage(pageNum);
+                }
+            });
+        }
+        
+        /**
          * Render a specific page of the PDF
          */
-        function renderPage(num) {
+        function renderPage(pageNum) {
+            if (pagesRendered.has(pageNum) || pageRendering) {
+                return Promise.resolve();
+            }
+            
             pageRendering = true;
             
-            // Update UI page numbers
-            pageNumDisplay.textContent = num;
-            pageNumMobileDisplay.textContent = num;
+            const pageInfo = pageCanvases.find(p => p.pageNum === pageNum);
+            if (!pageInfo) {
+                pageRendering = false;
+                return Promise.reject(new Error(`Page ${pageNum} not found`));
+            }
             
-            // Update progress bar
-            updateProgressBar();
-            
-            // Update reading progress on the server
-            saveProgress(num);
+            const canvas = pageInfo.canvas;
+            const ctx = canvas.getContext('2d');
             
             // Get the page
-            pdfDoc.getPage(num).then(function(page) {
+            return pdfDoc.getPage(pageNum).then(function(page) {
                 // Get device pixel ratio
                 const devicePixelRatio = window.devicePixelRatio || 1;
                 
-                // Adjust scale based on viewport
-                const viewportWidth = document.getElementById('viewerContainer').clientWidth - 20;
-                const viewportHeight = document.getElementById('viewerContainer').clientHeight - 20;
+                // Calculate viewport width based on container
+                const containerWidth = viewerContainer.clientWidth - 40; // Add some padding
                 
+                // Get viewport at scale 1
                 const originalViewport = page.getViewport({ scale: 1 });
                 
-                // Calculate scale to fit page within container
-                const widthScale = viewportWidth / originalViewport.width;
-                const heightScale = viewportHeight / originalViewport.height;
-                const fitScale = Math.min(widthScale, heightScale);
+                // Calculate scale to fit width
+                const scaleToFit = containerWidth / originalViewport.width;
                 
                 // Apply user scale on top of fit scale
-                const viewport = page.getViewport({ scale: fitScale * scale });
+                const viewport = page.getViewport({ scale: scaleToFit * scale });
                 
-                // Set canvas dimensions accounting for device pixel ratio for higher resolution
+                // Set canvas dimensions accounting for device pixel ratio
                 canvas.width = Math.floor(viewport.width * devicePixelRatio);
                 canvas.height = Math.floor(viewport.height * devicePixelRatio);
                 canvas.style.width = Math.floor(viewport.width) + "px";
@@ -240,69 +345,78 @@ include $headerPath;
                 // Scale context to ensure correct rendering
                 ctx.scale(devicePixelRatio, devicePixelRatio);
                 
-                // Render PDF page into canvas context with high quality settings
+                // Render PDF page into canvas context
                 const renderContext = {
                     canvasContext: ctx,
                     viewport: viewport,
                     enableWebGL: true,
-                    renderInteractiveForms: true,
-                    textLayer: true
+                    renderInteractiveForms: true
                 };
                 
-                const renderTask = page.render(renderContext);
-                
-                // Wait for rendering to finish
-                renderTask.promise.then(function() {
+                return page.render(renderContext).promise.then(() => {
+                    pagesRendered.add(pageNum);
+                    pageInfo.rendered = true;
                     pageRendering = false;
                     
-                    // Check if there's a pending page
-                    if (pageNumPending !== null) {
-                        renderPage(pageNumPending);
-                        pageNumPending = null;
+                    // Check if the rendered page is the current page for tracking
+                    if (pageNum === currentPage) {
+                        saveProgress(pageNum);
                     }
-                }).catch(function(error) {
-                    console.error('Error rendering page:', error);
-                    pageRendering = false;
-                    errorMessage.style.display = 'flex';
-                    errorText.textContent = 'Error rendering page: ' + error.message;
                 });
             }).catch(function(error) {
-                console.error('Error getting page:', error);
+                console.error(`Error rendering page ${pageNum}:`, error);
                 pageRendering = false;
-                errorMessage.style.display = 'flex';
-                errorText.textContent = 'Error getting page: ' + error.message;
+                return Promise.reject(error);
             });
+        }
+        
+        /**
+         * Update the current page based on visibility
+         */
+        function updateCurrentPage(pageNum) {
+            if (currentPage !== pageNum) {
+                currentPage = pageNum;
+                
+                // Update UI page numbers
+                pageNumDisplay.textContent = pageNum;
+                pageNumMobileDisplay.textContent = pageNum;
+                
+                // Update progress bar
+                updateProgressBar();
+                
+                // Save progress for this page
+                saveProgress(pageNum);
+            }
+        }
+        
+        /**
+         * Scroll to a specific page
+         */
+        function scrollToPage(pageNum) {
+            const pageContainer = document.getElementById(`page-container-${pageNum}`);
+            if (pageContainer) {
+                // Scroll the page into view with a smooth animation
+                pageContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Update current page
+                updateCurrentPage(pageNum);
+            }
         }
         
         /**
          * Display previous page
          */
         function showPrevPage() {
-            if (pageNum <= 1) return;
-            
-            pageNum--;
-            queueRenderPage(pageNum);
+            if (currentPage <= 1) return;
+            scrollToPage(currentPage - 1);
         }
         
         /**
          * Display next page
          */
         function showNextPage() {
-            if (pageNum >= pdfDoc.numPages) return;
-            
-            pageNum++;
-            queueRenderPage(pageNum);
-        }
-        
-        /**
-         * Queue a page for rendering
-         */
-        function queueRenderPage(num) {
-            if (pageRendering) {
-                pageNumPending = num;
-            } else {
-                renderPage(num);
-            }
+            if (currentPage >= pdfDoc.numPages) return;
+            scrollToPage(currentPage + 1);
         }
         
         /**
@@ -311,7 +425,7 @@ include $headerPath;
         function updateProgressBar() {
             if (!pdfDoc) return;
             
-            const progress = (pageNum / pdfDoc.numPages) * 100;
+            const progress = (currentPage / pdfDoc.numPages) * 100;
             progressIndicator.style.width = progress + '%';
         }
         
@@ -342,10 +456,8 @@ include $headerPath;
          */
         function zoomIn() {
             if (scale >= 3.0) return;
-            scale += 0.1;
-            saveZoomLevel();
-            showZoomIndicator();
-            queueRenderPage(pageNum);
+            scale += 0.2;
+            applyZoom();
         }
         
         /**
@@ -353,10 +465,28 @@ include $headerPath;
          */
         function zoomOut() {
             if (scale <= 0.5) return;
-            scale -= 0.1;
+            scale -= 0.2;
+            applyZoom();
+        }
+        
+        /**
+         * Apply zoom changes and re-render pages
+         */
+        function applyZoom() {
+            // Clear all rendered pages
+            pagesRendered.clear();
+            pageCanvases.forEach(page => {
+                page.rendered = false;
+            });
+            
+            // Save zoom level
             saveZoomLevel();
+            
+            // Show zoom indicator
             showZoomIndicator();
-            queueRenderPage(pageNum);
+            
+            // Re-render visible pages
+            renderVisiblePages();
         }
         
         /**
@@ -436,8 +566,12 @@ include $headerPath;
             const message = useAntialiasing ? 'Text smoothing: ON' : 'Text sharpening: ON';
             showMessage(message);
             
-            // Re-render current page with new setting
-            queueRenderPage(pageNum);
+            // Clear all rendered pages and re-render with new setting
+            pagesRendered.clear();
+            pageCanvases.forEach(page => {
+                page.rendered = false;
+            });
+            renderVisiblePages();
         }
         
         /**
@@ -488,17 +622,26 @@ include $headerPath;
         
         // Set up keyboard navigation
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowRight') {
+            if (e.key === 'ArrowRight' || e.key === 'PageDown') {
                 showNextPage();
-            } else if (e.key === 'ArrowLeft') {
+            } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
                 showPrevPage();
             }
         });
         
+        // Set up scroll event to track current page
+        viewerContainer.addEventListener('scroll', function() {
+            // This will be handled by Intersection Observer
+        });
+        
         // Handle window resize
         window.addEventListener('resize', function() {
-            // Re-render current page to adjust to new size
-            queueRenderPage(pageNum);
+            // Clear all rendered pages
+            pagesRendered.clear();
+            pageCanvases.forEach(page => {
+                page.rendered = false;
+            });
+            renderVisiblePages();
         });
     });
 </script>
@@ -647,65 +790,46 @@ include $headerPath;
 #viewerContainer {
     flex: 1;
     position: relative;
-    overflow: auto;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    overflow-y: auto;
+    overflow-x: hidden;
     background-color: #444;
-    padding-top: 20px;
 }
 
-#pdfCanvas {
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+#pdfPagesContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100%;
+}
+
+.pdf-page-container {
+    position: relative;
     margin-bottom: 20px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+    background-color: white;
+}
+
+.pdf-page-canvas {
+    display: block;
+    margin: 0 auto;
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     transform: translateZ(0);
 }
 
-#errorMessage {
+.pdf-page-label {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-}
-
-.error-content {
-    text-align: center;
-    color: #dc3545;
-}
-
-#loadingSpinner {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-}
-
-.spinner {
-    width: 3rem;
-    height: 3rem;
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-left-color: #007bff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    pointer-events: none;
 }
 
 .reading-progress-bar {
@@ -788,6 +912,51 @@ include $headerPath;
         height: 1.8rem;
         font-size: 0.9rem;
     }
+}
+
+#errorMessage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.error-content {
+    text-align: center;
+    color: #dc3545;
+}
+
+#loadingSpinner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>
 
