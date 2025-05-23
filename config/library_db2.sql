@@ -45,17 +45,21 @@ CREATE TABLE books (
     b_publisher          VARCHAR(255),
     b_publication_date   DATE,
     b_isbn               VARCHAR(20) UNIQUE,
-    b_genre_id           INT,
     b_pages              INTEGER,
     b_price              NUMERIC(10, 2),
     b_description        TEXT,
     b_created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     b_updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    b_deleted_at         TIMESTAMP DEFAULT NULL,
-
-    CONSTRAINT fk_book_genre FOREIGN KEY (b_genre_id) REFERENCES genre(g_id) ON DELETE SET NULL
+    b_deleted_at         TIMESTAMP DEFAULT NULL
 );
 
+CREATE TABLE book_genres (
+    book_id INT NOT NULL,
+    genre_id INT NOT NULL,
+    PRIMARY KEY (book_id, genre_id),
+    FOREIGN KEY (book_id) REFERENCES books(b_id) ON DELETE CASCADE,
+    FOREIGN KEY (genre_id) REFERENCES genre(g_id) ON DELETE CASCADE
+);
 
 -- Wishlist Table
 CREATE TABLE wishlist (
