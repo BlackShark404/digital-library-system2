@@ -126,7 +126,7 @@ class BookController extends BaseController
             'publisher' => $jsonData['publisher'] ?? null,
             'publication_date' => $jsonData['publication_date'] ?? null,
             'isbn' => $jsonData['isbn'] ?? null,
-            'genre_id' => $jsonData['genre_id'] ?? null,
+            'genres' => $jsonData['genres'] ?? [], // Now an array of genre IDs
             'pages' => $jsonData['pages'] ?? null,
             'price' => $jsonData['price'] ?? null,
             'description' => $jsonData['description'] ?? null
@@ -217,7 +217,7 @@ class BookController extends BaseController
             'publisher' => $jsonData['publisher'] ?? null,
             'publication_date' => $jsonData['publication_date'] ?? null,
             'isbn' => $jsonData['isbn'] ?? null,
-            'genre_id' => $jsonData['genre_id'] ?? null,
+            'genres' => $jsonData['genres'] ?? [], // Now an array of genre IDs
             'pages' => $jsonData['pages'] ?? null,
             'price' => $jsonData['price'] ?? null,
             'description' => $jsonData['description'] ?? null

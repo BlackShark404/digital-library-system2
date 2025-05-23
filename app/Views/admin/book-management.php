@@ -66,13 +66,13 @@ include $headerPath;
                             
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="genre_id" class="form-label">Genre</label>
-                                    <select class="form-select" id="genre_id" name="genre_id">
-                                        <option value="">Select Genre</option>
+                                    <label for="genres" class="form-label">Genres</label>
+                                    <select class="form-select" id="genres" name="genres[]" multiple>
                                         <?php foreach ($genres as $genre): ?>
                                             <option value="<?= $genre['g_id'] ?>"><?= $genre['g_name'] ?></option>
                                         <?php endforeach; ?>
                                     </select>
+                                    <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple genres</small>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="price" class="form-label">Price ($)</label>
@@ -164,7 +164,7 @@ include $headerPath;
                         
                         <div class="row mt-4">
                             <div class="col-md-6">
-                                <p><strong>Genre:</strong> <span id="viewGenre"></span></p>
+                                <p><strong>Genres:</strong> <span id="viewGenres"></span></p>
                                 <p><strong>Publisher:</strong> <span id="viewPublisher"></span></p>
                                 <p><strong>Publication Date:</strong> <span id="viewPublicationDate"></span></p>
                             </div>
@@ -594,7 +594,7 @@ include $headerPath;
                         $('#publisher').val(book.b_publisher);
                         $('#publication_date').val(book.b_publication_date ? book.b_publication_date.split(' ')[0] : '');
                         $('#isbn').val(book.b_isbn);
-                        $('#genre_id').val(book.b_genre_id);
+                        $('#genres').val(book.b_genre_ids);
                         $('#pages').val(book.b_pages);
                         $('#price').val(book.b_price);
                         $('#description').val(book.b_description);
@@ -632,46 +632,47 @@ include $headerPath;
             });
         }
         
-        // View Book Details
-        function viewBook(bookId) {
-            currentBookId = bookId;
-            
+        // Function to handle view book
+        function viewBook(id) {
             $.ajax({
-                url: `/api/books/${bookId}`,
-                method: 'GET',
+                url: `/api/books/${id}`,
+                type: 'GET',
+                dataType: 'json',
                 success: function(response) {
-                    if (response.success) {
-                        const book = response.data;
-                        
-                        // Populate view modal
-                        $('#viewTitle').text(book.b_title);
-                        $('#viewAuthor').text(book.b_author);
-                        $('#viewGenre').text(book.genre_name || book.genre || 'Uncategorized');
-                        $('#viewPublisher').text(book.b_publisher || 'N/A');
-                        $('#viewPublicationDate').text(book.b_publication_date ? formatDate(book.b_publication_date) : 'N/A');
-                        $('#viewIsbn').text(book.b_isbn || 'N/A');
-                        $('#viewPages').text(book.b_pages || 'N/A');
-                        $('#viewPrice').text(book.b_price ? `$${parseFloat(book.b_price).toFixed(2)}` : 'N/A');
-                        $('#viewDescription').text(book.b_description || 'No description available.');
-                        $('#viewCoverImage').attr('src', book.cover_url);
-                        
-                        // Handle file link
-                        if (book.file_url) {
-                            $('#viewFileLink').attr('href', book.file_url);
-                            $('#viewFileLink').html('<i class="bi bi-file-pdf"></i> View PDF');
-                            $('#viewFileSection').show();
-                        } else {
-                            $('#viewFileSection').hide();
-                        }
-                        
-                        // Show the modal
-                        $('#viewBookModal').modal('show');
+                    const book = response.data;
+                    
+                    // Populate view modal
+                    $('#viewCoverImage').attr('src', book.cover_url);
+                    $('#viewTitle').text(book.b_title);
+                    $('#viewAuthor').text(book.b_author);
+                    
+                    // Display genres as a comma-separated list
+                    const genres = book.genres.map(genre => genre.g_name).join(', ') || 'Uncategorized';
+                    $('#viewGenres').text(genres);
+                    
+                    $('#viewPublisher').text(book.b_publisher || 'N/A');
+                    $('#viewPublicationDate').text(book.b_publication_date ? formatDate(book.b_publication_date) : 'N/A');
+                    $('#viewIsbn').text(book.b_isbn || 'N/A');
+                    $('#viewPages').text(book.b_pages || 'N/A');
+                    $('#viewPrice').text(book.b_price ? '$' + parseFloat(book.b_price).toFixed(2) : 'N/A');
+                    $('#viewDescription').html(book.b_description ? book.b_description.replace(/\n/g, '<br>') : 'No description available.');
+                    
+                    // File download link
+                    if (book.file_url) {
+                        $('#viewFileSection').show();
+                        $('#viewFileLink').attr('href', book.file_url);
                     } else {
-                        showErrorAlert('Failed to load book data');
+                        $('#viewFileSection').hide();
                     }
+                    
+                    // Set data for edit button
+                    $('#editBookFromViewBtn').data('id', book.b_id);
+                    
+                    // Show the modal
+                    $('#viewBookModal').modal('show');
                 },
-                error: function() {
-                    showErrorAlert('Error loading book data');
+                error: function(xhr) {
+                    dataTable.showErrorToast('Error', 'Failed to load book details');
                 }
             });
         }
@@ -713,7 +714,7 @@ include $headerPath;
                 publisher: $('#publisher').val(),
                 publication_date: $('#publication_date').val(),
                 isbn: $('#isbn').val(),
-                genre_id: $('#genre_id').val(),
+                genres: $('#genres').val(),
                 pages: $('#pages').val() ? parseInt($('#pages').val()) : null,
                 price: $('#price').val(),
                 description: $('#description').val()
@@ -1083,8 +1084,8 @@ include $headerPath;
         
         // Function to update the genre dropdown in the book form
         function updateGenreDropdown(categories) {
-            const dropdown = $('#genre_id');
-            const currentValue = dropdown.val();
+            const dropdown = $('#genres');
+            const currentValues = dropdown.val();
             
             // Clear existing options except the placeholder
             dropdown.find('option:not(:first)').remove();
@@ -1094,9 +1095,9 @@ include $headerPath;
                 dropdown.append(`<option value="${category.g_id}">${escapeHtml(category.g_name)}</option>`);
             });
             
-            // Restore previously selected value if it still exists
-            if (currentValue) {
-                dropdown.val(currentValue);
+            // Restore previously selected values if they still exist
+            if (currentValues) {
+                dropdown.val(currentValues);
             }
         }
         
@@ -1105,6 +1106,15 @@ include $headerPath;
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Initialize multi-select for genres
+        if ($.fn.selectpicker) {
+            $('#genres').selectpicker({
+                actionsBox: true,
+                liveSearch: true,
+                selectedTextFormat: 'count > 2'
+            });
         }
     });
 </script>

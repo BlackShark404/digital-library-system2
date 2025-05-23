@@ -21,19 +21,25 @@ class BookModel extends BaseModel
     {
         $sql = "
             SELECT 
-                b.*, 
-                g.g_name as genre_name
+                b.*
             FROM 
                 {$this->table} b
-            LEFT JOIN 
-                genre g ON b.b_genre_id = g.g_id
             WHERE 
                 b.b_deleted_at IS NULL
             ORDER BY 
                 b.b_title ASC
         ";
         
-        return $this->query($sql);
+        $books = $this->query($sql);
+        
+        // Get genres for each book
+        foreach ($books as &$book) {
+            $book['genres'] = $this->getBookGenres($book['b_id']);
+            // Get first genre for compatibility with old code that expects a single genre
+            $book['genre_name'] = !empty($book['genres']) ? $book['genres'][0]['g_name'] : 'Uncategorized';
+        }
+        
+        return $books;
     }
     
     /**
@@ -46,18 +52,54 @@ class BookModel extends BaseModel
     {
         $sql = "
             SELECT 
-                b.*, 
-                g.g_name as genre_name
+                b.*
             FROM 
                 {$this->table} b
-            LEFT JOIN 
-                genre g ON b.b_genre_id = g.g_id
             WHERE 
                 b.{$this->primaryKey} = :id
                 AND b.b_deleted_at IS NULL
         ";
         
-        return $this->queryOne($sql, ['id' => $id]);
+        $book = $this->queryOne($sql, ['id' => $id]);
+        
+        if ($book) {
+            // Get genres for this book
+            $book['genres'] = $this->getBookGenres($id);
+            
+            // Get genre IDs for easy selection in multi-select
+            $book['b_genre_ids'] = array_map(function($genre) {
+                return $genre['g_id'];
+            }, $book['genres']);
+            
+            // For backward compatibility with single genre display
+            $book['genre_name'] = !empty($book['genres']) ? $book['genres'][0]['g_name'] : 'Uncategorized';
+        }
+        
+        return $book;
+    }
+    
+    /**
+     * Get all genres for a specific book
+     *
+     * @param int $bookId
+     * @return array Array of genres
+     */
+    public function getBookGenres($bookId)
+    {
+        $sql = "
+            SELECT 
+                g.g_id, g.g_name
+            FROM 
+                book_genres bg
+            JOIN 
+                genre g ON bg.genre_id = g.g_id
+            WHERE 
+                bg.book_id = :book_id
+            ORDER BY
+                g.g_name ASC
+        ";
+        
+        return $this->query($sql, ['book_id' => $bookId]);
     }
     
     /**
@@ -82,12 +124,12 @@ class BookModel extends BaseModel
             $publisher = $data['publisher'] ?? '';
             $publicationDate = !empty($data['publication_date']) ? $data['publication_date'] : null;
             $isbn = $data['isbn'] ?? '';
-            $genreId = !empty($data['genre_id']) ? $data['genre_id'] : null;
             $pages = !empty($data['pages']) ? (int)$data['pages'] : null;
             $price = isset($data['price']) && $data['price'] !== '' ? (float)$data['price'] : 0.00;
             $description = $data['description'] ?? '';
             $coverPath = $data['cover_path'] ?? null;
             $filePath = $data['file_path'] ?? null;
+            $genres = $data['genres'] ?? [];
             
             // Prepare SQL
             $sql = "
@@ -97,7 +139,6 @@ class BookModel extends BaseModel
                     b_publisher, 
                     b_publication_date, 
                     b_isbn, 
-                    b_genre_id, 
                     b_pages, 
                     b_price, 
                     b_description, 
@@ -111,7 +152,6 @@ class BookModel extends BaseModel
                     :publisher, 
                     :publication_date, 
                     :isbn, 
-                    :genre_id, 
                     :pages, 
                     :price, 
                     :description, 
@@ -129,7 +169,6 @@ class BookModel extends BaseModel
                 'publisher' => $publisher,
                 'publication_date' => $publicationDate,
                 'isbn' => $isbn,
-                'genre_id' => $genreId,
                 'pages' => $pages,
                 'price' => $price,
                 'description' => $description,
@@ -138,6 +177,11 @@ class BookModel extends BaseModel
             ]);
             
             $bookId = $this->lastInsertId();
+            
+            // Insert book genres
+            if (!empty($genres)) {
+                $this->saveBookGenres($bookId, $genres);
+            }
             
             $this->commit();
             return $bookId;
@@ -171,12 +215,12 @@ class BookModel extends BaseModel
             $publisher = $data['publisher'] ?? null;
             $publicationDate = !empty($data['publication_date']) ? $data['publication_date'] : null;
             $isbn = $data['isbn'] ?? null;
-            $genreId = !empty($data['genre_id']) ? $data['genre_id'] : null;
             $pages = !empty($data['pages']) ? (int)$data['pages'] : null;
             $price = isset($data['price']) && $data['price'] !== '' ? (float)$data['price'] : 0.00;
             $description = $data['description'] ?? null;
             $coverPath = $data['cover_path'] ?? null;
             $filePath = $data['file_path'] ?? null;
+            $genres = $data['genres'] ?? [];
             
             // Build update fields dynamically
             $fields = [];
@@ -187,7 +231,6 @@ class BookModel extends BaseModel
             if ($publisher !== null) { $fields[] = "b_publisher = :publisher"; $params['publisher'] = $publisher; }
             if ($publicationDate !== null) { $fields[] = "b_publication_date = :publication_date"; $params['publication_date'] = $publicationDate; }
             if ($isbn !== null) { $fields[] = "b_isbn = :isbn"; $params['isbn'] = $isbn; }
-            if ($genreId !== null) { $fields[] = "b_genre_id = :genre_id"; $params['genre_id'] = $genreId; }
             if ($pages !== null) { $fields[] = "b_pages = :pages"; $params['pages'] = $pages; }
             if ($price !== null) { $fields[] = "b_price = :price"; $params['price'] = $price; }
             if ($description !== null) { $fields[] = "b_description = :description"; $params['description'] = $description; }
@@ -203,11 +246,60 @@ class BookModel extends BaseModel
                 $this->execute($sql, $params);
             }
             
+            // Update book genres
+            $this->saveBookGenres($id, $genres, true); // true to delete existing relations
+            
             $this->commit();
             return true;
         } catch (\Exception $e) {
             $this->rollBack();
             error_log("Error updating book: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Save book genres relationship
+     *
+     * @param int $bookId
+     * @param array $genreIds
+     * @param bool $deleteExisting Whether to delete existing genre relationships
+     * @return bool
+     */
+    private function saveBookGenres($bookId, $genreIds, $deleteExisting = false)
+    {
+        try {
+            // Delete existing relationships if required
+            if ($deleteExisting) {
+                $deleteSql = "DELETE FROM book_genres WHERE book_id = :book_id";
+                $this->execute($deleteSql, ['book_id' => $bookId]);
+            }
+            
+            // Insert new relationships
+            if (!empty($genreIds)) {
+                $insertValues = [];
+                $insertParams = [];
+                
+                foreach ($genreIds as $index => $genreId) {
+                    if (empty($genreId)) continue;
+                    
+                    $bookKey = 'book' . $index;
+                    $genreKey = 'genre' . $index;
+                    
+                    $insertValues[] = "(:$bookKey, :$genreKey)";
+                    $insertParams[$bookKey] = $bookId;
+                    $insertParams[$genreKey] = $genreId;
+                }
+                
+                if (!empty($insertValues)) {
+                    $insertSql = "INSERT INTO book_genres (book_id, genre_id) VALUES " . implode(', ', $insertValues);
+                    $this->execute($insertSql, $insertParams);
+                }
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            error_log("Error saving book genres: " . $e->getMessage());
             return false;
         }
     }
