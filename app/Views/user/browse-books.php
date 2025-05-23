@@ -84,11 +84,15 @@ include $headerPath;
                                         by <?php echo htmlspecialchars($book['author']); ?>
                                     </p>
                                     <p class="card-text mb-2">
-                                        <span class="badge bg-secondary"><?php echo htmlspecialchars($book['genre']); ?></span>
+                                        <?php if (!empty($book['genres'])): ?>
+                                            <?php foreach ($book['genres'] as $genre): ?>
+                                                <span class="badge bg-secondary me-1"><?php echo htmlspecialchars($genre['name']); ?></span>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Uncategorized</span>
+                                        <?php endif; ?>
                                     </p>
-                                    <p class="card-text small text-truncate" title="<?php echo htmlspecialchars($book['description']); ?>">
-                                        <?php echo htmlspecialchars($book['description']); ?>
-                                    </p>
+                                    <p class="card-text small text-truncate" title="<?php echo htmlspecialchars($book['description']); ?>"><?php echo htmlspecialchars($book['description']); ?></p>
                                 </div>
                                 <div class="card-footer d-flex justify-content-between align-items-center">
                                     <span class="fw-bold">
@@ -267,7 +271,22 @@ include $headerPath;
                         document.getElementById('modalCoverImage').src = book.cover_url;
                         document.getElementById('modalTitle').textContent = book.b_title;
                         document.getElementById('modalAuthor').textContent = `by ${book.b_author}`;
-                        document.getElementById('modalGenre').textContent = book.genre_name || book.genre || 'Uncategorized';
+                        
+                        // Handle genres - display multiple badges
+                        const genreContainer = document.getElementById('modalGenre');
+                        genreContainer.innerHTML = '';
+                        
+                        if (book.genres && book.genres.length > 0) {
+                            book.genres.forEach(genre => {
+                                const badge = document.createElement('span');
+                                badge.className = 'badge bg-secondary me-1';
+                                badge.textContent = genre.g_name;
+                                genreContainer.appendChild(badge);
+                            });
+                        } else {
+                            genreContainer.textContent = book.genre_name || 'Uncategorized';
+                        }
+                        
                         document.getElementById('modalPublisher').textContent = book.b_publisher || 'N/A';
                         document.getElementById('modalPublicationDate').textContent = book.b_publication_date || 'N/A';
                         document.getElementById('modalIsbn').textContent = book.b_isbn || 'N/A';

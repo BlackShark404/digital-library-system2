@@ -92,6 +92,20 @@ class BookController extends BaseController
             ? '/assets/books/' . $book['b_file_path'] 
             : '';
         
+        // Ensure genres are properly formatted for the frontend
+        if (isset($book['genres']) && is_array($book['genres'])) {
+            // Keep the existing genres information as is
+        } else {
+            // Create a fallback if genres aren't set
+            $book['genres'] = [];
+            if (!empty($book['genre_name'])) {
+                $book['genres'][] = [
+                    'g_id' => 0,
+                    'g_name' => $book['genre_name']
+                ];
+            }
+        }
+        
         $this->jsonSuccess($book);
     }
     

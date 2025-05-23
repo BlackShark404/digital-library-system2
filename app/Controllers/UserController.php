@@ -390,11 +390,29 @@ class UserController extends BaseController{
                 ? '/assets/images/book-cover/' . $book['b_cover_path'] 
                 : '/assets/images/book-cover/default-cover.svg';
             
+            // Process genres properly for multiple genres
+            $genres = [];
+            if (isset($book['genres']) && is_array($book['genres'])) {
+                foreach ($book['genres'] as $genre) {
+                    $genres[] = [
+                        'id' => $genre['g_id'],
+                        'name' => $genre['g_name']
+                    ];
+                }
+            } else if (isset($book['genre_name'])) {
+                // Fallback to single genre if that's all we have
+                $genres[] = [
+                    'id' => 0,
+                    'name' => $book['genre_name']
+                ];
+            }
+            
             $formatted[] = [
                 'id' => $book['b_id'],
                 'title' => $book['b_title'],
                 'author' => $book['b_author'],
-                'genre' => $book['genre_name'] ?? 'Uncategorized',
+                'genres' => $genres,
+                'genre' => $book['genre_name'] ?? 'Uncategorized', // Keep this for backward compatibility
                 'description' => $book['b_description'] ?? '',
                 'cover_image' => $coverPath,
                 'price' => (float)$book['b_price'],
