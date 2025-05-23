@@ -191,7 +191,7 @@ include $headerPath;
         /**
          * Render a specific page of the PDF
          */
-        function renderPage(num) {
+        function renderPage(num, scrollToBottom = false) {
             pageRendering = true;
             
             // Update UI page numbers
@@ -210,8 +210,9 @@ include $headerPath;
                 const devicePixelRatio = window.devicePixelRatio || 1;
                 
                 // Adjust scale based on viewport
-                const viewportWidth = document.getElementById('viewerContainer').clientWidth - 20;
-                const viewportHeight = document.getElementById('viewerContainer').clientHeight - 20;
+                const viewerContainer = document.getElementById('viewerContainer');
+                const viewportWidth = viewerContainer.clientWidth - 20;
+                const viewportHeight = viewerContainer.clientHeight - 20;
                 
                 const originalViewport = page.getViewport({ scale: 1 });
                 
@@ -251,89 +252,105 @@ include $headerPath;
                 
                 const renderTask = page.render(renderContext);
                 
-                // Wait for rendering to finish
                 renderTask.promise.then(function() {
                     pageRendering = false;
-                    
-                    // Check if there's a pending page
                     if (pageNumPending !== null) {
                         renderPage(pageNumPending);
                         pageNumPending = null;
                     }
-                }).catch(function(error) {
-                    console.error('Error rendering page:', error);
-                    pageRendering = false;
-                    errorMessage.style.display = 'flex';
-                    errorText.textContent = 'Error rendering page: ' + error.message;
+                    // Scroll after rendering
+                    if (scrollToBottom) {
+                        viewerContainer.scrollTop = viewerContainer.scrollHeight;
+                    } else {
+                        viewerContainer.scrollTop = 0;
+                    }
                 });
-            }).catch(function(error) {
-                console.error('Error getting page:', error);
-                pageRendering = false;
-                errorMessage.style.display = 'flex';
-                errorText.textContent = 'Error getting page: ' + error.message;
             });
         }
         
         /**
-         * Display previous page
+         * If another page rendering in progress, waits until the rendering is
+         * finised. Otherwise, renders the page.
          */
-        function showPrevPage() {
-            if (pageNum <= 1) return;
-            
-            pageNum--;
-            queueRenderPage(pageNum);
-        }
-        
-        /**
-         * Display next page
-         */
-        function showNextPage() {
-            if (pageNum >= pdfDoc.numPages) return;
-            
-            pageNum++;
-            queueRenderPage(pageNum);
-        }
-        
-        /**
-         * Queue a page for rendering
-         */
-        function queueRenderPage(num) {
+        function queueRenderPage(num, scrollToBottom = false) {
             if (pageRendering) {
                 pageNumPending = num;
             } else {
-                renderPage(num);
+                renderPage(num, scrollToBottom);
             }
+        }
+        
+        /**
+         * Displays previous page.
+         */
+        function onPrevPage() {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            queueRenderPage(pageNum, true); // Scroll to bottom for previous page
+        }
+        
+        /**
+         * Displays next page.
+         */
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            queueRenderPage(pageNum, false); // Scroll to top for next page
         }
         
         /**
          * Update the progress bar
          */
         function updateProgressBar() {
-            if (!pdfDoc) return;
-            
-            const progress = (pageNum / pdfDoc.numPages) * 100;
-            progressIndicator.style.width = progress + '%';
+            if (pdfDoc) {
+                const progress = (pageNum / pdfDoc.numPages) * 100;
+                progressIndicator.style.width = progress + '%';
+            }
         }
         
         /**
-         * Save reading progress to the server
+         * Saves reading progress via AJAX
          */
-        function saveProgress(page) {
-            fetch('/reading-session/update-progress', {
+        function saveProgress(currentPage) {
+            // Check if session ID or book ID are missing
+            if (!sessionId || !bookId) {
+                console.warn("Session ID or Book ID is missing. Cannot save progress.");
+                return;
+            }
+            
+            const data = new FormData();
+            data.append('rs_id', sessionId);
+            data.append('b_id', bookId);
+            data.append('current_page', currentPage);
+            data.append('total_pages', pdfDoc ? pdfDoc.numPages : totalBookPages);
+
+            fetch('/reading-session/progress', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    current_page: page,
-                    is_completed: page === pdfDoc.numPages
-                })
+                body: data
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    // If the response status is not OK (e.g., 400, 500), throw an error to be caught by the .catch block
+                    return response.json().then(err => { throw new Error(err.message || 'Failed to save progress. Server returned an error.'); });
+                }
+                return response.json(); // Assuming the server returns JSON
+            })
+            .then(data => {
+                if (data.status !== 'success') {
+                    // If the application-level status indicates failure, log it or handle appropriately
+                    console.warn('Failed to save progress:', data.message || 'Unknown error from server.');
+                } else {
+                    // Progress saved successfully
+                    // console.log('Progress saved:', data); // Optional: log success
+                }
+            })
             .catch(error => {
-                console.error('Error saving reading progress:', error);
+                // This catches network errors or errors thrown from the .then block (e.g., from response.json() or explicit throw)
+                console.error('Error saving progress:', error);
             });
         }
         
@@ -472,11 +489,20 @@ include $headerPath;
             }, 1500);
         }
         
-        // Event listeners for navigation
-        prevBtn.addEventListener('click', showPrevPage);
-        nextBtn.addEventListener('click', showNextPage);
-        prevBtnMobile.addEventListener('click', showPrevPage);
-        nextBtnMobile.addEventListener('click', showNextPage);
+        // Attach event listeners
+        prevBtn.addEventListener('click', onPrevPage);
+        nextBtn.addEventListener('click', onNextPage);
+        prevBtnMobile.addEventListener('click', onPrevPage);
+        nextBtnMobile.addEventListener('click', onNextPage);
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') {
+                onPrevPage();
+            } else if (event.key === 'ArrowRight') {
+                onNextPage();
+            }
+        });
         
         // Event listeners for zoom
         zoomInBtn.addEventListener('click', zoomIn);
@@ -485,15 +511,6 @@ include $headerPath;
         
         // Event listener for antialiasing toggle
         antialiasingBtn.addEventListener('click', toggleAntialiasing);
-        
-        // Set up keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowRight') {
-                showNextPage();
-            } else if (e.key === 'ArrowLeft') {
-                showPrevPage();
-            }
-        });
         
         // Handle window resize
         window.addEventListener('resize', function() {

@@ -248,14 +248,14 @@ class ReadingSessionModel extends BaseModel
                     rs_id = :session_id
             ";
             
-            $this->execute($sql, [
+            $rowCount = $this->execute($sql, [
                 'current_page' => $currentPage,
                 'is_completed' => $isCompleted ? 1 : 0,
                 'session_id' => $sessionId
             ]);
             
             // If record was not found, insert a new one
-            if ($this->pdo->rowCount() === 0) {
+            if ($rowCount === 0) {
                 $insertSql = "
                     INSERT INTO {$this->progressTable} (rs_id, current_page, is_completed, last_updated)
                     VALUES (:session_id, :current_page, :is_completed, CURRENT_TIMESTAMP)
