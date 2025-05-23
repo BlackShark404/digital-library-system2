@@ -785,9 +785,34 @@ include $headerPath;
             if (tocVisible) {
                 tocSidebar.classList.add('visible');
                 document.body.classList.add('toc-is-visible');
+                
+                // Add click outside listener after a short delay to prevent immediate closing
+                setTimeout(() => {
+                    document.addEventListener('click', handleOutsideClick);
+                }, 10);
             } else {
                 tocSidebar.classList.remove('visible');
                 document.body.classList.remove('toc-is-visible');
+                
+                // Remove click outside listener
+                document.removeEventListener('click', handleOutsideClick);
+            }
+        }
+        
+        /**
+         * Handle clicks outside the TOC sidebar to close it
+         */
+        function handleOutsideClick(event) {
+            const tocSidebar = document.getElementById('tocSidebar');
+            const tocToggleBtn = document.getElementById('toggleToc');
+            
+            // Check if click is outside TOC sidebar and not on the toggle button
+            if (tocVisible && 
+                !tocSidebar.contains(event.target) && 
+                event.target !== tocToggleBtn && 
+                !tocToggleBtn.contains(event.target)) {
+                
+                toggleTableOfContents(false);
             }
         }
         
