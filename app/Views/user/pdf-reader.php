@@ -291,6 +291,9 @@ include $headerPath;
                         container.scrollTop = container.scrollHeight;
                     }
                     
+                    // Update TOC highlighting after page is completely rendered
+                    highlightCurrentTocItem(num);
+                    
                     // Check if there's a pending page
                     if (pageNumPending !== null) {
                         // Capture the pending scroll position if available
@@ -321,6 +324,9 @@ include $headerPath;
             
             pageNum--;
             queueRenderPage(pageNum, 'bottom');
+            
+            // Update TOC highlight
+            highlightCurrentTocItem(pageNum);
         }
         
         /**
@@ -331,6 +337,9 @@ include $headerPath;
             
             pageNum++;
             queueRenderPage(pageNum, 'top');
+            
+            // Update TOC highlight
+            highlightCurrentTocItem(pageNum);
         }
         
         /**
@@ -537,13 +546,41 @@ include $headerPath;
                     return;
                 }
                 
+                // Store TOC data for later use
+                window.tocData = processOutlineItems(outline);
+                
                 // Render TOC items
                 renderTocItems(outline, tocList);
+                
+                // Highlight current TOC item based on initial page
+                highlightCurrentTocItem(pageNum);
             }).catch(function(error) {
                 console.error('Error loading table of contents:', error);
                 loadingToc.style.display = 'none';
                 tocEmpty.style.display = 'flex';
             });
+        }
+        
+        /**
+         * Process outline items to extract page destinations
+         */
+        function processOutlineItems(items, result = []) {
+            items.forEach(function(item) {
+                if (item.dest) {
+                    result.push({
+                        title: item.title,
+                        dest: item.dest,
+                        pageNum: null,  // Will be resolved later
+                        element: null   // Will be set when rendered
+                    });
+                }
+                
+                if (item.items && item.items.length > 0) {
+                    processOutlineItems(item.items, result);
+                }
+            });
+            
+            return result;
         }
         
         /**
@@ -557,7 +594,16 @@ include $headerPath;
                 const link = document.createElement('a');
                 link.textContent = item.title;
                 link.href = '#';
+                link.dataset.title = item.title;
                 link.style.paddingLeft = (level * 15) + 'px';
+                
+                // Store reference to this element in tocData
+                if (window.tocData) {
+                    const tocItem = window.tocData.find(entry => entry.title === item.title);
+                    if (tocItem) {
+                        tocItem.element = link;
+                    }
+                }
                 
                 // Handle click event to navigate to the destination
                 link.addEventListener('click', function(e) {
@@ -628,9 +674,102 @@ include $headerPath;
                 
                 // Update any UI elements as needed
                 updateProgressBar();
+                highlightCurrentTocItem(targetPage);
             }).catch(function(error) {
                 console.error('Error navigating to destination:', error);
             });
+        }
+        
+        /**
+         * Highlight the TOC item that corresponds to the current page
+         */
+        function highlightCurrentTocItem(currentPage) {
+            if (!window.tocData || window.tocData.length === 0) return;
+            
+            // Clear all current highlights
+            document.querySelectorAll('.toc-item a').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // If page destinations aren't resolved yet, resolve them
+            const unresolvedItems = window.tocData.filter(item => item.pageNum === null);
+            if (unresolvedItems.length > 0) {
+                resolveAllTocPageNumbers().then(() => {
+                    setActiveItemBasedOnPage(currentPage);
+                }).catch(error => {
+                    console.error('Error resolving TOC destinations:', error);
+                });
+            } else {
+                // Page numbers already resolved, find the active item
+                setActiveItemBasedOnPage(currentPage);
+            }
+        }
+        
+        /**
+         * Resolve all TOC item destinations to page numbers
+         */
+        function resolveAllTocPageNumbers() {
+            const promises = window.tocData.map(item => {
+                if (item.pageNum !== null) return Promise.resolve();
+                
+                return new Promise((resolve, reject) => {
+                    if (typeof item.dest === 'string') {
+                        // Named destination
+                        pdfDoc.getDestination(item.dest).then(destination => {
+                            if (destination && Array.isArray(destination) && destination.length > 0) {
+                                const pageRef = destination[0];
+                                return pdfDoc.getPageIndex(pageRef);
+                            }
+                            return Promise.reject('Invalid destination');
+                        }).then(pageIndex => {
+                            item.pageNum = pageIndex + 1;  // Convert zero-based to one-based
+                            resolve();
+                        }).catch(reject);
+                    } else if (Array.isArray(item.dest) && item.dest.length > 0) {
+                        // Explicit destination
+                        const pageRef = item.dest[0];
+                        pdfDoc.getPageIndex(pageRef).then(pageIndex => {
+                            item.pageNum = pageIndex + 1;  // Convert zero-based to one-based
+                            resolve();
+                        }).catch(reject);
+                    } else {
+                        reject('Unsupported destination format');
+                    }
+                });
+            });
+            
+            return Promise.all(promises);
+        }
+        
+        /**
+         * Set the active TOC item based on current page
+         */
+        function setActiveItemBasedOnPage(currentPage) {
+            if (!window.tocData || window.tocData.length === 0) return;
+            
+            // Find the closest TOC item that's before or at the current page
+            let activeItem = null;
+            let closestPageDiff = Number.MAX_SAFE_INTEGER;
+            
+            window.tocData.forEach(item => {
+                if (item.pageNum === null || !item.element) return;
+                
+                if (item.pageNum <= currentPage) {
+                    const diff = currentPage - item.pageNum;
+                    if (diff < closestPageDiff) {
+                        closestPageDiff = diff;
+                        activeItem = item;
+                    }
+                }
+            });
+            
+            // Highlight the active item
+            if (activeItem && activeItem.element) {
+                activeItem.element.classList.add('active');
+                
+                // Scroll the active item into view if it's not visible
+                activeItem.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
         
         /**
@@ -1053,6 +1192,13 @@ include $headerPath;
 .toc-item a:hover {
     background-color: #f8f9fa;
     border-left-color: #007bff;
+}
+
+.toc-item a.active {
+    background-color: #e9f2ff;
+    border-left-color: #007bff;
+    font-weight: 500;
+    color: #007bff;
 }
 
 .nested-toc {
