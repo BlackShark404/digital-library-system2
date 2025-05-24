@@ -18,32 +18,28 @@ include $headerPath;
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <h5 class="card-title mb-3">Filter Purchases</h5>
-            <form id="filter-form" class="row g-3">
+            <div id="filter-form" class="row g-3">
                 <div class="col-md-4">
                     <label for="search" class="form-label">Search</label>
-                    <input type="text" class="form-control" id="search" name="search" placeholder="Book title, author, or user" value="<?= $filters['search'] ?? '' ?>">
-                </div>
-                <div class="col-md-3">
-                    <label for="date_from" class="form-label">Date From</label>
-                    <input type="date" class="form-control" id="date_from" name="date_from" value="<?= $filters['date_from'] ?? '' ?>">
-                </div>
-                <div class="col-md-3">
-                    <label for="date_to" class="form-label">Date To</label>
-                    <input type="date" class="form-control" id="date_to" name="date_to" value="<?= $filters['date_to'] ?? '' ?>">
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <div class="d-grid gap-2 w-100">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search me-1"></i> Filter
-                        </button>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control filter-input" id="search" name="search" placeholder="Book title, author, or user" value="<?= $filters['search'] ?? '' ?>">
                     </div>
+                </div>
+                <div class="col-md-4">
+                    <label for="date_from" class="form-label">Date From</label>
+                    <input type="date" class="form-control filter-input" id="date_from" name="date_from" value="<?= $filters['date_from'] ?? '' ?>">
+                </div>
+                <div class="col-md-4">
+                    <label for="date_to" class="form-label">Date To</label>
+                    <input type="date" class="form-control filter-input" id="date_to" name="date_to" value="<?= $filters['date_to'] ?? '' ?>">
                 </div>
                 <div class="col-12">
                     <button type="button" id="reset-filter" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle me-1"></i> Reset
+                        <i class="bi bi-x-circle me-1"></i> Reset Filters
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -292,28 +288,46 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 100); // Short delay helps ensure the DOM is ready
     
-    // Handle filter form submission
-    document.getElementById('filter-form').addEventListener('submit', function(e) {
-        e.preventDefault();
+    // Handle dynamic filtering when input values change
+    const filterInputs = document.querySelectorAll('.filter-input');
+    let filterDebounceTimer;
+    
+    filterInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            // Clear previous timer
+            clearTimeout(filterDebounceTimer);
+            
+            // Set a debounce timeout to avoid too many requests
+            filterDebounceTimer = setTimeout(function() {
+                applyFilters();
+            }, 500); // Wait 500ms after user stops typing
+        });
         
-        // Get form data
-        const formData = new FormData(this);
+        // Also apply immediately for date inputs on change
+        if (input.type === 'date') {
+            input.addEventListener('change', function() {
+                applyFilters();
+            });
+        }
+    });
+    
+    function applyFilters() {
         const queryParams = new URLSearchParams();
         
-        // Add form fields to query params
-        for (const [key, value] of formData.entries()) {
-            if (value.trim() !== '') {
-                queryParams.append(key, value);
+        // Get values from all filter inputs
+        filterInputs.forEach(input => {
+            if (input.value.trim() !== '') {
+                queryParams.append(input.name, input.value.trim());
             }
-        }
+        });
         
-        // Redirect to the page with query params
+        // Redirect to filtered page
         if (queryParams.toString()) {
             window.location.href = '/admin/purchases?' + queryParams.toString();
         } else {
             window.location.href = '/admin/purchases';
         }
-    });
+    }
     
     // Reset filter
     document.getElementById('reset-filter').addEventListener('click', function() {
