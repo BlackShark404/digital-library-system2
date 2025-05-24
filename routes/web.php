@@ -188,3 +188,4 @@ $router->map('GET', '/view', 'App\Controllers\TestController#viewData', 'view-da
 $router->map('GET', '/user-data', 'App\Controllers\TestController#showUser', 'test-modal');
 $router->map('GET', '/paginate', 'App\Controllers\TestController#paginateUsers', 'paginate-test');
 $router->map('GET', '/datable', 'App\Controllers\TestController#renderDatableTest', 'datable-test');
+$router->map('GET', '/test-image-upload', 'App\Controllers\TestController#testImageUpload', 'test-image-upload');

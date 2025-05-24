@@ -67,66 +67,104 @@ class ProfileController extends BaseController {
         }
         
         try {
-            // Initialize CloudinaryService
-            $cloudinary = new CloudinaryService;
+            // Define upload directory path
+            $uploadDir = dirname(dirname(__DIR__)) . '/public/assets/images/profile-pics/';
             
-            // Check if user has an existing custom profile image (not a default avatar)
-            $currentProfileUrl = $user['ua_profile_url'] ?? '';
-            $isDefaultAvatar = $this->isDefaultAvatar($currentProfileUrl);
-            
-            // Define a consistent public ID for the user's profile picture
-            $publicId = 'user_' . $userId . '_profile';
-            
-            // If the user has an existing Cloudinary image, delete it first
-            if (!$isDefaultAvatar && strpos($currentProfileUrl, 'cloudinary.com') !== false) {
-                try {
-                    // Extract public ID from existing URL
-                    // Typical Cloudinary URL format: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/public_id.ext
-                    $urlParts = parse_url($currentProfileUrl);
-                    if (isset($urlParts['path'])) {
-                        $pathParts = explode('/', $urlParts['path']);
-                        // Remove empty elements and get the relevant parts
-                        $pathParts = array_filter($pathParts);
-                        
-                        // If we found a path that looks like a Cloudinary URL
-                        if (count($pathParts) >= 5) {
-                            // The public ID is typically the last part without the extension
-                            $oldPublicId = pathinfo(end($pathParts), PATHINFO_FILENAME);
-                            $folderPath = prev($pathParts); // Get the folder name
-                            
-                            // Combine folder and file name to create the full public ID
-                            $oldFullPublicId = $folderPath . '/' . $oldPublicId;
-                            
-                            // Delete the old image
-                            $cloudinary->delete($oldFullPublicId);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    // If deletion fails, just log the error and continue
-                    error_log('Failed to delete old profile image: ' . $e->getMessage());
-                    // We don't want to abort the upload just because deletion failed
+            // Create directory if it doesn't exist
+            if (!is_dir($uploadDir)) {
+                if (!mkdir($uploadDir, 0755, true)) {
+                    throw new \Exception("Failed to create upload directory");
                 }
             }
             
-            // Upload image to Cloudinary with the consistent public ID
-            $uploadResult = $cloudinary->uploadImage(
-                $file['tmp_name'],
-                'Digital_Library/profile_pictures', // Folder in Cloudinary
-                [
-                    'public_id' => $publicId, // Use the consistent public ID
-                    'overwrite' => true, // Force overwrite of existing images with the same public ID
-                    'transformation' => [
-                        'width' => 300,
-                        'height' => 300,
-                        'crop' => 'fill',
-                        'gravity' => 'face'
-                    ]
-                ]
+            // Check if user has an existing custom profile image
+            $currentProfileUrl = $user['ua_profile_url'] ?? '';
+            $isDefaultAvatar = $this->isDefaultAvatar($currentProfileUrl);
+            
+            // Define the filename - use user ID for uniqueness
+            $fileExt = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $fileName = 'user_' . $userId . '.' . $fileExt;
+            $filePath = $uploadDir . $fileName;
+            
+            // If user already has a profile picture, delete the old one
+            if (!$isDefaultAvatar && strpos($currentProfileUrl, '/assets/images/profile-pics/') !== false) {
+                $oldFilePath = dirname(dirname(__DIR__)) . parse_url($currentProfileUrl, PHP_URL_PATH);
+                if (file_exists($oldFilePath)) {
+                    unlink($oldFilePath);
+                }
+            }
+            
+            // Process and save the image
+            list($width, $height) = getimagesize($file['tmp_name']);
+            
+            // Create a square crop focusing on the center
+            $size = min($width, $height);
+            $x = ($width - $size) / 2;
+            $y = ($height - $size) / 2;
+            
+            // Create image resource based on file type
+            switch ($fileType) {
+                case 'image/jpeg':
+                    $sourceImage = imagecreatefromjpeg($file['tmp_name']);
+                    break;
+                case 'image/png':
+                    $sourceImage = imagecreatefrompng($file['tmp_name']);
+                    break;
+                case 'image/gif':
+                    $sourceImage = imagecreatefromgif($file['tmp_name']);
+                    break;
+                case 'image/webp':
+                    $sourceImage = imagecreatefromwebp($file['tmp_name']);
+                    break;
+                default:
+                    throw new \Exception("Unsupported image type");
+            }
+            
+            // Create destination image (300x300)
+            $destWidth = 300;
+            $destHeight = 300;
+            $destImage = imagecreatetruecolor($destWidth, $destHeight);
+            
+            // Preserve transparency for PNG images
+            if ($fileType === 'image/png') {
+                imagealphablending($destImage, false);
+                imagesavealpha($destImage, true);
+            }
+            
+            // Resize and crop the image
+            imagecopyresampled(
+                $destImage, $sourceImage,
+                0, 0, $x, $y,
+                $destWidth, $destHeight, $size, $size
             );
             
-            // Extract the URL from the response
-            $resultArray = $cloudinary->toArray($uploadResult);
-            $profileUrl = $resultArray['secure_url'];
+            // Save the image based on file type
+            $saved = false;
+            switch ($fileType) {
+                case 'image/jpeg':
+                    $saved = imagejpeg($destImage, $filePath, 90); // 90% quality
+                    break;
+                case 'image/png':
+                    $saved = imagepng($destImage, $filePath, 9); // 0-9 compression level
+                    break;
+                case 'image/gif':
+                    $saved = imagegif($destImage, $filePath);
+                    break;
+                case 'image/webp':
+                    $saved = imagewebp($destImage, $filePath, 90);
+                    break;
+            }
+            
+            // Clean up
+            imagedestroy($sourceImage);
+            imagedestroy($destImage);
+            
+            if (!$saved) {
+                throw new \Exception("Failed to save the image");
+            }
+            
+            // Generate the URL for the profile picture
+            $profileUrl = '/assets/images/profile-pics/' . $fileName;
             
             // Update the user's profile URL in the database
             $updated = $this->userModel->updateUser($userId, ['profile_url' => $profileUrl]);
@@ -197,7 +235,6 @@ class ProfileController extends BaseController {
         $currentProfileUrl = $user['ua_profile_url'];
         $newName = $firstName . ' ' . $lastName;
 
-
         // Check if user has a custom profile image or is using a generated avatar
         $isDefaultAvatar = $this->isDefaultAvatar($currentProfileUrl);
 
@@ -260,7 +297,10 @@ class ProfileController extends BaseController {
      */
     private function isDefaultAvatar($profileUrl) {
         // Check if the URL is from ui-avatars.com or other default avatar services
-        return strpos($profileUrl, 'ui-avatars.com') !== false || strpos($profileUrl, 'gravatar.com') !== false;
+        // Local profile images will be stored in /assets/images/profile-pics/
+        return strpos($profileUrl, 'ui-avatars.com') !== false || 
+               strpos($profileUrl, 'gravatar.com') !== false || 
+               empty($profileUrl);
     }
 
     public function changePassword() {
