@@ -244,14 +244,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize DataTable using vanilla JS
         const table = document.getElementById('sessions-table');
         if (table && typeof DataTable !== 'undefined') {
-            new DataTable(table, {
-                responsive: true,
-                pageLength: 15,
-                language: {
-                    search: "",
-                    searchPlaceholder: "Search in table..."
-                }
-            });
+            // Check if the table has any data rows before initializing DataTable
+            const hasData = table.querySelector('tbody tr:not([data-empty-message])');
+            if (hasData) {
+                new DataTable(table, {
+                    responsive: true,
+                    pageLength: 15,
+                    language: {
+                        search: "",
+                        searchPlaceholder: "Search in table..."
+                    }
+                });
+            }
         } else {
             console.error('DataTable is not defined or table element not found');
         }
@@ -265,20 +269,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     } else {
         // Initialize DataTable using jQuery
-        const dataTable = jQuery('#sessions-table').DataTable({
-            responsive: true,
-            pageLength: 15,
-            language: {
-                search: "",
-                searchPlaceholder: "Search in table..."
-            }
-        });
+        const sessionsTable = jQuery('#sessions-table');
         
-        // Use jQuery event delegation for view buttons
-        jQuery('#sessions-table tbody').on('click', '.view-session-btn', function() {
-            const sessionId = jQuery(this).data('id');
-            showSessionDetails(sessionId);
-        });
+        // Check if the table has any data rows before initializing DataTable
+        if (sessionsTable.find('tbody tr').length > 0 && !sessionsTable.find('tbody tr td[colspan]').length) {
+            jQuery('#sessions-table').DataTable({
+                responsive: true,
+                pageLength: 15,
+                language: {
+                    search: "",
+                    searchPlaceholder: "Search in table..."
+                }
+            });
+            
+            // Use jQuery event delegation for view buttons
+            jQuery('#sessions-table tbody').on('click', '.view-session-btn', function() {
+                const sessionId = jQuery(this).data('id');
+                showSessionDetails(sessionId);
+            });
+        }
     }
     
     // Handle dynamic filtering when input values change
@@ -340,29 +349,61 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 console.log('Received filtered data:', data);
                 if (data.success && data.data) {
-                    // Table needs to be refreshed with new data
-                    const table = jQuery('#sessions-table').DataTable();
+                    // Check if we have an existing DataTable instance
+                    let table;
+                    let tableExists = false;
                     
-                    // Clear the table first
-                    table.clear();
+                    try {
+                        table = jQuery('#sessions-table').DataTable();
+                        tableExists = true;
+                    } catch (e) {
+                        console.log('No existing DataTable instance found');
+                    }
+                    
+                    // If table exists, destroy it first since we'll recreate it with new data
+                    if (tableExists) {
+                        table.destroy();
+                    }
+                    
+                    // Clear the table HTML
+                    const tableBody = jQuery('#sessions-table tbody');
+                    tableBody.empty();
                     
                     // Add new data
                     if (data.data.length > 0) {
+                        // Add rows to the table body
                         data.data.forEach(session => {
-                            addRowToTable(table, session);
+                            // Create HTML for this row
+                            const rowHtml = createRowHtml(session);
+                            tableBody.append(rowHtml);
                         });
                         
-                        // Draw the table to update display
-                        table.draw();
+                        // Reinitialize the DataTable on the non-empty table
+                        jQuery('#sessions-table').DataTable({
+                            responsive: true,
+                            pageLength: 15,
+                            language: {
+                                search: "",
+                                searchPlaceholder: "Search in table..."
+                            }
+                        });
+                        
+                        // Reattach event listeners
+                        jQuery('#sessions-table tbody').on('click', '.view-session-btn', function() {
+                            const sessionId = jQuery(this).data('id');
+                            showSessionDetails(sessionId);
+                        });
                     } else {
                         // If no data found, show message
-                        jQuery('#sessions-table tbody').html(`
+                        tableBody.html(`
                             <tr>
                                 <td colspan="8" class="text-center py-4">
                                     <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i> No reading sessions found with the selected filters</p>
                                 </td>
                             </tr>
                         `);
+                        
+                        // We don't initialize DataTable for empty results
                     }
                 } else {
                     console.error('API returned error or no data');
@@ -374,7 +415,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    function addRowToTable(table, session) {
+    // Function to create HTML for a table row
+    function createRowHtml(session) {
         // Determine status
         let statusClass, statusText;
         if (session.is_purchased) {
@@ -421,43 +463,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 hour: 'numeric',
                 minute: 'numeric'
             });
-        
-        // Add row to table
-        table.row.add([
-            session.rs_id,
-            `<div class="d-flex align-items-center">
-                <div>
-                    <div class="fw-bold">${session.ua_first_name} ${session.ua_last_name}</div>
-                    <div class="small text-muted">${session.ua_email}</div>
-                </div>
-            </div>`,
-            `<div class="d-flex align-items-center">
-                <img src="${coverPath}" alt="Book Cover" class="me-2" style="width: 40px; height: 60px; object-fit: cover; border-radius: 2px;">
-                <div>
-                    <div class="fw-bold">${session.b_title}</div>
-                    <div class="small text-muted">${session.b_author}</div>
-                </div>
-            </div>`,
-            formattedStartDate,
-            formattedExpireDate,
-            `<div class="d-flex align-items-center">
-                <div class="flex-grow-1 me-2" style="min-width: 100px;">
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-${statusClass}" role="progressbar" 
-                            style="width: ${progress}%;" 
-                            aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+            
+        // Create row HTML
+        return `
+            <tr>
+                <td>${session.rs_id}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div>
+                            <div class="fw-bold">${session.ua_first_name} ${session.ua_last_name}</div>
+                            <div class="small text-muted">${session.ua_email}</div>
                         </div>
                     </div>
-                </div>
-                <span class="small">${progressText}</span>
-            </div>`,
-            `<span class="badge bg-${statusClass}">${statusText}</span>`,
-            `<div class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-outline-primary view-session-btn" data-id="${session.rs_id}">
-                    <i class="bi bi-info-circle"></i> View
-                </button>
-            </div>`
-        ]).draw();
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <img src="${coverPath}" alt="Book Cover" class="me-2" style="width: 40px; height: 60px; object-fit: cover; border-radius: 2px;">
+                        <div>
+                            <div class="fw-bold">${session.b_title}</div>
+                            <div class="small text-muted">${session.b_author}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>${formattedStartDate}</td>
+                <td>${formattedExpireDate}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1 me-2" style="min-width: 100px;">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-${statusClass}" role="progressbar" 
+                                    style="width: ${progress}%;" 
+                                    aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                        <span class="small">${progressText}</span>
+                    </div>
+                </td>
+                <td><span class="badge bg-${statusClass}">${statusText}</span></td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary view-session-btn" data-id="${session.rs_id}">
+                            <i class="bi bi-info-circle"></i> View
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
     }
     
     // Handle reset button

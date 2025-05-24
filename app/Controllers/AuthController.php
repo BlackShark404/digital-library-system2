@@ -76,15 +76,15 @@ class AuthController extends BaseController
         $this->userModel->updateLastLogin($user['ua_id']);
 
         // Set session data
-        $_SESSION['user_id'] = $user['ua_id'];
-        $_SESSION['profile_url'] = $user['ua_profile_url'];
-        $_SESSION['first_name'] = $user['ua_first_name'];
-        $_SESSION['last_name'] = $user['ua_last_name'];
-        $_SESSION['full_name'] = $user['ua_first_name'] . ' ' . $user['ua_last_name'];
-        $_SESSION['user_email'] = $user['ua_email'];
-        $_SESSION['phone_number'] = $user['ua_phone_number'];
-        $_SESSION['user_role'] = $user['role_name'] ?? "user";
-        $_SESSION['member_since'] = (new DateTime($user['ua_created_at']))->format('F j, Y');
+        Session::set('user_id', $user['ua_id']);
+        Session::set('profile_url', $user['ua_profile_url']);
+        Session::set('first_name', $user['ua_first_name']);
+        Session::set('last_name', $user['ua_last_name']);
+        Session::set('full_name', $user['ua_first_name'] . ' ' . $user['ua_last_name']);
+        Session::set('user_email', $user['ua_email']);
+        Session::set('phone_number', $user['ua_phone_number']);
+        Session::set('user_role', $user['role_name'] ?? "user");
+        Session::set('member_since', (new DateTime($user['ua_created_at']))->format('F j, Y'));
 
         if ($remember) {
             $token = $this->userModel->generateRememberToken($user['ua_id'], 30);
