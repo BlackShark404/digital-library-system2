@@ -168,7 +168,7 @@
                                 Remember me
                             </label>
                         </div>
-                        <a href="forgot-password.php" class="text-decoration-none" style="color: var(--primary-color);">Forgot password?</a>
+                        <!-- <a href="forgot-password.php" class="text-decoration-none" style="color: var(--primary-color);">Forgot password?</a> -->
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">Sign In</button>
