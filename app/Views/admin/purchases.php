@@ -257,27 +257,35 @@ document.addEventListener('DOMContentLoaded', function() {
                     $('#purchases-table').DataTable().destroy();
                 }
                 
-                // Initialize with simpler configuration
-                $('#purchases-table').DataTable({
-                    responsive: true,
-                    pageLength: 15,
-                    searching: false, // Disable DataTables built-in search since we have our own filter form
-                    language: {
-                        emptyTable: "No purchases found",
-                        info: "Showing _START_ to _END_ of _TOTAL_ purchases",
-                        infoEmpty: "Showing 0 to 0 of 0 purchases",
-                        paginate: {
-                            first: '<i class="bi bi-chevron-double-left"></i>',
-                            last: '<i class="bi bi-chevron-double-right"></i>',
-                            next: '<i class="bi bi-chevron-right"></i>',
-                            previous: '<i class="bi bi-chevron-left"></i>'
-                        }
-                    },
-                    dom: '<"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7"p>>',
-                    columnDefs: [
-                        { orderable: false, targets: 5 } // Disable sorting on the actions column
-                    ]
-                });
+                // Handle empty tables properly
+                const tableBody = document.querySelector('#purchases-table tbody');
+                const hasNoRecords = tableBody.querySelectorAll('tr').length === 1 && 
+                                    tableBody.querySelector('tr td[colspan]') !== null;
+                
+                // Only initialize DataTable if we have proper data rows
+                if (!hasNoRecords) {
+                    // Initialize with simpler configuration
+                    $('#purchases-table').DataTable({
+                        responsive: true,
+                        pageLength: 15,
+                        searching: false, // Disable DataTables built-in search since we have our own filter form
+                        language: {
+                            emptyTable: "No purchases found",
+                            info: "Showing _START_ to _END_ of _TOTAL_ purchases",
+                            infoEmpty: "Showing 0 to 0 of 0 purchases",
+                            paginate: {
+                                first: '<i class="bi bi-chevron-double-left"></i>',
+                                last: '<i class="bi bi-chevron-double-right"></i>',
+                                next: '<i class="bi bi-chevron-right"></i>',
+                                previous: '<i class="bi bi-chevron-left"></i>'
+                            }
+                        },
+                        dom: '<"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7"p>>',
+                        columnDefs: [
+                            { orderable: false, targets: 5 } // Disable sorting on the actions column
+                        ]
+                    });
+                }
             } catch (e) {
                 console.error("DataTable initialization error:", e);
             }
