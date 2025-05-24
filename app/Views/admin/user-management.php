@@ -167,28 +167,31 @@ include $headerPath;
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i> For security reasons, administrators can only modify the user's status (Active/Inactive).
+                </div>
                 <form id="editUserForm">
                     <input type="hidden" id="editUserId" name="id">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="editFirstName" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="editFirstName" name="first_name" required>
+                            <input type="text" class="form-control" id="editFirstName" name="first_name" readonly>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="editLastName" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="editLastName" name="last_name" required>
+                            <input type="text" class="form-control" id="editLastName" name="last_name" readonly>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="editEmail" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="editEmail" name="email" required>
+                            <input type="email" class="form-control" id="editEmail" name="email" readonly>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="editPassword" class="form-label">New Password</label>
-                            <input type="password" class="form-control" id="editPassword" name="password" placeholder="Leave blank to keep current">
+                            <label for="editPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="editPassword" name="password" disabled placeholder="Password cannot be changed here">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="editRole" class="form-label">Role</label>
-                            <select class="form-select" id="editRole" name="role_id" required>
+                            <select class="form-select" id="editRole" name="role_id" disabled>
                                 <option value="1">User</option>
                                 <option value="2">Admin</option>
                             </select>
@@ -436,21 +439,11 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#editUserForm').on('submit', function(e) {
         e.preventDefault();
         
-        // Get form data
+        // Get form data - Only include status field
         const userId = $('#editUserId').val();
         const formData = {
-            first_name: $('#editFirstName').val(),
-            last_name: $('#editLastName').val(),
-            email: $('#editEmail').val(),
-            role_id: $('#editRole').val(),
             is_active: $('#editStatus').val()
         };
-        
-        // Add password only if provided
-        const password = $('#editPassword').val();
-        if (password) {
-            formData.password = password;
-        }
         
         // Submit form via AJAX
         $.ajax({
@@ -468,7 +461,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     userTableManager.refresh();
                     
                     // Show success message
-                    userTableManager.showSuccessToast('User Updated', response.message);
+                    userTableManager.showSuccessToast('User Status Updated', response.message);
                 } else {
                     userTableManager.showErrorToast('Error', response.message);
                 }

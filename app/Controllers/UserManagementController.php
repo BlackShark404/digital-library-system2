@@ -177,8 +177,6 @@ class UserManagementController extends BaseController
      */
     public function updateUser($id)
     {
-        $avatar = new AvatarGenerator();
-
         // Check if request is AJAX
         if (!$this->isAjax()) {
             $this->jsonError('Invalid request', 400);
@@ -190,80 +188,41 @@ class UserManagementController extends BaseController
         // Check if user exists
         $user = $this->userModel->findById($id);
         if (!$user) {
-            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: user with ID $id not found");
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user status: user with ID $id not found");
             $this->jsonError('User not found', 404);
         }
         
-        // Validate required fields
-        $requiredFields = ['first_name', 'last_name', 'email', 'role_id', 'is_active'];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field]) || $data[$field] === '') {
-                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: missing required field $field");
-                $this->jsonError("Missing required field: $field", 400);
-            }
+        // Only validate is_active field - it's the only one that can be modified
+        if (!isset($data['is_active']) || $data['is_active'] === '') {
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user status: missing required field is_active");
+            $this->jsonError("Missing required field: is_active", 400);
         }
-        
-        // Check email uniqueness (if changed)
-        if ($data['email'] !== $user['ua_email'] && $this->userModel->emailExists($data['email'])) {
-            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: email already exists (" . $data['email'] . ")");
-            $this->jsonError('Email address already in use', 400);
-        }
-
-        $oldProfileUrl = $user['ua_profile_url'];
-        $newName = $data['first_name'] . ' ' . $data['last_name'];
-
-        $profileUrl = $avatar->updateNameKeepBackground($oldProfileUrl, $newName);
         
         try {
-            // Update user data
+            // Update only the status
             $updateData = [
-                'profile_url' => $profileUrl,
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $data['email'],
-                'role_id' => $data['role_id'],
                 'is_active' => $data['is_active']
             ];
-            
-            // Add password if provided
-            if (isset($data['password']) && !empty($data['password'])) {
-                $updateData['password'] = $data['password'];
-            }
             
             $result = $this->userModel->updateUser($id, $updateData);
             
             if ($result) {
-                // Log changes made to user
-                $changes = [];
-                if ($user['ua_first_name'] != $data['first_name'] || $user['ua_last_name'] != $data['last_name']) {
-                    $changes[] = "name changed from '{$user['ua_first_name']} {$user['ua_last_name']}' to '{$data['first_name']} {$data['last_name']}'";
-                }
-                if ($user['ua_email'] != $data['email']) {
-                    $changes[] = "email changed from '{$user['ua_email']}' to '{$data['email']}'";
-                }
-                if ($user['ua_role_id'] != $data['role_id']) {
-                    $oldRole = $user['ua_role_id'] == 2 ? 'admin' : 'user';
-                    $newRole = $data['role_id'] == 2 ? 'admin' : 'user';
-                    $changes[] = "role changed from '$oldRole' to '$newRole'";
-                }
+                // Log status change
                 if ($user['ua_is_active'] != $data['is_active']) {
                     $status = $data['is_active'] ? 'active' : 'inactive';
-                    $changes[] = "status changed to '$status'";
+                    $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Admin updated user status (ID: $id, Name: {$user['ua_first_name']} {$user['ua_last_name']}): status changed to '$status'");
+                    $this->jsonSuccess([], 'User status updated successfully');
+                } else {
+                    // No actual change in status
+                    $this->jsonSuccess([], 'No change in user status');
                 }
-                if (isset($data['password']) && !empty($data['password'])) {
-                    $changes[] = "password changed";
-                }
-                
-                $changesStr = implode(', ', $changes);
-                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Admin updated user (ID: $id): $changesStr");
-                $this->jsonSuccess([], 'User updated successfully');
             } else {
-                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user: database error");
-                $this->jsonError('Failed to update user', 500);
+                $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'PROFILE_UPDATE', "Failed to update user status: database error");
+                $this->jsonError('Failed to update user status', 500);
             }
         } catch (\Exception $e) {
-            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error updating user: " . $e->getMessage());
-            $this->jsonError('Error updating user: ' . $e->getMessage(), 500);
+            $this->activityLogModel->logActivity($_SESSION['user_id'] ?? null, 'ERROR', "Error updating user status: " . $e->getMessage());
+            $this->jsonError('Error updating user status: ' . $e->getMessage(), 500);
         }
     }
     
