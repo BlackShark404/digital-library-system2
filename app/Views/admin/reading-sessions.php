@@ -8,14 +8,17 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <h5 class="card-title mb-3">Filter Reading Sessions</h5>
-            <form id="filter-form" class="row g-3">
+            <div id="filter-form" class="row g-3">
                 <div class="col-md-4">
                     <label for="search" class="form-label">Search</label>
-                    <input type="text" class="form-control" id="search" name="search" placeholder="Book title, author, or user">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control filter-input" id="search" name="search" placeholder="Book title, author, or user">
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <label for="status" class="form-label">Status</label>
-                    <select class="form-select" id="status" name="status">
+                    <select class="form-select filter-input" id="status" name="status">
                         <option value="">All Statuses</option>
                         <option value="active">Active</option>
                         <option value="expired">Expired</option>
@@ -24,21 +27,18 @@
                 </div>
                 <div class="col-md-3">
                     <label for="date_from" class="form-label">Date From</label>
-                    <input type="date" class="form-control" id="date_from" name="date_from">
+                    <input type="date" class="form-control filter-input" id="date_from" name="date_from">
                 </div>
                 <div class="col-md-3">
                     <label for="date_to" class="form-label">Date To</label>
-                    <input type="date" class="form-control" id="date_to" name="date_to">
+                    <input type="date" class="form-control filter-input" id="date_to" name="date_to">
                 </div>
                 <div class="col-12">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> Filter
-                    </button>
                     <button type="button" id="reset-filter" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle me-1"></i> Reset
+                        <i class="bi bi-x-circle me-1"></i> Reset Filters
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -281,20 +281,47 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Handle filter form submission
-    document.getElementById('filter-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Get form data
-        const formData = new FormData(this);
-        const queryParams = new URLSearchParams();
-        
-        // Add form fields to query params
-        for (const [key, value] of formData.entries()) {
-            if (value.trim() !== '') {
-                queryParams.append(key, value);
+    // Handle dynamic filtering when input values change
+    const filterInputs = document.querySelectorAll('.filter-input');
+    let filterDebounceTimer;
+    
+    filterInputs.forEach(input => {
+        if (input.tagName === 'SELECT') {
+            // For select elements, apply filter immediately on change
+            input.addEventListener('change', function() {
+                applyFilters();
+            });
+        } else {
+            // For text and date inputs, use debounce
+            input.addEventListener('input', function() {
+                // Clear previous timer
+                clearTimeout(filterDebounceTimer);
+                
+                // Set a debounce timeout to avoid too many requests
+                filterDebounceTimer = setTimeout(function() {
+                    applyFilters();
+                }, 500); // Wait 500ms after user stops typing
+            });
+            
+            // Also apply immediately for date inputs on change
+            if (input.type === 'date') {
+                input.addEventListener('change', function() {
+                    applyFilters();
+                });
             }
         }
+    });
+    
+    function applyFilters() {
+        // Get form data
+        const queryParams = new URLSearchParams();
+        
+        // Add filter values to query params
+        filterInputs.forEach(input => {
+            if (input.value.trim() !== '') {
+                queryParams.append(input.name, input.value.trim());
+            }
+        });
         
         console.log('Filtering with params:', queryParams.toString());
         
@@ -345,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error fetching data:', error);
                 alert('Error fetching data. Please try again.');
             });
-    });
+    }
     
     function addRowToTable(table, session) {
         // Determine status
@@ -436,10 +463,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle reset button
     document.getElementById('reset-filter').addEventListener('click', function() {
         // Reset form fields
-        document.getElementById('filter-form').reset();
+        filterInputs.forEach(input => {
+            input.value = '';
+        });
         
-        // Trigger submit to reload all data
-        document.getElementById('filter-form').dispatchEvent(new Event('submit'));
+        // Apply filters with cleared values
+        applyFilters();
     });
     
     function showSessionDetails(sessionId) {
