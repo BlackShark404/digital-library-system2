@@ -3,7 +3,6 @@
 namespace App\Controllers;
 
 use Core\AvatarGenerator;
-use Core\CloudinaryService;
 use App\Models\ActivityLogModel;
 
 class ProfileController extends BaseController {

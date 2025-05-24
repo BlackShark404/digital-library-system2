@@ -228,14 +228,14 @@ class AuthController extends BaseController
                 $this->userModel->updateLastLogin($user['ua_id']);
                 
                 // Set session data
-                $_SESSION['user_id'] = $user['ua_id'];
-                $_SESSION['user_email'] = $user['ua_email'];
-                $_SESSION['user_role'] = $user['role_name'];
-                $_SESSION['full_name'] = $user['ua_first_name'] . ' ' . $user['ua_last_name'];
-                $_SESSION['first_name'] = $user['ua_first_name'];
-                $_SESSION['last_name'] = $user['ua_last_name'];
-                $_SESSION['profile_url'] = $user['ua_profile_url'];
-                $_SESSION['phone_number'] = $user['ua_phone_number'];
+                Session::set('user_id', $user['ua_id']);
+                Session::set('user_email', $user['ua_email']);
+                Session::set('user_role', $user['role_name']);
+                Session::set('full_name', $user['ua_first_name'] . ' ' . $user['ua_last_name']);
+                Session::set('first_name', $user['ua_first_name']);
+                Session::set('last_name', $user['ua_last_name']);
+                Session::set('profile_url', $user['ua_profile_url']);
+                Session::set('phone_number', $user['ua_phone_number']);
                 
                 // Generate a new token for security
                 // This rotates the token on each successful auto-login
