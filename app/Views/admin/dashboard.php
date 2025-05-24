@@ -21,8 +21,8 @@ include $headerPath;
         <div class="card-body p-4">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h3 class="mb-2 fw-bold text-dark">Welcome, <?= Session::get('first_name') ?>!</h3>
-                    <p class="mb-0 text-dark">
+                    <h3 class="mb-2 fw-bold text-white">Welcome, <?= Session::get('first_name') ?>!</h3>
+                    <p class="mb-0 text-white">
                         Manage your digital library system, track user activities, and monitor system performance.
                     </p>
                 </div>
