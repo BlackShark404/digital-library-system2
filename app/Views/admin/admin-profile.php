@@ -232,7 +232,7 @@ include $headerPath;
                             </a>
                         </div>
                         <div class="col-md-3 col-6">
-                            <a href="/admin/activity-logs" class="btn btn-outline-info w-100 py-2">
+                            <a href="/admin/logs" class="btn btn-outline-info w-100 py-2">
                                 <i class="bi bi-activity me-2"></i>Logs
                             </a>
                         </div>

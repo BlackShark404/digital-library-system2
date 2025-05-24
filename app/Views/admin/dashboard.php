@@ -11,7 +11,7 @@ include $headerPath;
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Admin Dashboard</h2>
-        <a href="/admin/activity-log" class="btn btn-outline-primary">
+        <a href="/admin/activity-logs" class="btn btn-outline-primary">
             <i class="bi bi-activity me-1"></i> View Activity Logs
         </a>
     </div>
@@ -277,7 +277,7 @@ include $headerPath;
             <h5 class="card-title mb-0">
                 <i class="bi bi-activity me-2 text-danger"></i>Recent Activity
             </h5>
-            <a href="/admin/activity-log" class="btn btn-sm btn-outline-primary rounded-pill">
+            <a href="/admin/activity-logs" class="btn btn-sm btn-outline-primary rounded-pill">
                 View All
             </a>
         </div>
