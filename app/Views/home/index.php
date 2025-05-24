@@ -42,6 +42,18 @@
             color: var(--secondary-color) !important;
         }
 
+        .navbar-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .blue-text {
+            color: var(--primary-color);
+        }
+
         /* For the navbar button links */
         .navbar .nav-link {
             color: #495057 !important;
@@ -359,7 +371,11 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="/">BookSync</a>
+            <div class="navbar-brand">
+                <a href="/" class="navbar-title">
+                    <i class="fas fa-book me-2"></i>Book<span class="blue-text">Sync</span>
+                </a>
+            </div>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -553,46 +569,61 @@
                 <h2 class="fw-bold">How BookSync Works</h2>
                 <p class="text-muted">Get started with our digital library in just a few steps</p>
             </div>
-            <div class="row justify-content-center">
-                <div class="col-lg-10">
-                    <div class="row align-items-center mb-5">
-                        <div class="col-md-6 order-md-2 mb-4 mb-md-0">
-                        <img src="/assets/images/landing-page/create-account.jpeg" alt="Create Account" class="img-fluid rounded-3 shadow" width="300" height="100">
-                        </div>
-                        <div class="col-md-6 order-md-1">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-weight: bold;">1</div>
-                                <h4 class="ms-3 mb-0">Create a free account</h4>
+            
+            <div class="row justify-content-center g-4">
+                <!-- Step 1 -->
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="rounded-circle bg-primary mx-auto d-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                                <i class="fas fa-user-plus text-white fs-2"></i>
                             </div>
-                            <p class="text-muted">Sign up for BookSync in seconds to access our extensive digital library and start exploring thousands of books.</p>
+                            <span class="badge bg-primary mb-3">Step 1</span>
+                            <h4 class="card-title">Create a free account</h4>
+                            <p class="card-text text-muted">Sign up for BookSync in seconds to access our extensive digital library and start exploring thousands of books.</p>
+                            <div class="mt-4">
+                                <a href="/register" class="btn btn-outline-primary btn-sm">Sign Up Now</a>
+                            </div>
                         </div>
                     </div>
-                    <div class="row align-items-center mb-5">
-                        <div class="col-md-6 mb-4 mb-md-0">
-                            <img src="/assets/images/landing-page/browse-books.png" alt="Browse Books" class="img-fluid rounded-3 shadow">
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-weight: bold;">2</div>
-                                <h4 class="ms-3 mb-0">Browse and preview</h4>
+                </div>
+                
+                <!-- Step 2 -->
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="rounded-circle bg-success mx-auto d-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                                <i class="fas fa-book-open text-white fs-2"></i>
                             </div>
-                            <p class="text-muted">Explore our categories to find books that interest you and enjoy a 3-day free preview period to sample the content.</p>
+                            <span class="badge bg-success mb-3">Step 2</span>
+                            <h4 class="card-title">Browse and preview</h4>
+                            <p class="card-text text-muted">Explore our categories to find books that interest you and enjoy a 3-day free preview period to sample the content.</p>
+                            <div class="mt-4">
+                                <a href="/login" class="btn btn-outline-success btn-sm">Browse Library</a>
+                            </div>
                         </div>
                     </div>
-                    <div class="row align-items-center">
-                        <div class="col-md-6 order-md-2 mb-4 mb-md-0">
-                            <img src="/assets/images/landing-page/purchases.png" alt="Purchase Books" class="img-fluid rounded-3 shadow">
-                        </div>
-                        <div class="col-md-6 order-md-1">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-weight: bold;">3</div>
-                                <h4 class="ms-3 mb-0">Purchase and enjoy</h4>
+                </div>
+                
+                <!-- Step 3 -->
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="rounded-circle bg-info mx-auto d-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                                <i class="fas fa-shopping-cart text-white fs-2"></i>
                             </div>
-                            <p class="text-muted">Buy books you love to read them indefinitely and download PDF versions for offline access on your desktop.</p>
+                            <span class="badge bg-info mb-3">Step 3</span>
+                            <h4 class="card-title">Purchase and enjoy</h4>
+                            <p class="card-text text-muted">Buy books you love to read them indefinitely and download PDF versions for offline access on your desktop.</p>
+                            <div class="mt-4">
+                                <a href="/login" class="btn btn-outline-info btn-sm">Start Reading</a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            
         </div>
     </section>
 
