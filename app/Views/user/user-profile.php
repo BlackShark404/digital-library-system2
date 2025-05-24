@@ -212,7 +212,7 @@ include $headerPath;
                     <h5 class="card-title mb-0">
                         <i class="bi bi-book-half me-2 text-success"></i>Recent Reading Activity
                     </h5>
-                    <a href="reading_session.php" class="btn btn-sm btn-outline-success rounded-pill">
+                    <a href="/user/reading-sessions" class="btn btn-sm btn-outline-success rounded-pill">
                         <i class="bi bi-clock-history me-1"></i>View All
                     </a>
                 </div>
@@ -261,9 +261,6 @@ include $headerPath;
                         </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
-                </div>
-                <div class="card-footer bg-white border-top-0 text-center">
-                    <a href="reading_session.php" class="btn btn-link text-success">View all reading sessions <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>

@@ -102,17 +102,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Handle links to prevent animation during page transitions
-    document.querySelectorAll('a').forEach(function (link) {
-        // Only apply to internal links that aren't # anchors
-        if (link.host === window.location.host && !link.getAttribute('href').startsWith('#')) {
-            link.addEventListener('click', function () {
-                // Disable transitions before navigation
-                document.documentElement.classList.add('no-transition');
-                document.body.classList.add('no-transition');
-            });
-        }
-    });
+    // Store all tooltip instances for later cleanup
+    let tooltipInstances = [];
 
     // Optimize tooltip initialization
     var tooltipOptions = {
@@ -120,12 +111,62 @@ document.addEventListener('DOMContentLoaded', function () {
             show: 300,
             hide: 100
         },
-        trigger: 'hover',
+        trigger: 'hover focus',
         boundary: 'window'
     };
 
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-        new bootstrap.Tooltip(tooltipTriggerEl, tooltipOptions);
+    // Function to initialize tooltips
+    function initializeTooltips() {
+        // Dispose existing tooltips first to prevent duplicates
+        tooltipInstances.forEach(tooltip => {
+            tooltip.dispose();
+        });
+        tooltipInstances = [];
+
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            let tooltip = new bootstrap.Tooltip(tooltipTriggerEl, tooltipOptions);
+            tooltipInstances.push(tooltip);
+
+            // Add manual handling for mouse leave to ensure tooltip is hidden
+            tooltipTriggerEl.addEventListener('mouseleave', function () {
+                tooltip.hide();
+            });
+        });
+    }
+
+    // Initialize tooltips
+    initializeTooltips();
+
+    // Handle links to prevent animation during page transitions
+    document.querySelectorAll('a').forEach(function (link) {
+        // Only apply to internal links that aren't # anchors
+        if (link.host === window.location.host && !link.getAttribute('href')?.startsWith('#')) {
+            link.addEventListener('click', function () {
+                // Disable transitions before navigation
+                document.documentElement.classList.add('no-transition');
+                document.body.classList.add('no-transition');
+
+                // Hide all tooltips when navigating
+                tooltipInstances.forEach(tooltip => {
+                    tooltip.hide();
+                });
+            });
+        }
+    });
+
+    // Fix for the Activity Log tooltip specifically
+    document.addEventListener('mouseover', function (e) {
+        if (!e.target.closest('[data-bs-toggle="tooltip"]')) {
+            // If mouse is not over a tooltip element, hide all tooltips
+            tooltipInstances.forEach(tooltip => {
+                tooltip.hide();
+            });
+        }
+    }, true);
+
+    // Reinitialize tooltips when document gains focus (helps with page refresh/return)
+    window.addEventListener('focus', function () {
+        initializeTooltips();
     });
 });

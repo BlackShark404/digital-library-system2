@@ -569,7 +569,7 @@
                     </div>
                     <div class="row align-items-center mb-5">
                         <div class="col-md-6 mb-4 mb-md-0">
-                            <img src="/api/placeholder/500/300" alt="Browse Books" class="img-fluid rounded-3 shadow">
+                            <img src="/assets/images/landing-page/browse-books.png" alt="Browse Books" class="img-fluid rounded-3 shadow">
                         </div>
                         <div class="col-md-6">
                             <div class="d-flex align-items-center mb-3">
@@ -581,7 +581,7 @@
                     </div>
                     <div class="row align-items-center">
                         <div class="col-md-6 order-md-2 mb-4 mb-md-0">
-                            <img src="/api/placeholder/500/300" alt="Purchase Books" class="img-fluid rounded-3 shadow">
+                            <img src="/assets/images/landing-page/purchases.png" alt="Purchase Books" class="img-fluid rounded-3 shadow">
                         </div>
                         <div class="col-md-6 order-md-1">
                             <div class="d-flex align-items-center mb-3">
