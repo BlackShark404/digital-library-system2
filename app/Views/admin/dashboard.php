@@ -4,6 +4,9 @@ use Core\Session;
 include $headerPath;
 ?>
 
+<!-- Include Admin Dashboard CSS -->
+<link rel="stylesheet" href="/assets/css/admin-dashboard.css">
+
 <div class="container-fluid py-4">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -320,5 +323,39 @@ include $headerPath;
         </div>
     </div>
 </div>
+
+<style>
+/* Custom styles for hover effects */
+.hover-lift {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+.card-hover-primary:hover {
+    border-bottom: 3px solid var(--bs-primary) !important;
+}
+.card-hover-success:hover {
+    border-bottom: 3px solid var(--bs-success) !important;
+}
+.card-hover-info:hover {
+    border-bottom: 3px solid var(--bs-info) !important;
+}
+.card-hover-danger:hover {
+    border-bottom: 3px solid var(--bs-danger) !important;
+}
+.bg-gradient-primary {
+    background: linear-gradient(45deg, var(--bs-primary), #5c7cfa);
+}
+/* Card icon hover effect */
+.card:hover .icon-box i {
+    transform: scale(1.15);
+    transition: transform 0.3s ease;
+}
+.icon-box i {
+    transition: transform 0.3s ease;
+}
+</style>
 
 <?php include $footerPath; ?>
