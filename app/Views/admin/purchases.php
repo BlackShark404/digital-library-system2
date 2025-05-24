@@ -9,9 +9,9 @@ include $headerPath;
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><i class="bi bi-cart-check me-2"></i>Purchase Management</h1>
-        <a href="/api/purchases/export" class="btn btn-success">
+        <!-- <a href="/api/purchases/export" class="btn btn-success">
             <i class="bi bi-file-earmark-excel me-1"></i> Export CSV
-        </a>
+        </a> -->
     </div>
     
     <!-- Filters -->

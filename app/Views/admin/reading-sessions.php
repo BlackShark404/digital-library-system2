@@ -348,29 +348,34 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 console.log('Received filtered data:', data);
-                if (data.success && data.data) {
-                    // Check if we have an existing DataTable instance
-                    let table;
-                    let tableExists = false;
-                    
-                    try {
-                        table = jQuery('#sessions-table').DataTable();
-                        tableExists = true;
-                    } catch (e) {
-                        console.log('No existing DataTable instance found');
-                    }
-                    
-                    // If table exists, destroy it first since we'll recreate it with new data
-                    if (tableExists) {
-                        table.destroy();
-                    }
-                    
-                    // Clear the table HTML
+                if (data.success) {
+                    // Clear the table HTML first
                     const tableBody = jQuery('#sessions-table tbody');
+                    
+                    // Safely destroy existing DataTable if it exists
+                    try {
+                        const dataTableInstance = jQuery.fn.dataTable.isDataTable('#sessions-table') 
+                            ? jQuery('#sessions-table').DataTable() 
+                            : null;
+                            
+                        if (dataTableInstance) {
+                            // Remove event listeners before destroying
+                            jQuery('#sessions-table tbody').off('click', '.view-session-btn');
+                            dataTableInstance.destroy();
+                        }
+                    } catch (e) {
+                        console.warn('Error destroying DataTable:', e);
+                        // If we can't destroy it cleanly, remove the table completely and recreate it
+                        const tableHTML = jQuery('#sessions-table').prop('outerHTML');
+                        const tableParent = jQuery('#sessions-table').parent();
+                        jQuery('#sessions-table').remove();
+                        tableParent.html(tableHTML);
+                    }
+                    
                     tableBody.empty();
                     
                     // Add new data
-                    if (data.data.length > 0) {
+                    if (data.data && data.data.length > 0) {
                         // Add rows to the table body
                         data.data.forEach(session => {
                             // Create HTML for this row
@@ -411,7 +416,18 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching data:', error);
-                alert('Error fetching data. Please try again.');
+                // Show user-friendly error without alert
+                const tableBody = jQuery('#sessions-table tbody');
+                tableBody.html(`
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                Error loading data. Please try again.
+                            </div>
+                        </td>
+                    </tr>
+                `);
             });
     }
     
@@ -518,6 +534,31 @@ document.addEventListener('DOMContentLoaded', function() {
         filterInputs.forEach(input => {
             input.value = '';
         });
+        
+        try {
+            // If DataTable exists, safely destroy it first
+            if (jQuery.fn.dataTable.isDataTable('#sessions-table')) {
+                const table = jQuery('#sessions-table').DataTable();
+                jQuery('#sessions-table tbody').off('click', '.view-session-btn');
+                table.destroy();
+            }
+            
+            // Show loading indicator in the table while we fetch fresh data
+            jQuery('#sessions-table tbody').html(`
+                <tr>
+                    <td colspan="8" class="text-center py-4">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span>Loading data...</span>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        } catch (e) {
+            console.warn('Error resetting table:', e);
+        }
         
         // Apply filters with cleared values
         applyFilters();
