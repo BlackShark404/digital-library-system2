@@ -119,8 +119,12 @@ $action_filter = $action_filter ?? '';
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <strong>User:</strong> <span id="modalUsername"></span>
+                <div class="mb-3 d-flex align-items-center">
+                    <strong class="me-2">User:</strong> 
+                    <div id="modalUserContainer" class="d-flex align-items-center">
+                        <img id="modalUserProfilePic" src="" alt="Profile" class="rounded-circle me-2" width="32" height="32" style="display: none;">
+                        <span id="modalUsername"></span>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <strong>Action:</strong> <span id="modalAction"></span>
@@ -199,8 +203,11 @@ $(document).ready(function() {
                 data: 'username',
                 render: function(data, type, row) {
                     if (!row.user_id) return 'System';
-                    return '<a href="/admin/user-management?id=' + row.user_id + '" data-bs-toggle="tooltip" data-bs-title="View User Profile">' 
-                         + data + '</a>';
+                    const profileUrl = row.profile_url || '/assets/images/default-avatar.png';
+                    return `<div class="d-flex align-items-center">
+                              <img src="${profileUrl}" alt="Profile" class="rounded-circle me-2" width="32" height="32">
+                              <div class="text-dark">${data}</div>
+                           </div>`;
                 }
             },
             { 
@@ -262,7 +269,16 @@ $(document).ready(function() {
                     
                     // Update modal content
                     $('#logModalLabel').text('Activity Details #' + log.id);
-                    $('#modalUsername').text(log.user_id ? log.username + ' (ID: ' + log.user_id + ')' : 'System');
+                    
+                    if (log.user_id) {
+                        const profileUrl = log.profile_url || '/assets/images/default-avatar.png';
+                        $('#modalUserProfilePic').attr('src', profileUrl).show();
+                        $('#modalUsername').text(log.username + ' (ID: ' + log.user_id + ')');
+                    } else {
+                        $('#modalUserProfilePic').hide();
+                        $('#modalUsername').text('System');
+                    }
+                    
                     $('#modalAction').html('<span class="badge ' + getBadgeClass(log.action) + '">' + log.action + '</span>');
                     $('#modalDetails').text(log.details);
                     $('#modalTimestamp').text(log.timestamp);

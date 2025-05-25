@@ -62,8 +62,7 @@ include $headerPath;
                     <thead>
                         <tr>
                             <th scope="col">ID</th>
-                            <th scope="col">First Name</th>
-                            <th scope="col">Last Name</th>
+                            <th scope="col">User</th>
                             <th scope="col">Email</th>
                             <th scope="col">Role</th>
                             <th scope="col">Status</th>
@@ -167,6 +166,9 @@ include $headerPath;
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div class="text-center mb-4">
+                    <img id="editUserProfilePic" src="" alt="User Profile" class="rounded-circle img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                </div>
                 <div class="alert alert-info mb-3">
                     <i class="fas fa-info-circle me-2"></i> For security reasons, administrators can only modify the user's status (Active/Inactive).
                 </div>
@@ -226,18 +228,39 @@ include $headerPath;
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <h6 class="border-bottom pb-2 mb-3">Basic Information</h6>
                 <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <p><strong>User ID:</strong> <span id="viewUserId"></span></p>
-                        <p><strong>Name:</strong> <span id="viewUserName"></span></p>
-                        <p><strong>Email:</strong> <span id="viewUserEmail"></span></p>
-                        <p><strong>Role:</strong> <span id="viewUserRole"></span></p>
+                    <div class="col-md-4 d-flex flex-column align-items-center">
+                        <img id="viewUserProfilePic" src="" alt="User Profile" class="rounded-circle img-thumbnail mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                        <div class="text-center">
+                            <h5 id="viewUserName" class="fw-bold mb-1"></h5>
+                            <span id="viewUserRole" class="badge bg-primary"></span>
+                            <span id="viewUserStatus" class="badge ms-1"></span>
+                        </div>
                     </div>
-                    <div class="col-md-6 mb-2">
-                        <p><strong>Status:</strong> <span id="viewUserStatus"></span></p>
-                        <p><strong>Registered:</strong> <span id="viewUserRegistered"></span></p>
-                        <p><strong>Last Login:</strong> <span id="viewUserLastLogin"></span></p>
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>User Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2 d-flex">
+                                    <div class="text-muted me-2" style="width: 120px;"><i class="fas fa-hashtag me-1"></i>User ID:</div>
+                                    <div id="viewUserId" class="fw-bold"></div>
+                                </div>
+                                <div class="mb-2 d-flex">
+                                    <div class="text-muted me-2" style="width: 120px;"><i class="fas fa-envelope me-1"></i>Email:</div>
+                                    <div id="viewUserEmail" class="fw-bold"></div>
+                                </div>
+                                <div class="mb-2 d-flex">
+                                    <div class="text-muted me-2" style="width: 120px;"><i class="fas fa-calendar-alt me-1"></i>Registered:</div>
+                                    <div id="viewUserRegistered" class="fw-bold"></div>
+                                </div>
+                                <div class="mb-2 d-flex">
+                                    <div class="text-muted me-2" style="width: 120px;"><i class="fas fa-clock me-1"></i>Last Login:</div>
+                                    <div id="viewUserLastLogin" class="fw-bold"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -280,8 +303,17 @@ document.addEventListener('DOMContentLoaded', function() {
         ajaxUrl: '/api/users',
         columns: [
             { data: 'id', title: 'ID' },
-            { data: 'first_name', title: 'First Name' },
-            { data: 'last_name', title: 'Last Name' },
+            { 
+                data: null, 
+                title: 'User',
+                render: function(data, type, row) {
+                    const profileUrl = row.profile_url || '/assets/images/default-avatar.png';
+                    return `<div class="d-flex align-items-center">
+                                <img src="${profileUrl}" alt="Profile" class="rounded-circle me-2" width="40" height="40">
+                                <div>${row.first_name} ${row.last_name}</div>
+                            </div>`;
+                }
+            },
             { data: 'email', title: 'Email' },
             { 
                 data: 'role', 
@@ -329,10 +361,21 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#viewUserName').text(rowData.first_name + ' ' + rowData.last_name);
             $('#viewUserUsername').text(rowData.first_name + ' ' + rowData.last_name);
             $('#viewUserEmail').text(rowData.email);
-            $('#viewUserRole').text(rowData.role);
-            $('#viewUserStatus').text(rowData.status);
+            
+            // Set role badge
+            const roleBadgeClass = rowData.role === 'admin' ? 'bg-danger' : 'bg-info';
+            $('#viewUserRole').attr('class', `badge ${roleBadgeClass}`).text(rowData.role);
+            
+            // Set status badge
+            const statusBadgeClass = rowData.status === 'active' ? 'bg-success' : 'bg-danger';
+            $('#viewUserStatus').attr('class', `badge ${statusBadgeClass} ms-1`).text(rowData.status);
+            
             $('#viewUserRegistered').text(rowData.registered);
             $('#viewUserLastLogin').text(rowData.last_login || 'Never');
+            
+            // Set profile picture
+            const profileUrl = rowData.profile_url || '/assets/images/default-avatar.png';
+            $('#viewUserProfilePic').attr('src', profileUrl);
             
             // Set sample activity statistics
             $('#viewUserLogins').text(rowData.logins || '0');
@@ -491,6 +534,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Clear password field (for security)
         $('#editPassword').val('');
+        
+        // Set profile picture
+        const profileUrl = rowData.profile_url || '/assets/images/default-avatar.png';
+        $('#editUserProfilePic').attr('src', profileUrl);
         
         // Show the modal
         const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));

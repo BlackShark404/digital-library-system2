@@ -57,6 +57,7 @@ class ActivityLogModel extends BaseModel
                 al.al_id as id,
                 al.ua_id as user_id,
                 ua.ua_first_name || ' ' || ua.ua_last_name as username,
+                ua.ua_profile_url as profile_url,
                 at.at_name as action,
                 al.al_description as details,
                 al.al_timestamp as timestamp
@@ -171,6 +172,7 @@ class ActivityLogModel extends BaseModel
                 al.al_id as id,
                 al.ua_id as user_id,
                 ua.ua_first_name || ' ' || ua.ua_last_name as username,
+                ua.ua_profile_url as profile_url,
                 at.at_name as action,
                 al.al_description as details,
                 al.al_timestamp as timestamp
