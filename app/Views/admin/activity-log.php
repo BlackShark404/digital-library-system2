@@ -227,7 +227,7 @@ $(document).ready(function() {
                     if (!row.user_id) return 'System';
                     const profileUrl = row.profile_url || '/assets/images/default-avatar.png';
                     return `<div class="d-flex align-items-center">
-                              <img src="${profileUrl}" alt="Profile" class="rounded-circle me-2" width="32" height="32">
+                              <img src="${profileUrl}" alt="Profile" class="rounded-circle me-2" width="40" height="40">
                               <div class="text-dark">${data}</div>
                            </div>`;
                 }

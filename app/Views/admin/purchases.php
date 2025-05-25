@@ -66,7 +66,7 @@ include $headerPath;
                                     <td data-search="<?= htmlspecialchars($purchase['ua_first_name'] . ' ' . $purchase['ua_last_name'] . ' ' . $purchase['ua_email']) ?>">
                                         <div class="d-flex align-items-center">
                                             <?php if (!empty($purchase['ua_profile_url'])): ?>
-                                                <img src="<?= $purchase['ua_profile_url'] ?>" alt="profile" class="avatar-wrapper-compact avatar-compact me-2 rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                                <img src="<?= $purchase['ua_profile_url'] ?>" alt="profile" class="avatar-wrapper-compact avatar-compact me-2 rounded-circle" style="width: 45px; height: 45px; object-fit: cover;">
                                             <?php else: ?>
                                                 <?php 
                                                     $initials = strtoupper(substr($purchase['ua_first_name'], 0, 1) . substr($purchase['ua_last_name'], 0, 1));
