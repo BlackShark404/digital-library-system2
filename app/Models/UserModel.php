@@ -160,7 +160,7 @@ class UserModel extends BaseModel
             'ua_profile_url' => 'ua_profile_url',
             'profile_url' => 'ua_profile_url',
             'first_name' => 'ua_first_name',
-            'lastName' => 'ua_first_name',
+            'lastName' => 'ua_last_name',
             'last_name' => 'ua_last_name',
             'firstName' => 'ua_first_name',
             'email' => 'ua_email',
