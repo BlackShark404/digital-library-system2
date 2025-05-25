@@ -17,47 +17,31 @@ $userModel = new UserModel;
 // Check if any admin user exists
 $adminExists = $userModel->getByRole('admin');
 
-// If no admin exists, create one from environment variables
+// If no admin exists, create admin and default users
 if (empty($adminExists)) {
-    // Get admin details from environment variables
-    $adminProfileUrl = $_ENV['ADMIN_PROFILE_URL'];
-    $adminFirstName = $_ENV['ADMIN_FIRST_NAME'];
-    $adminLastName = $_ENV['ADMIN_LAST_NAME'];
-    $adminEmail = $_ENV['ADMIN_EMAIL'];
-    $adminPassword = $_ENV['ADMIN_PASSWORD'];
-    $adminRoleId = (int) $_ENV['ADMIN_ROLE_ID'];
-    
-    // Create admin user
+    // Create Admin
     $userModel->createUser([
-        'profile_url' => $adminProfileUrl,
-        'first_name' => $adminFirstName,
-        'last_name' => $adminLastName,
-        'email' => $adminEmail,
-        'password' => $adminPassword,
-        'role_id' => $adminRoleId,
+        'profile_url' => $_ENV['ADMIN_PROFILE_URL'],
+        'first_name' => $_ENV['ADMIN_FIRST_NAME'],
+        'last_name' => $_ENV['ADMIN_LAST_NAME'],
+        'email' => $_ENV['ADMIN_EMAIL'],
+        'password' => $_ENV['ADMIN_PASSWORD'],
+        'role_id' => (int) $_ENV['ADMIN_ROLE_ID'],
         'is_active' => true
     ]);
 
-    // Define user details
-    $userProfileUrl = 'https://ui-avatars.com/api/?name=Khen+Sorela&background=1a2236&color=fff&size=128';
-    $firstName = 'Khen';
-    $lastName = 'Sorela';
-    $email = 'khen@gmail.com';
-    $password = 'ad';  // plaintext password
-    $roleId = 1;  // User role
+    // Loop through 10 default users
+    for ($i = 1; $i <= 10; $i++) {
+        $userModel->createUser([
+            'profile_url' => $_ENV["USER{$i}_PROFILE_URL"],
+            'first_name' => $_ENV["USER{$i}_FIRST_NAME"],
+            'last_name' => $_ENV["USER{$i}_LAST_NAME"],
+            'email' => $_ENV["USER{$i}_EMAIL"],
+            'password' => $_ENV["USER{$i}_PASSWORD"],
+            'role_id' => (int) $_ENV["USER{$i}_ROLE_ID"],
+            'is_active' => true
+        ]);
+    }
 
-    // Create user
-    $userModel->createUser([
-        'profile_url' => $userProfileUrl,
-        'first_name' => $firstName,
-        'last_name' => $lastName,
-        'email' => $email,
-        'password' => $password,
-        'role_id' => $roleId,
-        'is_active' => true
-    ]);
-    
-    // Log the creation of admin account (optional)
-    error_log('Admin and User account has been created: ' . $adminEmail . " and " . $email);
+    error_log('Admin and 10 user accounts have been created.');
 }
-
