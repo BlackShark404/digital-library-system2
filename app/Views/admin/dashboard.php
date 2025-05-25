@@ -2,6 +2,32 @@
 // Include header
 use Core\Session;
 include $headerPath;
+
+// Helper function to get badge class based on action type
+function getBadgeClass($action) {
+    switch ($action) {
+        case 'Login':
+            return 'bg-success';         // green
+        case 'Register':
+            return 'bg-info';            // light blue
+        case 'Logout':
+            return 'bg-secondary';       // gray
+        case 'Book Purchase':
+            return 'bg-primary';         // blue
+        case 'Book Added':
+            return 'bg-dark';            // dark gray/black
+        case 'Reading Session':
+            return 'bg-warning';         // yellow
+        case 'Profile Update':
+            return 'bg-danger';          // red
+        case 'Book Updated':
+            return 'bg-info';            // light blue
+        case 'Book Deleted':
+            return 'bg-danger';          // red
+        default:
+            return 'bg-secondary';
+    }
+}
 ?>
 
 <!-- Include Admin Dashboard CSS -->
@@ -193,8 +219,16 @@ include $headerPath;
                                                 <span class="badge bg-<?= $statusClass ?> ms-2"><?= $statusText ?></span>
                                             </div>
                                             <p class="text-muted small mb-1">
-                                                <?= htmlspecialchars($session['ua_first_name'] . ' ' . $session['ua_last_name']) ?> • 
-                                                <?= date('M d, Y H:i', strtotime($session['rs_started_at'])) ?>
+                                                <div class="d-flex align-items-center">
+                                                    <?php 
+                                                    $profileUrl = !empty($session['ua_profile_url']) 
+                                                        ? $session['ua_profile_url'] 
+                                                        : '/assets/images/default-avatar.png';
+                                                    ?>
+                                                    <img src="<?= $profileUrl ?>" alt="Profile" class="rounded-circle me-2" width="24" height="24">
+                                                    <span><?= htmlspecialchars($session['ua_first_name'] . ' ' . $session['ua_last_name']) ?> • 
+                                                    <?= date('M d, Y H:i', strtotime($session['rs_started_at'])) ?></span>
+                                                </div>
                                             </p>
                                             <div class="progress mt-1" style="height: 5px;">
                                                 <div class="progress-bar bg-<?= $statusClass ?>" role="progressbar" 
@@ -251,8 +285,16 @@ include $headerPath;
                                         <div class="flex-grow-1">
                                             <h6 class="mb-0 text-truncate" style="max-width: 250px;"><?= htmlspecialchars($purchase['b_title']) ?></h6>
                                             <p class="text-muted small mb-1">
-                                                <?= htmlspecialchars($purchase['ua_first_name'] . ' ' . $purchase['ua_last_name']) ?> • 
-                                                <?= date('M d, Y H:i', strtotime($purchase['up_purchased_at'])) ?>
+                                                <div class="d-flex align-items-center">
+                                                    <?php 
+                                                    $profileUrl = !empty($purchase['ua_profile_url']) 
+                                                        ? $purchase['ua_profile_url'] 
+                                                        : '/assets/images/default-avatar.png';
+                                                    ?>
+                                                    <img src="<?= $profileUrl ?>" alt="Profile" class="rounded-circle me-2" width="24" height="24">
+                                                    <span><?= htmlspecialchars($purchase['ua_first_name'] . ' ' . $purchase['ua_last_name']) ?> • 
+                                                    <?= date('M d, Y H:i', strtotime($purchase['up_purchased_at'])) ?></span>
+                                                </div>
                                             </p>
                                             <div class="d-flex align-items-center mt-2">
                                                 <span class="badge bg-success">
@@ -305,12 +347,25 @@ include $headerPath;
                                     <tr>
                                         <td>
                                             <?php if (isset($activity['user_id']) && $activity['user_id']): ?>
-                                                <?= htmlspecialchars($activity['first_name'] . ' ' . $activity['last_name']) ?>
+                                                <div class="d-flex align-items-center">
+                                                    <?php 
+                                                    $profileUrl = !empty($activity['profile_url']) 
+                                                        ? $activity['profile_url'] 
+                                                        : '/assets/images/default-avatar.png';
+                                                    ?>
+                                                    <img src="<?= $profileUrl ?>" alt="Profile" class="rounded-circle me-2" width="28" height="28">
+                                                    <span><?= htmlspecialchars($activity['first_name'] . ' ' . $activity['last_name']) ?></span>
+                                                </div>
                                             <?php else: ?>
-                                                <span class="text-muted">System</span>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                                                        <i class="bi bi-gear-fill text-secondary" style="font-size: 1rem;"></i>
+                                                    </div>
+                                                    <span class="text-muted">System</span>
+                                                </div>
                                             <?php endif; ?>
                                         </td>
-                                        <td><span class="badge bg-light text-dark"><?= $activity['action'] ?></span></td>
+                                        <td><span class="badge <?= getBadgeClass($activity['action']) ?>"><?= $activity['action'] ?></span></td>
                                         <td class="text-truncate" style="max-width: 300px;"><?= htmlspecialchars($activity['description']) ?></td>
                                         <td><small class="text-muted"><?= $activity['time_ago'] ?></small></td>
                                     </tr>
