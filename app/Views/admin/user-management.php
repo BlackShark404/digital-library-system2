@@ -161,49 +161,59 @@ include $headerPath;
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-pen me-2"></i>Edit User: <span id="editUserName"></span></h5>
+            <div class="modal-header bg-light">
+                <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Edit User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="text-center mb-4">
-                    <img id="editUserProfilePic" src="" alt="User Profile" class="rounded-circle img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                </div>
                 <div class="alert alert-info mb-3">
                     <i class="fas fa-info-circle me-2"></i> For security reasons, administrators can only modify the user's status (Active/Inactive).
                 </div>
                 <form id="editUserForm">
                     <input type="hidden" id="editUserId" name="id">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="editFirstName" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="editFirstName" name="first_name" readonly>
+                        <div class="col-md-4 d-flex flex-column align-items-center">
+                            <img id="editUserProfilePic" src="" alt="User Profile" class="rounded-circle img-thumbnail mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                            <div class="text-center">
+                                <span id="editUserNameDisplay" class="fw-bold fs-5"></span>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="editLastName" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="editLastName" name="last_name" readonly>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="editEmail" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="editEmail" name="email" readonly>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="editPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="editPassword" name="password" disabled placeholder="Password cannot be changed here">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="editRole" class="form-label">Role</label>
-                            <select class="form-select" id="editRole" name="role_id" disabled>
-                                <option value="1">User</option>
-                                <option value="2">Admin</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="editStatus" class="form-label">Status</label>
-                            <select class="form-select" id="editStatus" name="is_active" required>
-                                <option value="1">Active</option>
-                                <option value="0">Inactive</option>
-                            </select>
+                        <div class="col-md-8">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-user-edit me-2"></i>User Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="editFirstName" class="form-label text-muted"><i class="fas fa-user me-1"></i>First Name</label>
+                                            <input type="text" class="form-control bg-light" id="editFirstName" name="first_name" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="editLastName" class="form-label text-muted"><i class="fas fa-user me-1"></i>Last Name</label>
+                                            <input type="text" class="form-control bg-light" id="editLastName" name="last_name" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="editEmail" class="form-label text-muted"><i class="fas fa-envelope me-1"></i>Email</label>
+                                            <input type="email" class="form-control bg-light" id="editEmail" name="email" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="editRole" class="form-label text-muted"><i class="fas fa-user-tag me-1"></i>Role</label>
+                                            <select class="form-select bg-light" id="editRole" name="role_id" disabled>
+                                                <option value="1">User</option>
+                                                <option value="2">Admin</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="editStatus" class="form-label text-muted"><i class="fas fa-toggle-on me-1"></i>Status</label>
+                                            <select class="form-select border-primary" id="editStatus" name="is_active" required>
+                                                <option value="1">Active</option>
+                                                <option value="0">Inactive</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -523,7 +533,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#editFirstName').val(rowData.first_name);
         $('#editLastName').val(rowData.last_name);
         $('#editEmail').val(rowData.email);
-        $('#editUserName').text(rowData.first_name + ' ' + rowData.last_name);
+        $('#editUserNameDisplay').text(rowData.first_name + ' ' + rowData.last_name);
         
         // Set dropdown values
         const roleId = rowData.role === 'admin' ? 2 : 1;
@@ -531,9 +541,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         $('#editRole').val(roleId);
         $('#editStatus').val(status);
-        
-        // Clear password field (for security)
-        $('#editPassword').val('');
         
         // Set profile picture
         const profileUrl = rowData.profile_url || '/assets/images/default-avatar.png';
