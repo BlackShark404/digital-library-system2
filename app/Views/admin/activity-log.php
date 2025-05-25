@@ -112,28 +112,50 @@ $action_filter = $action_filter ?? '';
 
 <!-- Log Detail Modal -->
 <div class="modal fade" id="logModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="logModalLabel">Activity Details</h5>
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="logModalLabel"><i class="bi bi-activity me-2"></i>Activity Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3 d-flex align-items-center">
-                    <strong class="me-2">User:</strong> 
-                    <div id="modalUserContainer" class="d-flex align-items-center">
-                        <img id="modalUserProfilePic" src="" alt="Profile" class="rounded-circle me-2" width="32" height="32" style="display: none;">
-                        <span id="modalUsername"></span>
+                <div class="row">
+                    <div class="col-md-4 d-flex flex-column align-items-center">
+                        <div id="userProfileSection" class="text-center mb-3">
+                            <img id="modalUserProfilePic" src="" alt="Profile" class="rounded-circle img-thumbnail mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                            <h5 id="modalUsername" class="fw-bold"></h5>
+                        </div>
+                        <div id="systemProfileSection" class="text-center mb-3" style="display: none;">
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 120px; height: 120px;">
+                                <i class="bi bi-gear-fill text-secondary" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="fw-bold text-secondary">System</h5>
+                        </div>
+                        <div class="mt-2 text-center">
+                            <span id="modalAction" class="badge bg-primary fs-6"></span>
+                        </div>
                     </div>
-                </div>
-                <div class="mb-3">
-                    <strong>Action:</strong> <span id="modalAction"></span>
-                </div>
-                <div class="mb-3">
-                    <strong>Details:</strong> <span id="modalDetails"></span>
-                </div>
-                <div class="mb-3">
-                    <strong>Date/Time:</strong> <span id="modalTimestamp"></span>
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Activity Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3 d-flex">
+                                    <div class="text-muted me-2" style="width: 120px;"><i class="bi bi-hash me-1"></i>ID:</div>
+                                    <div id="modalId" class="fw-bold"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="text-muted mb-1"><i class="bi bi-card-text me-1"></i>Details:</div>
+                                    <div id="modalDetails" class="p-3 bg-light rounded"></div>
+                                </div>
+                                <div class="mb-2 d-flex">
+                                    <div class="text-muted me-2" style="width: 120px;"><i class="bi bi-calendar me-1"></i>Date/Time:</div>
+                                    <div id="modalTimestamp" class="fw-bold"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -267,19 +289,31 @@ $(document).ready(function() {
                 if (response.success) {
                     var log = response.data;
                     
-                    // Update modal content
-                    $('#logModalLabel').text('Activity Details #' + log.id);
+                    // Update modal title with ID
+                    $('#logModalLabel').html(`<i class="bi bi-activity me-2"></i>Activity Details #${log.id}`);
+                    $('#modalId').text(log.id);
                     
+                    // Handle user vs system activity
                     if (log.user_id) {
+                        // It's a user activity - show user profile section
+                        $('#userProfileSection').show();
+                        $('#systemProfileSection').hide();
+                        
+                        // Set profile picture and username
                         const profileUrl = log.profile_url || '/assets/images/default-avatar.png';
-                        $('#modalUserProfilePic').attr('src', profileUrl).show();
-                        $('#modalUsername').text(log.username + ' (ID: ' + log.user_id + ')');
+                        $('#modalUserProfilePic').attr('src', profileUrl);
+                        $('#modalUsername').text(log.username);
                     } else {
-                        $('#modalUserProfilePic').hide();
-                        $('#modalUsername').text('System');
+                        // It's a system activity - show system icon
+                        $('#userProfileSection').hide();
+                        $('#systemProfileSection').show();
                     }
                     
-                    $('#modalAction').html('<span class="badge ' + getBadgeClass(log.action) + '">' + log.action + '</span>');
+                    // Set action badge with proper styling
+                    const badgeClass = getBadgeClass(log.action);
+                    $('#modalAction').attr('class', `badge ${badgeClass} fs-6`).text(log.action);
+                    
+                    // Set details and timestamp
                     $('#modalDetails').text(log.details);
                     $('#modalTimestamp').text(log.timestamp);
                     
